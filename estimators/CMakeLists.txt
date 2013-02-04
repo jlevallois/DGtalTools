@@ -1,10 +1,16 @@
 SET(DGTAL_TOOLS_SRC
   2dLocalEstimators
+  3dLocalEstimators
   lengthEstimators
   vol2normalField
   curvatureBC
   curvatureMCMS
   tangentBC
+  statisticsEstimators
+  scaleSpaceIntegralInvariant2D
+  scaleSpaceIntegralInvariant2D_ellipse
+  scaleSpaceIntegralInvariant2D_flower
+  scaleSpaceIntegralInvariant3D
 )
 
 FOREACH(FILE ${DGTAL_TOOLS_SRC})
