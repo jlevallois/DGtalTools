@@ -643,9 +643,9 @@ int main( int argc, char** argv )
   if (!(vm.count("shape"))) missingParam("--shape");
   std::string shapeName = vm["shape"].as<std::string>();
     
-  int nb = 3; //number of available methods
+  int nb = 4; //number of available methods
   std::string options = vm["estimators"].as<std::string>();
-  if (options.size() < 3)
+  if (options.size() < nb)
     {
       trace.error() << " At least " << nb 
 		    << " characters are required "

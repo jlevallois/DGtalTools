@@ -170,6 +170,83 @@ Image* Compute( MyShape & shape, std::vector< double > & re_array,
     return image;
 }
 
+/**
+ * Create the static list of shapes.
+ *
+ */
+void createList()
+{
+  shapes2D.push_back("ball");
+  shapesDesc.push_back("Ball for the Euclidean metric.");
+  shapesParam1.push_back("--radius [-R]");
+  shapesParam2.push_back("");
+  shapesParam3.push_back("");
+  shapesParam4.push_back("");
+
+  shapes2D.push_back("square");
+  shapesDesc.push_back("square (no signature).");
+  shapesParam1.push_back("--width [-w]");
+  shapesParam2.push_back("");
+  shapesParam3.push_back("");
+  shapesParam4.push_back("");
+
+  shapes2D.push_back("lpball");
+  shapesDesc.push_back("Ball for the l_power metric (no signature).");
+  shapesParam1.push_back("--radius [-R],");
+  shapesParam2.push_back("--power [-p]");
+  shapesParam3.push_back("");
+  shapesParam4.push_back("");
+
+  shapes2D.push_back("flower");
+  shapesDesc.push_back("Flower with k petals with radius ranging from R+/-v.");
+  shapesParam1.push_back("--radius [-R],");
+  shapesParam2.push_back("--varsmallradius [-v],");
+  shapesParam3.push_back("--k [-k],");
+  shapesParam4.push_back("--phi");
+
+  shapes2D.push_back("ngon");
+  shapesDesc.push_back("Regular k-gon.");
+  shapesParam1.push_back("--radius [-R],");
+  shapesParam2.push_back("--k [-k],");
+  shapesParam3.push_back("--phi");
+  shapesParam4.push_back("");
+
+  shapes2D.push_back("accflower");
+  shapesDesc.push_back("Accelerated Flower with k petals.");
+  shapesParam1.push_back("--radius [-R],");
+  shapesParam2.push_back("--varsmallradius [-v],");
+  shapesParam3.push_back("--k [-k],");
+  shapesParam4.push_back("--phi");
+
+  shapes2D.push_back("ellipse");
+  shapesDesc.push_back("Ellipse.");
+  shapesParam1.push_back("--axis1 [-A],");
+  shapesParam2.push_back("--axis2 [-a],");
+  shapesParam3.push_back("--phi");
+  shapesParam4.push_back("");
+
+
+}
+
+/**
+ * Display the shape list with parameters.
+ *
+ */
+void displayList()
+{
+  trace.emphase()<<"2D Shapes:"<<std::endl;
+  for(unsigned int i=0; i<shapes2D.size(); ++i)
+    trace.info()<<"\t"<<shapes2D[i]<<"\t"
+        <<shapesDesc[i]<<std::endl
+        <<"\t\tRequired parameter(s): "
+        << shapesParam1[i]<<" "
+        << shapesParam2[i]<<" "
+        << shapesParam3[i]<<" "
+        << shapesParam4[i]<<std::endl;
+
+}
+
+
 void usage( int argc, char** argv )
 {
     std::cerr << "Usage: " << argv[ 0 ] << " <min_re> <max_re> <step_re> <min_h> <max_h> <step_h> <filename>" << std::endl;
@@ -186,6 +263,58 @@ void usage( int argc, char** argv )
 
 int main ( int argc, char** argv )
 {
+    po::options_description general_opt("Allowed options are");
+    general_opt.add_options()
+            ("help,h", "display this message")
+            ("list,l",  "List all available shapes")
+            ("shape,s", po::value<std::string>(), "Shape name")
+            ("radius,R",  po::value<double>(), "Radius of the shape" )
+            ("axis1,A",  po::value<double>(), "Half big axis of the shape (ellipse)" )
+            ("axis2,a",  po::value<double>(), "Half small axis of the shape (ellipse)" )
+            ("smallradius,r",  po::value<double>()->default_value(5), "Small radius of the shape" )
+            ("varsmallradius,v",  po::value<double>()->default_value(5), "Variable small radius of the shape" )
+            ("k,k",  po::value<unsigned int>()->default_value(3), "Number of branches or corners the shape" )
+            ("phi",  po::value<double>()->default_value(0.0), "Phase of the shape (in radian)" )
+            ("width,w",  po::value<double>()->default_value(10.0), "Width of the shape" )
+            ("power,p",   po::value<double>()->default_value(2.0), "Power of the metric (double)" )
+            ("center_x,x",   po::value<double>()->default_value(0.0), "x-coordinate of the shape center (double)" )
+            ("center_y,y",   po::value<double>()->default_value(0.0), "y-coordinate of the shape center (double)" )
+
+            ("re,r",  po::value<std::string>()->default_value("1.0 7.0 0.01"), "Grid step for the digitization" )
+            ("gridstep,g",  po::value<std::string>()->default_value("0.05 0.05 0.01"), "Grid step for the digitization" )
+            ("export,e",  po::value<std::string>()->default_value("11 filename"), "the i-th estimator is disabled iff there is a 0 at position i" );
+
+    bool parseOK = true;
+    po::variables_map vm;
+    try
+    {
+        po::store(po::parse_command_line(argc, argv, general_opt), vm);
+    }
+    catch( const std::exception& ex )
+    {
+        parseOK = false;
+        trace.info() << "Error checking program options: " << ex.what() << std::endl;
+    }
+
+    po::notify(vm);
+    if( !parseOK || vm.count("help") || argc<=1)
+    {
+        trace.info()<< "Compare local estimators on implicit shapes using DGtal library" <<std::endl
+                    << "Basic usage: "<<std::endl
+                    << "\t" << argv[ 0 ] << " --shape <shapeName> [required parameters] --re <min_re> <max_re> <step_re> --gridstep <min_h> <max_h> <step_h> --export <binaryWord> <filename>"<<std::endl
+                    << std::endl
+                    << "Below are the different available exports: " << std::endl
+                    << "\t - As an image" << std::endl
+                    << "\t - As data" << std::endl
+                    << std::endl
+                    << "The i-th export type is used if the i-th character of the binary word is not 0. "
+                    << "The default binary word is '11'. This means that it export as an image and data file. "
+                    << std::endl
+                    << general_opt << std::endl;
+        return 0;
+    }
+
+
     if ( argc < 8 )
     {
         usage( argc, argv );
@@ -213,6 +342,17 @@ int main ( int argc, char** argv )
     {
         re_array.push_back ( re_init );
     }
+
+    int nb = 2; //number of available methods
+    std::string options = vm["export"].as<std::string>();
+    if (options.size() < 2)
+      {
+        trace.error() << " At least " << nb
+              << " characters are required "
+              << " with option --export.";
+        trace.info() << std::endl;
+        exit(1);
+      }
 
     for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
     {
