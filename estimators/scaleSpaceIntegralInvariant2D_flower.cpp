@@ -38,7 +38,8 @@
 #include "DGtal/base/Clock.h"
 
 //shapes
-#include "DGtal/shapes/parametric/Flower2D.h"
+#include "DGtal/shapes/ShapeFactory.h"
+#include "DGtal/shapes/Shapes.h"
 
 //Digitizer
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
@@ -56,17 +57,31 @@
 #include "DGtal/io/colormaps/GradientColorMap.h"
 #include "DGtal/io/writers/PPMWriter.h"
 
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/variables_map.hpp>
+#include <boost/program_options/parsers.hpp>
+
 #define uint unsigned int
 
 using namespace DGtal;
 
-typedef Flower2D< Z2i::Space > MyShape;
-typedef GaussDigitizer< Z2i::Space, MyShape > MyGaussDigitizer;
-typedef FunctorOnCells< MyGaussDigitizer, Z2i::KSpace > MyFunctor;
-typedef IntegralInvariantMeanCurvatureEstimator< Z2i::KSpace, MyFunctor > MyMeanCurvatureEstimator;
-typedef typename MyMeanCurvatureEstimator::Quantity Quantity;
+/**
+ * Global vectors to describe the available shapes and their
+ * parameters.
+ */
+std::vector<std::string> shapes2D;
+std::vector<std::string> shapesDesc;
+std::vector<std::string> shapesParam1;
+std::vector<std::string> shapesParam2;
+std::vector<std::string> shapesParam3;
+std::vector<std::string> shapesParam4;
+
+//typedef Flower2D< Z2i::Space > MyShape;
+//typedef GaussDigitizer< Z2i::Space, MyShape > MyGaussDigitizer;
+
 typedef ImageSelector< Z2i::Domain, float >::Type Image;
 
+template< typename MyShape >
 Image* Compute( MyShape & shape, std::vector< double > & re_array,
              double h,
              std::string name )
@@ -74,7 +89,9 @@ Image* Compute( MyShape & shape, std::vector< double > & re_array,
     Image * image;
     typedef Z2i::KSpace::Surfel Surfel;
 
+    typedef GaussDigitizer< Z2i::Space, MyShape > MyGaussDigitizer;
     typedef typename MyGaussDigitizer::RealPoint RealPoint;
+
     MyGaussDigitizer gaussDigShape;
     gaussDigShape.attach( shape );
     gaussDigShape.init( shape.getLowerBound(), shape.getUpperBound(), h );
@@ -96,10 +113,11 @@ Image* Compute( MyShape & shape, std::vector< double > & re_array,
     MyLightImplicitDigitalSurface lightImplDigSurf( kSpace, gaussDigShape, SAdj, bel );
     MyDigitalSurface digSurfShape( lightImplDigSurf );
 
-
+    typedef FunctorOnCells< MyGaussDigitizer, Z2i::KSpace > MyFunctor;
+    typedef IntegralInvariantMeanCurvatureEstimator< Z2i::KSpace, MyFunctor > MyMeanCurvatureEstimator;
+    typedef typename MyMeanCurvatureEstimator::Quantity Quantity;
     typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
     typedef typename Visitor::VertexConstIterator SurfelConstIterator;
-
     typedef std::vector< Quantity > vQuantity;
     typedef typename vQuantity::const_iterator const_interatorQuantity;
 
@@ -246,6 +264,43 @@ void displayList()
 
 }
 
+/**
+ * Missing parameter error message.
+ *
+ * @param param
+ */
+void missingParam(std::string param)
+{
+  trace.error() << " Parameter: " << param << " is required.";
+  trace.info() << std::endl;
+  exit(1);
+}
+
+/**
+ * Check if a given shape is available. If not, we exit with an error.
+ * If it is, we return the corresponding index in the global vectors.
+ *
+ * @param shapeName name of the shape to search.
+ *
+ * @return index of the shape in the shape vectors.
+ */
+unsigned int checkAndReturnIndex(const std::string &shapeName)
+{
+  unsigned int pos=0;
+
+  while ((pos < shapes2D.size()) && (shapes2D[pos] != shapeName))
+    pos++;
+
+  if (pos == shapes2D.size())
+    {
+      trace.error() << "The specified shape has not found.";
+      trace.info() << std::endl;
+      exit(1);
+    }
+
+  return pos;
+}
+
 
 void usage( int argc, char** argv )
 {
@@ -260,6 +315,8 @@ void usage( int argc, char** argv )
     std::cerr << "\t - <filename> name of the pgm image created with the scale space analysis.";
     std::cerr << "\t - Example: " << argv[ 0 ] << "1.0 7.0 0.01 0.05 0.05 0.01 flower" << std::endl;
 }
+
+namespace po = boost::program_options;
 
 int main ( int argc, char** argv )
 {
@@ -280,9 +337,14 @@ int main ( int argc, char** argv )
             ("center_x,x",   po::value<double>()->default_value(0.0), "x-coordinate of the shape center (double)" )
             ("center_y,y",   po::value<double>()->default_value(0.0), "y-coordinate of the shape center (double)" )
 
-            ("re,r",  po::value<std::string>()->default_value("1.0 7.0 0.01"), "Grid step for the digitization" )
-            ("gridstep,g",  po::value<std::string>()->default_value("0.05 0.05 0.01"), "Grid step for the digitization" )
-            ("export,e",  po::value<std::string>()->default_value("11 filename"), "the i-th estimator is disabled iff there is a 0 at position i" );
+            ("re_min,re_min",  po::value<double>()->default_value(1.0), "min Euclidean radius of the convolution kernel" )
+            ("re_max,re_max",  po::value<double>()->default_value(7.0), "max Euclidean radius of the convolution kernel" )
+            ("re_step,re_step",  po::value<double>()->default_value(0.01), "step of the increase of the Euclidean radius of the convolution kernel" )
+            ("gridstep_min,g_min",  po::value<double>()->default_value(0.05), "min Grid step for the digitization" )
+            ("gridstep_max,g_max",  po::value<double>()->default_value(0.05), "max Grid step for the digitization" )
+            ("gridstep_step,g_step",  po::value<double>()->default_value(0.01), "step of the increase of the Grid step for the digitization" )
+            ("export,e",  po::value<std::string>()->default_value("11"), "the i-th estimator is disabled iff there is a 0 at position i" )
+            ("filename,f",  po::value<std::string>(), "filename for the export" );
 
     bool parseOK = true;
     po::variables_map vm;
@@ -297,7 +359,7 @@ int main ( int argc, char** argv )
     }
 
     po::notify(vm);
-    if( !parseOK || vm.count("help") || argc<=1)
+    if( !parseOK || vm.count("help") || argc <= 1)
     {
         trace.info()<< "Compare local estimators on implicit shapes using DGtal library" <<std::endl
                     << "Basic usage: "<<std::endl
@@ -314,55 +376,301 @@ int main ( int argc, char** argv )
         return 0;
     }
 
+    //List creation
 
-    if ( argc < 8 )
+    createList();
+
+    if( vm.count( "list" ))
     {
-        usage( argc, argv );
+        displayList();
         return 0;
     }
 
-    double max_radius_shape = 20.00217;
-    double min_radius_shape = 10.00217;
-    MyShape shape( 0, 0, max_radius_shape, min_radius_shape, 4, 3.0 ); //Flower
-
-    std::vector< double > rh_array;
-    double rh_init = atof( argv[ 4 ] ); // 0.1
-    double rh_end  = atof( argv[ 5 ] ); // 0.05
-    double rh_step = atof( argv[ 6 ] ); // 0.01
-    for ( ; rh_init >= rh_end; rh_init -= rh_step )
+    //Parse options
+    if( !( vm.count( "shape" )))
     {
-        rh_array.push_back ( rh_init );
-    };
+        missingParam( "--shape" );
+    }
+    std::string shapeName = vm[ "shape" ].as< std::string >();
 
+    double re_init = vm[ "re_min" ].as< double >();
+    double re_end  = vm[ "re_max" ].as< double >();
+    double re_step = vm[ "re_step" ].as< double >();
+    if ( re_init <= 0.0 || re_end <= 0.0 || re_step <= 0.0 )
+    {
+        trace.error() << " You need to specify positive values with option --re.";
+        trace.info() << std::endl;
+        exit(1);
+    }
     std::vector< double > re_array;
-    double re_init = atof( argv[ 1 ] ); // 0.02
-    double re_end  = atof( argv[ 2 ] ); // 0.06
-    double re_step = atof( argv[ 3 ] ); // 0.0005
     for ( ; re_init <= re_end; re_init += re_step )
     {
         re_array.push_back ( re_init );
     }
 
-    int nb = 2; //number of available methods
-    std::string options = vm["export"].as<std::string>();
-    if (options.size() < 2)
-      {
-        trace.error() << " At least " << nb
-              << " characters are required "
-              << " with option --export.";
+    double rh_init = vm[ "gridstep_min" ].as< double >();
+    double rh_end  = vm[ "gridstep_max" ].as< double >();
+    double rh_step = vm[ "gridstep_step" ].as< double >();
+    if ( rh_init <= 0.0 || rh_end <= 0.0 || rh_step <= 0.0 )
+    {
+        trace.error() << " You need to specify positive values with option --gridstep.";
         trace.info() << std::endl;
         exit(1);
-      }
-
-    for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
-    {
-        std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
-
-        std::stringstream sstm;
-        sstm << "ScaleSpaceMean2D_" << argv[ 7 ] << "_h_" << rh_array[ i_h ] << ".pgm";
-        std::string exportname = sstm.str();
-        Compute( shape, re_array, rh_array[ i_h ], exportname.c_str() );
     }
+    std::vector< double > rh_array;
+    for ( ; rh_init >= rh_end; rh_init -= rh_step )
+    {
+        rh_array.push_back ( rh_init );
+    }
+
+    std::string options = vm[ "export" ].as< std::string >();
+    std::string filename  = vm[ "filename" ].as< std::string >();
+    if( options.size() < 2 )
+    {
+        trace.error() << " At least 2 characters are required with option --export.";
+        trace.info() << std::endl;
+        exit(1);
+    }
+
+    //We check that the shape is known
+    unsigned int id = checkAndReturnIndex(shapeName);
+
+    // standard types
+    typedef Z2i::Space::Point Point;
+    typedef Z2i::Space::RealPoint RealPoint;
+
+    RealPoint center( vm[ "center_x" ].as< double >(),
+                      vm[ "center_y" ].as< double >());
+
+    if( id == 0 )
+    {
+        if( !( vm.count( "radius" )))
+        {
+            missingParam( "--radius" );
+        }
+        double radius = vm[ "radius" ].as< double >();
+        Ball2D< Z2i::Space > ball( Z2i::Point( 0, 0 ), radius );
+        for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
+        {
+            std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
+            std::stringstream sstm;
+            sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
+            std::string exportname = sstm.str();
+
+            Compute( ball, re_array, rh_array[ i_h ], exportname.c_str() );
+        }
+    }
+    else if( id == 1 )
+    {
+        if( !( vm.count( "width" )))
+        {
+            missingParam( "--width" );
+        }
+        double width = vm[ "width" ].as< double >();
+        ImplicitHyperCube< Z2i::Space > object( Z2i::Point( 0, 0 ), width / 2.0 );
+        trace.error() << "Not available.";
+        trace.info() << std::endl;
+    }
+    else if( id == 2 )
+    {
+        if( !( vm.count( "power" )))
+        {
+            missingParam( "--power" );
+        }
+        if( !( vm.count( "radius" )))
+        {
+            missingParam( "--radius" );
+        }
+        double radius = vm[ "radius" ].as< double >();
+        double power = vm[ "power" ].as< double >();
+        ImplicitRoundedHyperCube< Z2i::Space > ball( Z2i::Point( 0, 0 ), radius, power );
+        trace.error() << "Not available.";
+        trace.info() << std::endl;
+    }
+    else if( id == 3 )
+    {
+        if( !( vm.count( "varsmallradius" )))
+        {
+            missingParam( "--varsmallradius" );
+        }
+        if( !( vm.count( "radius" )))
+        {
+            missingParam( "--radius" );
+        }
+        if( !( vm.count( "k" )))
+        {
+            missingParam( "--k" );
+        }
+        if( !( vm.count( "phi" )))
+        {
+            missingParam( "--phi" );
+        }
+        double radius = vm[ "radius" ].as< double >();
+        double varsmallradius = vm[ "varsmallradius" ].as< double >();
+        unsigned int k = vm[ "k" ].as< unsigned int >();
+        double phi = vm[ "phi" ].as< double >();
+        Flower2D< Z2i::Space > flower( center, radius, varsmallradius, k, phi );
+        for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
+        {
+            std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
+            std::stringstream sstm;
+            sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
+            std::string exportname = sstm.str();
+
+            Compute( flower, re_array, rh_array[ i_h ], exportname.c_str() );
+        }
+    }
+    else if( id == 4 )
+    {
+        if( !( vm.count( "radius" )))
+        {
+            missingParam( "--radius" );
+        }
+        if( !( vm.count( "k" )))
+        {
+            missingParam( "--k" );
+        }
+        if( !( vm.count( "phi" )))
+        {
+            missingParam( "--phi" );
+        }
+        double radius = vm[ "radius" ].as< double >();
+        unsigned int k = vm[ "k" ].as< unsigned int >();
+        double phi = vm[ "phi" ].as< double >();
+        NGon2D< Z2i::Space > object( center, radius, k, phi );
+        for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
+        {
+            std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
+            std::stringstream sstm;
+            sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
+            std::string exportname = sstm.str();
+
+            Compute( object, re_array, rh_array[ i_h ], exportname.c_str() );
+        }
+    }
+    else if( id == 5 )
+    {
+        if( !( vm.count( "varsmallradius" )))
+        {
+            missingParam( "--varsmallradius" );
+        }
+        if( !( vm.count( "radius" )))
+        {
+            missingParam( "--radius" );
+        }
+        if( !( vm.count( "k" )))
+        {
+            missingParam( "--k" );
+        }
+        if( !( vm.count( "phi" )))
+        {
+            missingParam( "--phi" );
+        }
+        double radius = vm[ "radius" ].as< double >();
+        double varsmallradius = vm[ "varsmallradius" ].as< double >();
+        unsigned int k = vm[ "k" ].as< unsigned int >();
+        double phi = vm[ "phi" ].as< double >();
+        AccFlower2D< Z2i::Space > accflower( center, radius, varsmallradius, k, phi );
+        for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
+        {
+            std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
+            std::stringstream sstm;
+            sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
+            std::string exportname = sstm.str();
+
+            Compute( accflower, re_array, rh_array[ i_h ], exportname.c_str() );
+        }
+    }
+    else if( id == 6 )
+    {
+        if( !( vm.count( "axis1" )))
+        {
+            missingParam( "--axis1" );
+        }
+        if( !( vm.count( "axis2" )))
+        {
+            missingParam( "--axis2" );
+        }
+        if( !( vm.count( "phi" )))
+        {
+            missingParam( "--phi" );
+        }
+        double a1 = vm[ "axis1" ].as< double >();
+        double a2 = vm[ "axis2" ].as< double >();
+        double phi = vm[ "phi" ].as< double >();
+        Ellipse2D< Z2i::Space > ellipse( center, a1, a2, phi );
+        for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
+        {
+            std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
+            std::stringstream sstm;
+            sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
+            std::string exportname = sstm.str();
+
+            Compute( ellipse, re_array, rh_array[ i_h ], exportname.c_str() );
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//    if ( argc < 8 )
+//    {
+//        usage( argc, argv );
+//        return 0;
+//    }
+
+//    double max_radius_shape = 20.00217;
+//    double min_radius_shape = 10.00217;
+//    MyShape shape( 0, 0, max_radius_shape, min_radius_shape, 4, 3.0 ); //Flower
+
+//    std::vector< double > rh_array;
+//    double rh_init = atof( argv[ 4 ] ); // 0.1
+//    double rh_end  = atof( argv[ 5 ] ); // 0.05
+//    double rh_step = atof( argv[ 6 ] ); // 0.01
+//    for ( ; rh_init >= rh_end; rh_init -= rh_step )
+//    {
+//        rh_array.push_back ( rh_init );
+//    };
+
+//    std::vector< double > re_array;
+//    double re_init = atof( argv[ 1 ] ); // 0.02
+//    double re_end  = atof( argv[ 2 ] ); // 0.06
+//    double re_step = atof( argv[ 3 ] ); // 0.0005
+//    for ( ; re_init <= re_end; re_init += re_step )
+//    {
+//        re_array.push_back ( re_init );
+//    }
+
+//    int nb = 2; //number of available methods
+//    std::string options = vm["export"].as<std::string>();
+//    if (options.size() < 2)
+//      {
+//        trace.error() << " At least " << nb
+//              << " characters are required "
+//              << " with option --export.";
+//        trace.info() << std::endl;
+//        exit(1);
+//      }
+
+//    for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
+//    {
+//        std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
+
+//        std::stringstream sstm;
+//        sstm << "ScaleSpaceMean2D_" << argv[ 7 ] << "_h_" << rh_array[ i_h ] << ".pgm";
+//        std::string exportname = sstm.str();
+//        Compute( shape, re_array, rh_array[ i_h ], exportname.c_str() );
+//    }
 
     return 42;
 }
