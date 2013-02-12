@@ -122,10 +122,13 @@ int Compute( const MyShape & shape,
     typedef std::vector< Quantity > vQuantity;
     typedef typename vQuantity::const_iterator const_interatorQuantity;
 
+    std::vector< Quantity > data;
+    uint data_size = 0;
+
     uint re_size = re_array.size ();
 
     Quantity min = numeric_limits< Quantity >::max();
-    Quantity max = numeric_limits <Quantity >::min();
+    Quantity max = numeric_limits< Quantity >::min();
 
     for ( uint step_re = 0; step_re < re_size; ++step_re )
     {
@@ -179,15 +182,62 @@ int Compute( const MyShape & shape,
             cmap_grad.addColor( Color( 255, 0, 0 ) );
             cmap_grad.addColor( Color( 255, 255, 10 ) );
 
-            PPMWriter<Image, Gradient >::exportPPM( name, *image, cmap_grad ); // Erase previous image with old + new iteration values (the computation on full iteration take long time, so we can see result before ending)
+            std::stringstream sstm;
+            sstm << name << ".ppm";
+            std::string exportname = sstm.str();
+            PPMWriter<Image, Gradient >::exportPPM( exportname, *image, cmap_grad ); // Erase previous image with old + new iteration values (the computation on full iteration take long time, so we can see result before ending)
         }
 
         if( options.at( 1 ) != '0' ) // export as data file
         {
             if ( step_re == 0 )
             {
-                trace.error() << "export as data file not available yet" << std::endl;
+                data_size = rsize * re_size;
+                data.resize( data_size );
             }
+
+            for ( uint i = 0; i < rsize; ++i )
+            {
+                data[ i * re_size + step_re ] = current_result;
+            }
+
+            std::stringstream sstm;
+            sstm << name << ".dat";
+            std::string exportname = sstm.str();
+            ofstream outf( exportname, ios::trunc );
+            outf.flush();
+            if( !outf )
+            {
+                trace.error() << "IO error with file " << exportname << std::endl;
+                return 0;
+            }
+
+            uint id = 0;
+            for ( uint i = 0; i < data_size; ++i )
+            {
+                if ( step_re == 0 )
+                {
+                    outf << id;
+                    ++id;
+                }
+
+                outf << " ";
+
+                if ( i % re_size > step_re )
+                {
+                    outf << "NA";
+                }
+                else
+                {
+                    outf << data[ i ];
+                }
+                if ( i % re_size == re_size - 1 )
+                {
+                    outf << "BATMAN !!! ";
+                    outf << '\n';
+                }
+            }
+            outf.close();
         }
 
 
@@ -603,7 +653,7 @@ int main ( int argc, char** argv )
         {
             std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
             std::stringstream sstm;
-            sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
+            sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ];
             std::string exportname = sstm.str();
 
             Compute( ellipse, re_array, rh_array[ i_h ], options, exportname.c_str() );
