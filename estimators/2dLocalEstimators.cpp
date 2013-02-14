@@ -58,7 +58,7 @@
 #include "DGtal/shapes/GaussDigitizer.h"
 #include "DGtal/geometry/curves/GridCurve.h"
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
-#include "DGtal/topology/DepthFirstVisitor.h"
+#include "DGtal/graph/DepthFirstVisitor.h"
 
 
 //Estimators

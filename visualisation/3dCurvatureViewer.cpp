@@ -48,7 +48,8 @@
 #include "DGtal/topology/helpers/Surfaces.h"
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
 #include "DGtal/topology/DigitalSurface.h"
-#include "DGtal/topology/DepthFirstVisitor.h"
+#include "DGtal/graph/DepthFirstVisitor.h"
+#include "DGtal/graph/GraphVisitorRange.h"
 
 // Integral Invariant includes
 #include "DGtal/geometry/surfaces/FunctorOnCells.h"
@@ -120,10 +121,11 @@ int main( int argc, char** argv )
     MyDigitalSurface digSurf( LightImplDigSurf );
 
     typedef DepthFirstVisitor<MyDigitalSurface> Visitor;
-    typedef Visitor::VertexConstIterator SurfelConstIterator;
-    Visitor *depth = new Visitor (digSurf, *digSurf.begin());
-    SurfelConstIterator abegin = SurfelConstIterator(depth);
-    SurfelConstIterator aend = SurfelConstIterator(0);
+    typedef GraphVisitorRange< Visitor > VisitorRange;
+    typedef VisitorRange::ConstIterator SurfelConstIterator;
+    VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
+    SurfelConstIterator abegin = range.begin();
+    SurfelConstIterator aend = range.end();
 
 
     // Integral Invariant stuff
@@ -137,8 +139,8 @@ int main( int argc, char** argv )
     viewer.show();
 //    viewer << SetMode3D(image.domain().className(), "BoundingBox") << image.domain();
 
-    Visitor *depth2 = new Visitor (digSurf, *digSurf.begin());
-    SurfelConstIterator abegin2 = SurfelConstIterator(depth2);
+    VisitorRange range2( new Visitor( digSurf, *digSurf.begin() ) );
+    SurfelConstIterator abegin2 = range2.begin();
 
     if( mode == "mean" || mode == "gaussian" )
     {
@@ -210,27 +212,32 @@ int main( int argc, char** argv )
         // Drawing results
         SCellToMidPoint< Z3i::KSpace > midpoint( KSpaceShape );
         typedef typename Matrix3x3::RowVector RowVector;
+        typedef typename Matrix3x3::ColumnVector ColumnVector;
         for ( unsigned int i = 0; i < results.size(); ++i )
         {
             CurvInformation current = results[ i ];
-            Z3i::Point center = midpoint( *abegin2 );
+            Z3i::Space::RealPoint center = midpoint( *abegin2 );
+
 
             viewer << CustomColors3D( DGtal::Color(255,255,255,255),
                                       DGtal::Color(255,255,255,255))
                    << *abegin2;
 
-//            RowVector normal = current.eigenVectors.row(0).getNormalized(); // don't show the normal
-            RowVector curv1 = current.eigenVectors.row(1).getNormalized();
-            RowVector curv2 = current.eigenVectors.row(2).getNormalized();
+            ColumnVector normal = current.eigenVectors.column(0).getNormalized(); // don't show the normal
+            ColumnVector curv1 = current.eigenVectors.column(1).getNormalized();
+            ColumnVector curv2 = current.eigenVectors.column(2).getNormalized();
 
+            center[0] -= 0.4;// * normal;
+            center[1] -= 0.4;
+            center[2] -= 0.4;
 
-//            viewer.addLine ( center[0],
-//                             center[1],
-//                             center[2],
-//                             center[0] +  normal[0],
-//                             center[1] +  normal[1],
-//                             center[2] +  normal[2],
-//                             DGtal::Color ( 20,200,200 ), 5.0 ); // don't show the normal
+//            viewer.addLine ( center[0] - 0.5 * normal[ 0],
+//                             center[1] - 0.5 * normal[1],
+//                             center[2] - 0.5* normal[2],
+//                             center[0] +  0.5 * normal[0],
+//                             center[1] +  0.5 * normal[1],
+//                             center[2] +  0.5 * normal[2],
+//                             DGtal::Color ( 0,0,0 ), 5.0 ); // don't show the normal
 
 
             viewer.addLine ( center[0] -  0.5 * curv1[0],
