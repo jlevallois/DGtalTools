@@ -45,7 +45,8 @@
 //Digitizer
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
 #include "DGtal/topology/DigitalSurface.h"
-#include "DGtal/topology/DepthFirstVisitor.h"
+#include "DGtal/graph/DepthFirstVisitor.h"
+#include "DGtal/graph/GraphVisitorRange.h"
 
 
 //Estimator
@@ -78,7 +79,8 @@ Image* Compute( ImplicitShape & shape, std::vector< double > & re_array,
     typedef LightImplicitDigitalSurface< Z3i::KSpace, MyGaussDigitizer > MyLightImplicitDigitalSurface;
     typedef DigitalSurface< MyLightImplicitDigitalSurface > MyDigitalSurface;
     typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
-    typedef typename Visitor::VertexConstIterator SurfelConstIterator;
+    typedef GraphVisitorRange< Visitor > VisitorRange;
+    typedef VisitorRange::ConstIterator SurfelConstIterator;
     typedef GradientColorMap< Quantity > Gradient;
 
     Image * image;
@@ -110,9 +112,9 @@ Image* Compute( ImplicitShape & shape, std::vector< double > & re_array,
     {
         MyFunctor functor ( gaussDigShape, kSpace, domain, true );
 
-        Visitor *depth = new Visitor( digSurfShape, *digSurfShape.begin() );
-        SurfelConstIterator abegin = SurfelConstIterator( depth );
-        SurfelConstIterator aend = SurfelConstIterator( 0 );
+        VisitorRange range( new Visitor( digSurfShape, *digSurfShape.begin() ) );
+        SurfelConstIterator abegin = range.begin();
+        SurfelConstIterator aend = range.end();
 
         std::vector< Quantity > results;
         back_insert_iterator< std::vector< Quantity > > resultsIterator( results );

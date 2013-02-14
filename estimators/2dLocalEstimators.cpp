@@ -59,6 +59,7 @@
 #include "DGtal/geometry/curves/GridCurve.h"
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
 #include "DGtal/graph/DepthFirstVisitor.h"
+#include "DGtal/graph/GraphVisitorRange.h"
 
 
 //Estimators
@@ -485,8 +486,8 @@ computeLocalEstimations( const string & name,
         typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
         typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
         typedef DepthFirstVisitor< DigSurface > Visitor;
-        typedef typename Visitor::VertexConstIterator I;
-
+        typedef GraphVisitorRange< Visitor > VisitorRange;
+        typedef typename VisitorRange::ConstIterator I;
 
         LightImplicitDigSurface LightImplDigSurf( K, dig, SAdj, bel );
         DigSurface digSurf( LightImplDigSurf );
@@ -499,9 +500,9 @@ computeLocalEstimations( const string & name,
         IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> IICurvatureEstimator( K, functor );
 
 
-        Visitor *depth = new Visitor (digSurf, *digSurf.begin());
-        I ibegin = I(depth);
-        I iend = I(0);
+        VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
+        I ibegin = range.begin();
+        I iend = range.end();
 
         Clock c;
         c.startClock();

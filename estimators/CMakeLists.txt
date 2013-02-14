@@ -8,8 +8,6 @@ SET(DGTAL_TOOLS_SRC
   tangentBC
   statisticsEstimators
   scaleSpaceIntegralInvariant2D
-  scaleSpaceIntegralInvariant2D_ellipse
-  scaleSpaceIntegralInvariant2D_flower
   scaleSpaceIntegralInvariant3D
 )
 

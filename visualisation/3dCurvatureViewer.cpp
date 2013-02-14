@@ -188,6 +188,7 @@ int main( int argc, char** argv )
 
         for ( unsigned int i = 0; i < results.size(); ++i )
         {
+            std::cout << results[ i ] << std::endl;
             viewer << CustomColors3D( Color::Black, cmap_grad( results[ i ] ))
                    << *abegin2;
             ++abegin2;

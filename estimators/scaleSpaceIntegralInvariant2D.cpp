@@ -44,7 +44,8 @@
 //Digitizer
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
 #include "DGtal/topology/DigitalSurface.h"
-#include "DGtal/topology/DepthFirstVisitor.h"
+#include "DGtal/graph/DepthFirstVisitor.h"
+#include "DGtal/graph/GraphVisitorRange.h"
 
 
 //Estimator
@@ -118,7 +119,8 @@ int Compute( const MyShape & shape,
     typedef IntegralInvariantMeanCurvatureEstimator< Z2i::KSpace, MyFunctor > MyMeanCurvatureEstimator;
     typedef typename MyMeanCurvatureEstimator::Quantity Quantity;
     typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
-    typedef typename Visitor::VertexConstIterator SurfelConstIterator;
+    typedef GraphVisitorRange< Visitor > VisitorRange;
+    typedef typename VisitorRange::ConstIterator SurfelConstIterator;
     typedef std::vector< Quantity > vQuantity;
     typedef typename vQuantity::const_iterator const_interatorQuantity;
 
@@ -143,9 +145,9 @@ int Compute( const MyShape & shape,
 
         vQuantity results;
         back_insert_iterator< vQuantity > resultIterator( results );
-        Visitor *depth = new Visitor( digSurfShape, *digSurfShape.begin() );
-        SurfelConstIterator abegin = SurfelConstIterator( depth );
-        SurfelConstIterator aend = SurfelConstIterator( 0 );
+        VisitorRange range( new Visitor( digSurfShape, *digSurfShape.begin() ) );
+        SurfelConstIterator abegin = range.begin();
+        SurfelConstIterator aend = range.end();
         meanCurvatureEstimator.eval( abegin, aend, resultIterator );
 
         uint rsize = results.size();
@@ -233,7 +235,6 @@ int Compute( const MyShape & shape,
                 }
                 if ( i % re_size == re_size - 1 )
                 {
-                    outf << "BATMAN !!! ";
                     outf << '\n';
                 }
             }

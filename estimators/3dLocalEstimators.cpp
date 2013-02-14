@@ -50,6 +50,7 @@
 #include "DGtal/shapes/GaussDigitizer.h"
 #include "DGtal/geometry/curves/GridCurve.h"
 #include "DGtal/graph/DepthFirstVisitor.h"
+#include "DGtal/graph/GraphVisitorRange.h"
 
 
 //Estimators
@@ -145,7 +146,8 @@ compareShapeEstimators( const std::string & name,
   typedef typename KSpace::Surfel Surfel;
 
   typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
-  typedef typename Visitor::VertexConstIterator SurfelConstIterator;
+  typedef GraphVisitorRange< Visitor > VisitorRange;
+  typedef typename VisitorRange::ConstIterator SurfelConstIterator;
 
   Digitizer dig;
   dig.attach( aShape );
@@ -177,15 +179,16 @@ compareShapeEstimators( const std::string & name,
     // True values
     std::cout << "# True values computation" << std::endl;
 
-    Visitor *depth0 = new Visitor ( surf, *surf.begin() );
-    SurfelConstIterator abegin = SurfelConstIterator ( depth0 );
-    SurfelConstIterator aend = SurfelConstIterator ( 0 );
+    VisitorRange range( new Visitor( surf, *surf.begin() ) );
+    SurfelConstIterator abegin = range.begin();
+    SurfelConstIterator aend = range.end();
 
     std::vector<double> trueMeanCurvatures =
       estimateTrueMeanCurvatureQuantity ( aShape, K, h, abegin, aend );
 
-    Visitor *depth1 = new Visitor (surf, *surf.begin());
-    abegin = SurfelConstIterator ( depth1 );
+    VisitorRange range2( new Visitor( surf, *surf.begin() ) );
+    abegin = range2.begin();
+    aend = range2.end();
 
     std::vector<double> trueGaussianCurvatures =
       estimateTrueGaussianCurvatureQuantity ( aShape, K, h, abegin, aend );
@@ -205,8 +208,9 @@ compareShapeEstimators( const std::string & name,
     c.startClock();
     IIMeanCurvatureEstimator.init ( h, re_convolution_kernel );
 
-    Visitor *depth2 = new Visitor ( surf, *surf.begin() );
-    abegin = SurfelConstIterator ( depth2 );
+    VisitorRange range3( new Visitor( surf, *surf.begin() ) );
+    abegin = range3.begin();
+    aend = range3.end();
 
     std::vector<double> IIMeanCurvatures =
       estimateQuantity( IIMeanCurvatureEstimator, abegin, aend );
@@ -221,8 +225,9 @@ compareShapeEstimators( const std::string & name,
     c.startClock();
     IIGaussianCurvatureEstimator.init( h, re_convolution_kernel );
 
-    Visitor *depth3 = new Visitor ( surf, *surf.begin() );
-    abegin = SurfelConstIterator ( depth3 );
+    VisitorRange range4( new Visitor( surf, *surf.begin() ) );
+    abegin = range4.begin();
+    aend = range4.end();
 
     std::vector<double> IIGaussianCurvatures =
       estimateQuantity( IIGaussianCurvatureEstimator, abegin, aend );
@@ -236,8 +241,9 @@ compareShapeEstimators( const std::string & name,
               << " IIMeanCurvature IIGaussianCurvature"
               << std::endl;
 
-    Visitor *depth4 = new Visitor ( surf, *surf.begin() );
-    abegin = SurfelConstIterator(depth4);
+    VisitorRange range5( new Visitor( surf, *surf.begin() ) );
+    abegin = range5.begin();
+    aend = range5.end();
 
     Z3i::DigitalSet set3d( domain );
 
