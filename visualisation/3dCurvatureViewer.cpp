@@ -188,7 +188,7 @@ int main( int argc, char** argv )
 
         for ( unsigned int i = 0; i < results.size(); ++i )
         {
-            std::cout << results[ i ] << std::endl;
+//            std::cout << results[ i ] << std::endl;
             viewer << CustomColors3D( Color::Black, cmap_grad( results[ i ] ))
                    << *abegin2;
             ++abegin2;
@@ -197,8 +197,8 @@ int main( int argc, char** argv )
     else
     {
         typedef double Quantity;
-        typedef SimpleMatrix< double, 3, 3 > Matrix3x3;
-        typedef EigenValues3D::Vector3 Vector3;
+        typedef EigenValues3D< Quantity >::Matrix33 Matrix3x3;
+        typedef EigenValues3D< Quantity >::Vector3 Vector3;
         typedef CurvatureInformation< Quantity, Matrix3x3, Vector3 > CurvInformation;
 
         std::vector< CurvInformation > results;
