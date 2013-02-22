@@ -75,6 +75,7 @@
 #include "DGtal/geometry/curves/ArithmeticalDSS.h"
 #include "DGtal/geometry/curves/GeometricalDCA.h"
 
+#include "DGtal/images/ImageHelper.h"
 #include "DGtal/geometry/surfaces/FunctorOnCells.h"
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator.h"
 
@@ -495,8 +496,15 @@ computeLocalEstimations( const string & name,
         double re_convolution_kernel = radiusKernel * std::pow( h, 1.0/3.0 );
         std::cout << "# full kernel (digital) size = " <<
           re_convolution_kernel / h << std::endl;
-        typedef FunctorOnCells< Digitizer, KSpace > CurvatureIIFct;
-        CurvatureIIFct functor ( dig, K, domain );
+
+        typedef typename ImageSelector< Domain, unsigned int >::Type Image;
+        Image image( domain );
+        DGtal::imageFromRangeAndValue( domain.begin(), domain.end(), image );
+
+        typedef ImageToConstantFunctor< Image, Digitizer > MyPointFunctor;
+        MyPointFunctor pointFct( &image, &dig, 1 );
+        typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
+        CurvatureIIFct functor ( pointFct, K );
         IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> IICurvatureEstimator( K, functor );
 
 
@@ -621,7 +629,7 @@ int main( int argc, char** argv )
 		  << "\t - Maximal DSS based estimators" << std::endl
 		  << "\t - Maximal DCA based estimators" << std::endl
 		  << "\t - Binomial convolver based estimators" << std::endl
-          << "\t - Integral Invariants based estimators" << std::endl
+		  << "\t - Integral Invariants based estimators" << std::endl
 		  << std::endl
 		  << "The i-th family of estimators is enabled if the i-th character of the binary word is not 0. "
 		  << "The default binary word is '100'. This means that the first family of estimators, "

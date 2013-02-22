@@ -115,8 +115,8 @@ int Compute( const MyShape & shape,
     MyLightImplicitDigitalSurface lightImplDigSurf( kSpace, gaussDigShape, SAdj, bel );
     MyDigitalSurface digSurfShape( lightImplDigSurf );
 
-    typedef FunctorOnCells< MyGaussDigitizer, Z2i::KSpace > MyFunctor;
-    typedef IntegralInvariantMeanCurvatureEstimator< Z2i::KSpace, MyFunctor > MyMeanCurvatureEstimator;
+    typedef FunctorOnCells< MyGaussDigitizer, Z2i::KSpace > MyCellFunctor;
+    typedef IntegralInvariantMeanCurvatureEstimator< Z2i::KSpace, MyCellFunctor > MyMeanCurvatureEstimator;
     typedef typename MyMeanCurvatureEstimator::Quantity Quantity;
     typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
     typedef GraphVisitorRange< Visitor > VisitorRange;
@@ -134,7 +134,7 @@ int Compute( const MyShape & shape,
 
     for ( uint step_re = 0; step_re < re_size; ++step_re )
     {
-        MyFunctor functor ( gaussDigShape, kSpace, domain, true );
+        MyCellFunctor functor ( gaussDigShape, kSpace, domain, true );
         MyMeanCurvatureEstimator meanCurvatureEstimator ( kSpace, functor );
 
         Clock c;

@@ -61,7 +61,7 @@
 #include "DGtal/geometry/surfaces/FunctorOnCells.h"
 
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
-
+#include "DGtal/images/imagesSetsUtils/SimpleThresholdForegroundPredicate.h"
 #include "DGtal/math/MPolynomial.h"
 #include "DGtal/io/readers/MPolynomialReader.h"
 #include "DGtal/shapes/implicit/ImplicitPolynomial3Shape.h"
@@ -154,6 +154,10 @@ compareShapeEstimators( const std::string & name,
   dig.init( RealPoint( border_min ), RealPoint( border_max ), h );
   Domain domain = dig.getDomain();
 
+  typedef typename ImageSelector< Domain, unsigned int >::Type Image;
+  Image image( domain );
+  DGtal::imageFromRangeAndValue( domain.begin(), domain.end(), image );
+
   KSpace K;
   bool ok = K.init( domain.lowerBound(), domain.upperBound(), true );
   if ( ! ok )
@@ -193,13 +197,15 @@ compareShapeEstimators( const std::string & name,
     std::vector<double> trueGaussianCurvatures =
       estimateTrueGaussianCurvatureQuantity ( aShape, K, h, abegin, aend );
 
+    typedef ImageToConstantFunctor< Image, Digitizer > MyPointFunctor;
+    MyPointFunctor pointFunctor( &image, &dig, 1, true );
 
     // Integral Invariant Mean Curvature
     std::cout << "# Mean Curvature estimation from the Integral Invariant viewpoint" << std::endl;
-    typedef FunctorOnCells< Digitizer, KSpace > MyFunctor;
+    typedef FunctorOnCells< MyPointFunctor, KSpace > MyCellFunctor;
 
-    MyFunctor functor ( dig, K, domain, true );
-    IntegralInvariantMeanCurvatureEstimator< KSpace, MyFunctor > IIMeanCurvatureEstimator ( K, functor );
+    MyCellFunctor functor ( pointFunctor, K );
+    IntegralInvariantMeanCurvatureEstimator< KSpace, MyCellFunctor > IIMeanCurvatureEstimator ( K, functor );
 
     double re_convolution_kernel = radius_kernel * std::pow( h, 1.0/3.0 ); // to obtains convergence results, re must follow the rule re=kh^(1/3)
     std::cout << "# computed kernel radius = " << re_convolution_kernel << std::endl;
@@ -219,7 +225,7 @@ compareShapeEstimators( const std::string & name,
     // Integral Invariant Gaussian Curvature
     std::cout << "# Gaussian Curvature estimation from the Integral Invariant viewpoint" << std::endl;
 
-    IntegralInvariantGaussianCurvatureEstimator< KSpace, MyFunctor > IIGaussianCurvatureEstimator ( K, functor );
+    IntegralInvariantGaussianCurvatureEstimator< KSpace, MyCellFunctor > IIGaussianCurvatureEstimator ( K, functor );
     std::cout << "# computed kernel radius = " << re_convolution_kernel << std::endl;
 
     c.startClock();
