@@ -71,12 +71,12 @@ using namespace DGtal;
 
 void usage( int argc, char** argv )
 {
-    trace.error() << "Usage: " << argv[ 0 ]
-                           << " <fileName.vol> <re> <\"mean\" || \"gaussian\" || \"princurv\">";
-    trace.error() << "\t - <filename.vol> file you want to show the curvature information.";
-    trace.error() << "\t - <re> Euclidean radius of the kernel.";
-    trace.error() << "\t - <\"mean\" || \"gaussian\"> show mean or Gaussian curvature on shape.";
-    trace.error() << "Example : "<< argv[ 0 ] << " Al.150.vol 7.39247665 \"mean\"";
+    trace.info() << "Usage: " << argv[ 0 ]
+		  << " <fileName.vol> <re> <\"mean\" || \"gaussian\" || \"princurv\">"<< std::endl;
+    trace.info() << "\t - <filename.vol> file you want to show the curvature information."<< std::endl;
+    trace.info() << "\t - <re> Euclidean radius of the kernel."<< std::endl;
+    trace.info() << "\t - <\"mean\" || \"gaussian\"> show mean or Gaussian curvature on shape."<< std::endl;
+    trace.info() << "Example : "<< argv[ 0 ] << " Al.150.vol 7 \"mean\""<< std::endl;
 }
 
 int main( int argc, char** argv )
@@ -217,8 +217,8 @@ int main( int argc, char** argv )
 
         // Drawing results
         SCellToMidPoint< Z3i::KSpace > midpoint( KSpaceShape );
-        typedef typename Matrix3x3::RowVector RowVector;
-        typedef typename Matrix3x3::ColumnVector ColumnVector;
+        typedef  Matrix3x3::RowVector RowVector;
+        typedef  Matrix3x3::ColumnVector ColumnVector;
         for ( unsigned int i = 0; i < results.size(); ++i )
         {
             CurvInformation current = results[ i ];
