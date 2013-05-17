@@ -176,8 +176,8 @@ compareShapeEstimators( const std::string & name,
     MyDigitalSurface surf ( LightImplDigSurf );
 
 
-    std::cout << "# range size = " << surf.size() << std::endl;
     std::cout << "# h = " << h << std::endl;
+    std::cout << "# range size = " << surf.size() << std::endl;
 
     // Estimations
     // True values

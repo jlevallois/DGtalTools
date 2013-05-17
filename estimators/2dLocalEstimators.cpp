@@ -309,6 +309,7 @@ computeLocalEstimations( const std::string & name,
     // Ranges
     typedef typename GridCurve<KSpace>::PointsRange PointsRange; 
     PointsRange pointsRange = gridcurve.getPointsRange(); 
+    std::cout << "# h = " << h << std::endl;
     std::cout << "# range size = " << pointsRange.size() << std::endl;  
 
     // Estimations

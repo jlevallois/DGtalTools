@@ -132,7 +132,7 @@ int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsign
   BOOST_FOREACH (const std::string & cline, tokens_param)
   {
     std::string line = cline;
-    if ( h != 0.0 && radius != 0.0 )
+    if ( h != 0.0 )//&& radius != 0.0 )
       break;
 
     int pos;
@@ -144,12 +144,12 @@ int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsign
       continue;
     }
 
-    pos = line.find("# computed kernel radius = ");
-    if ( pos != std::string::npos)
-    {
-      radius = atof ( (line.erase ( pos, 26 )).c_str() );
-      continue;
-    }
+//    pos = line.find("# computed kernel radius = ");
+//    if ( pos != std::string::npos)
+//    {
+//      radius = atof ( (line.erase ( pos, 26 )).c_str() );
+//      continue;
+//    }
   }
 
   if (h == 0.0 )
@@ -164,7 +164,7 @@ int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsign
     return 0;
   }
 
-  double absd1d2 = 0.0;
+  double absd1d2;
 
   double L1 = 0.0;
   double L2 = 0.0;
@@ -172,7 +172,7 @@ int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsign
 
   for ( int index = 0; index < sizeVector1; ++index )
   {
-      absd1d2 = abs ( data1[index] - data2[index] );
+      absd1d2 = std::abs ( data1[index] - data2[index] );
       if ( Linf < absd1d2 )
           Linf = absd1d2;
       L1 += absd1d2;
