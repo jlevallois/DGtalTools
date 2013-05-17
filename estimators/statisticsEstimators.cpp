@@ -33,6 +33,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <cmath>
 #include <math.h>
 #include <boost/foreach.hpp>
 #include <boost/tokenizer.hpp>
@@ -172,7 +173,7 @@ int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsign
 
   for ( int index = 0; index < sizeVector1; ++index )
   {
-      absd1d2 = std::abs ( data1[index] - data2[index] );
+      absd1d2 = std::abs ( (double)( data1[index] - data2[index] ));
       if ( Linf < absd1d2 )
           Linf = absd1d2;
       L1 += absd1d2;
