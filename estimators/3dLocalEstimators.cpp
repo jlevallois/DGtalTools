@@ -51,6 +51,7 @@
 #include "DGtal/geometry/curves/GridCurve.h"
 #include "DGtal/graph/DepthFirstVisitor.h"
 #include "DGtal/graph/GraphVisitorRange.h"
+#include "DGtal/geometry/volumes/KanungoNoise.h"
 
 
 //Estimators
