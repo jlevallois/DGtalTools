@@ -311,6 +311,7 @@ computeLocalEstimations( const std::string & name,
                          double h,
                          struct OptionsIntegralInvariant< Z2i::RealPoint > optionsII,
                          const std::string & options,
+                         const std::string & properties,
                          double noiseLevel = 0.0 )
 {
     // Types
@@ -328,6 +329,9 @@ computeLocalEstimations( const std::string & name,
     bool withNoise = ( noiseLevel <= 0.0 ) ? false : true;
     if( withNoise )
         noiseLevel *= h;
+
+    bool tangeant = ( properties.at( 0 ) != '0' ) ? true : false;
+    bool curvature = ( properties.at( 1 ) != '0' ) ? true : false;
 
     // Digitizer
     Digitizer dig;
@@ -391,45 +395,43 @@ computeLocalEstimations( const std::string & name,
             std::cout << "# noise level (current) = " << noiseLevel << std::endl;
         }
 
-        if (options.at(3) != '0')
-        {
-            if( optionsII.radius <= 0.0 )
-            {
-                optionsII.radius = suggestedSizeIntegralInvariant( h, dig.round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-                std::cout << "Estimated radius: " << optionsII.radius << std::endl;
-            }
-        }
-
         // Estimations
         if (gridcurve.isClosed())
         {
-
-            std::cout << "# True tangents computation..." << std::endl;
-            std::vector<RealPoint> trueTangents;
+            std::vector< RealPoint > trueTangents;
+            if( tangeant )
             {
-                typedef ParametricShapeTangentFunctor< Shape > TangentFunctor;
-                typedef typename PointsRange::ConstCirculator C;
-                TrueLocalEstimatorOnPoints< C, Shape, TangentFunctor >
-                        trueTangentEstimator;
-                trueTangentEstimator.attach( &aShape );
-                estimation( trueTangentEstimator, h,
-                            pointsRange.c(), pointsRange.c(),
-                            std::back_inserter(trueTangents) );
-                estimationError(trueTangents.size(), pointsRange.size());
+                std::cout << "# True tangents computation..." << std::endl;
+
+                {
+                    typedef ParametricShapeTangentFunctor< Shape > TangentFunctor;
+                    typedef typename PointsRange::ConstCirculator C;
+                    TrueLocalEstimatorOnPoints< C, Shape, TangentFunctor >
+                            trueTangentEstimator;
+                    trueTangentEstimator.attach( &aShape );
+                    estimation( trueTangentEstimator, h,
+                                pointsRange.c(), pointsRange.c(),
+                                std::back_inserter(trueTangents) );
+                    estimationError(trueTangents.size(), pointsRange.size());
+                }
             }
 
-            std::cout << "# True curvature values computation..." << std::endl;
-            std::vector<double> trueCurvatures;
+            std::vector< double > trueCurvatures;
+            if( curvature )
             {
-                typedef ParametricShapeCurvatureFunctor< Shape > CurvatureFunctor;
-                typedef typename PointsRange::ConstCirculator C;
-                TrueLocalEstimatorOnPoints< C, Shape, CurvatureFunctor >
-                        trueCurvatureEstimator;
-                trueCurvatureEstimator.attach( &aShape );
-                estimation( trueCurvatureEstimator, h,
-                            pointsRange.c(), pointsRange.c(),
-                            std::back_inserter(trueCurvatures) );
-                estimationError(trueCurvatures.size(), pointsRange.size());
+                std::cout << "# True curvature values computation..." << std::endl;
+
+                {
+                    typedef ParametricShapeCurvatureFunctor< Shape > CurvatureFunctor;
+                    typedef typename PointsRange::ConstCirculator C;
+                    TrueLocalEstimatorOnPoints< C, Shape, CurvatureFunctor >
+                            trueCurvatureEstimator;
+                    trueCurvatureEstimator.attach( &aShape );
+                    estimation( trueCurvatureEstimator, h,
+                                pointsRange.c(), pointsRange.c(),
+                                std::back_inserter(trueCurvatures) );
+                    estimationError(trueCurvatures.size(), pointsRange.size());
+                }
             }
 
             // Maximal Segments
@@ -438,47 +440,53 @@ computeLocalEstimations( const std::string & name,
             std::vector<double> MDSSCurvatures2;
             if (options.at(0) != '0')
             {
-                std::cout << "# Most centered maximal DSS tangent estimation" << std::endl;
+                if( tangeant )
                 {
-                    typedef typename PointsRange::ConstCirculator C;
-                    typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
-                    typedef TangentFromDSSEstimator<SegmentComputer> SCFunctor;
-                    SegmentComputer sc;
-                    SCFunctor f;
-                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSTangentEstimator(sc, f);
-                    estimation( MDSSTangentEstimator, h,
-                                pointsRange.c(), pointsRange.c(),
-                                std::back_inserter(MDSSTangents) );
-                    estimationError(MDSSTangents.size(), pointsRange.size());
+                    std::cout << "# Most centered maximal DSS tangent estimation" << std::endl;
+                    {
+                        typedef typename PointsRange::ConstCirculator C;
+                        typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
+                        typedef TangentFromDSSEstimator<SegmentComputer> SCFunctor;
+                        SegmentComputer sc;
+                        SCFunctor f;
+                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSTangentEstimator(sc, f);
+                        estimation( MDSSTangentEstimator, h,
+                                    pointsRange.c(), pointsRange.c(),
+                                    std::back_inserter(MDSSTangents) );
+                        estimationError(MDSSTangents.size(), pointsRange.size());
+                    }
                 }
-                std::cout << "# Most centered maximal DSS curvature estimation"
-                          << " (from length only)" << std::endl;
+                if( curvature )
                 {
-                    typedef typename PointsRange::ConstCirculator C;
-                    typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
-                    typedef CurvatureFromDSSLengthEstimator<SegmentComputer> SCFunctor;
-                    SegmentComputer sc;
-                    SCFunctor f;
-                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSCurvatureEstimator(sc, f);
-                    estimation( MDSSCurvatureEstimator, h,
-                                pointsRange.c(), pointsRange.c(),
-                                std::back_inserter(MDSSCurvatures1) );
-                    estimationError(MDSSCurvatures1.size(), pointsRange.size());
-                }
+                    std::cout << "# Most centered maximal DSS curvature estimation"
+                              << " (from length only)" << std::endl;
+                    {
+                        typedef typename PointsRange::ConstCirculator C;
+                        typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
+                        typedef CurvatureFromDSSLengthEstimator<SegmentComputer> SCFunctor;
+                        SegmentComputer sc;
+                        SCFunctor f;
+                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSCurvatureEstimator(sc, f);
+                        estimation( MDSSCurvatureEstimator, h,
+                                    pointsRange.c(), pointsRange.c(),
+                                    std::back_inserter(MDSSCurvatures1) );
+                        estimationError(MDSSCurvatures1.size(), pointsRange.size());
+                    }
 
-                std::cout << "# Most centered maximal DSS curvature estimation"
-                          << " (from length and width)" << std::endl;
-                {
-                    typedef typename PointsRange::ConstCirculator C;
-                    typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
-                    typedef CurvatureFromDSSEstimator<SegmentComputer> SCFunctor;
-                    SegmentComputer sc;
-                    SCFunctor f;
-                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSCurvatureEstimator(sc, f);
-                    estimation( MDSSCurvatureEstimator, h,
-                                pointsRange.c(), pointsRange.c(),
-                                std::back_inserter(MDSSCurvatures2) );
-                    estimationError(MDSSCurvatures2.size(), pointsRange.size());
+                    std::cout << "# Most centered maximal DSS curvature estimation"
+                              << " (from length and width)" << std::endl;
+                    {
+                        typedef typename PointsRange::ConstCirculator C;
+                        typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
+                        typedef CurvatureFromDSSEstimator<SegmentComputer> SCFunctor;
+                        SegmentComputer sc;
+                        SCFunctor f;
+                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSCurvatureEstimator(sc, f);
+                        estimation( MDSSCurvatureEstimator, h,
+                                    pointsRange.c(), pointsRange.c(),
+                                    std::back_inserter(MDSSCurvatures2) );
+                        estimationError(MDSSCurvatures2.size(), pointsRange.size());
+                    }
                 }
             }
 
@@ -487,38 +495,44 @@ computeLocalEstimations( const std::string & name,
             std::vector<double> MDCACurvatures;
             if (options.at(1) != '0')
             {
-                std::cout << "# Most centered maximal DCA tangents estimation"
-                          << std::endl;
+                if( tangeant )
                 {
-                    typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
-                    typedef typename Range::ConstCirculator C;
-                    Range r = gridcurve.getIncidentPointsRange();
-                    typedef GeometricalDCA<C> SegmentComputer;
-                    typedef TangentFromDCAEstimator<SegmentComputer> SCFunctor;
-                    SegmentComputer sc;
-                    SCFunctor f;
-                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCATangentEstimator(sc, f);
-                    estimation( MDCATangentEstimator, h,
-                                r.c(), r.c(),
-                                std::back_inserter(MDCATangents) );
-                    estimationError(MDCATangents.size(), pointsRange.size());
+                    std::cout << "# Most centered maximal DCA tangents estimation"
+                              << std::endl;
+                    {
+                        typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
+                        typedef typename Range::ConstCirculator C;
+                        Range r = gridcurve.getIncidentPointsRange();
+                        typedef GeometricalDCA<C> SegmentComputer;
+                        typedef TangentFromDCAEstimator<SegmentComputer> SCFunctor;
+                        SegmentComputer sc;
+                        SCFunctor f;
+                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCATangentEstimator(sc, f);
+                        estimation( MDCATangentEstimator, h,
+                                    r.c(), r.c(),
+                                    std::back_inserter(MDCATangents) );
+                        estimationError(MDCATangents.size(), pointsRange.size());
+                    }
                 }
 
-                std::cout << "# Most centered maximal DCA curvature estimation"
-                          << std::endl;
+                if( curvature )
                 {
-                    typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
-                    typedef typename Range::ConstCirculator C;
-                    Range r = gridcurve.getIncidentPointsRange();
-                    typedef GeometricalDCA<C> SegmentComputer;
-                    typedef CurvatureFromDCAEstimator<SegmentComputer> SCFunctor;
-                    SegmentComputer sc;
-                    SCFunctor f;
-                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCACurvatureEstimator(sc, f);
-                    estimation( MDCACurvatureEstimator, h,
-                                r.c(), r.c(),
-                                std::back_inserter(MDCACurvatures) );
-                    estimationError(MDCACurvatures.size(), pointsRange.size());
+                    std::cout << "# Most centered maximal DCA curvature estimation"
+                              << std::endl;
+                    {
+                        typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
+                        typedef typename Range::ConstCirculator C;
+                        Range r = gridcurve.getIncidentPointsRange();
+                        typedef GeometricalDCA<C> SegmentComputer;
+                        typedef CurvatureFromDCAEstimator<SegmentComputer> SCFunctor;
+                        SegmentComputer sc;
+                        SCFunctor f;
+                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCACurvatureEstimator(sc, f);
+                        estimation( MDCACurvatureEstimator, h,
+                                    r.c(), r.c(),
+                                    std::back_inserter(MDCACurvatures) );
+                        estimationError(MDCACurvatures.size(), pointsRange.size());
+                    }
                 }
             }
 
@@ -527,6 +541,7 @@ computeLocalEstimations( const std::string & name,
             std::vector <double> BCCurvatures;
             if (options.at(2) != '0')
             {
+                if( tangeant )
                 {
                     std::cout << "# Tangents estimation from binomial convolution" << std::endl;
                     typedef typename PointsRange::ConstIterator I;
@@ -537,15 +552,18 @@ computeLocalEstimations( const std::string & name,
                             TangentBCFct;
                     BinomialConvolverEstimator< MyBinomialConvolver, TangentBCFct> BCTangentEstimator;
 
-                    Clock c;
-                    c.startClock();
-                    BCTangentEstimator.init( h, pointsRange.begin(), pointsRange.end(), true );
-                    BCTangentEstimator.eval( pointsRange.begin(), pointsRange.end(), std::back_inserter(BCTangents) );
-                    double time = c.stopClock();
-                    std::cout << "# Time: " << time << std::endl;
-                    estimationError(BCTangents.size(), pointsRange.size());
+                    if( BCTangentEstimator.init( h, pointsRange.begin(), pointsRange.end(), true ))
+                    {
+                        Clock c;
+                        c.startClock();
+                        BCTangentEstimator.eval( pointsRange.begin(), pointsRange.end(), std::back_inserter(BCTangents) );
+                        double time = c.stopClock();
+                        std::cout << "# Time: " << time << std::endl;
+                        estimationError(BCTangents.size(), pointsRange.size());
+                    }
                 }
 
+                if( curvature )
                 {
                     std::cout << "# Curvature estimation from binomial convolution" << std::endl;
                     typedef typename PointsRange::ConstIterator I;
@@ -556,13 +574,15 @@ computeLocalEstimations( const std::string & name,
                             CurvatureBCFct;
                     BinomialConvolverEstimator< MyBinomialConvolver, CurvatureBCFct> BCCurvatureEstimator;
 
-                    Clock c;
-                    c.startClock();
-                    BCCurvatureEstimator.init( h, pointsRange.begin(), pointsRange.end(), true );
-                    BCCurvatureEstimator.eval( pointsRange.begin(), pointsRange.end(), std::back_inserter(BCCurvatures) );
-                    double time = c.stopClock();
-                    std::cout << "# Time: " << time << std::endl;
-                    estimationError(BCCurvatures.size(), pointsRange.size());
+                    if( BCCurvatureEstimator.init( h, pointsRange.begin(), pointsRange.end(), true ))
+                    {
+                        Clock c;
+                        c.startClock();
+                        BCCurvatureEstimator.eval( pointsRange.begin(), pointsRange.end(), std::back_inserter(BCCurvatures) );
+                        double time = c.stopClock();
+                        std::cout << "# Time: " << time << std::endl;
+                        estimationError(BCCurvatures.size(), pointsRange.size());
+                    }
                 }
             }
 
@@ -570,8 +590,15 @@ computeLocalEstimations( const std::string & name,
             std::vector <double> IICurvatures;
             if (options.at(3) != '0')
             {
+                if( curvature )
                 {
                     std::cout << "# Curvature estimation from integral invariants" << std::endl;
+
+                    if( optionsII.radius <= 0.0 )
+                    {
+                        optionsII.radius = suggestedSizeIntegralInvariant( h, dig.round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
+                        std::cout << "# Estimated radius: " << optionsII.radius << std::endl;
+                    }
                     double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
                     std::cout << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
                                  re_convolution_kernel / h << std::endl;
@@ -656,15 +683,55 @@ computeLocalEstimations( const std::string & name,
             }
 
             // Output
-            std::cout << "# id x y tx ty k";
+            std::cout << "# id x y";
+            if( tangeant )
+            {
+                std::cout << "tx ty";
+            }
+            if( curvature )
+            {
+                std::cout << " k";
+            }
             if (options.at(0) != '0')
-                std::cout << " MDSStx MDSSty MDSSkFromLendth MDSSkFromLengthAndWidth";
+            {
+                if( tangeant )
+                {
+                    std::cout << " MDSStx MDSSty";
+                }
+                if( curvature )
+                {
+                    std::cout << " MDSSkFromLendth MDSSkFromLengthAndWidth";
+                }
+            }
             if (options.at(1) != '0')
-                std::cout << " MDCAtx MDCAty MDCAk";
+            {
+                if( tangeant )
+                {
+                    std::cout << " MDCAtx MDCAty";
+                }
+                if( curvature )
+                {
+                    std::cout << " MDCAk";
+                }
+            }
             if (options.at(2) != '0')
-                std::cout << " BCtx BCty BCk";
+            {
+                if( tangeant )
+                {
+                    std::cout << " BCtx BCty";
+                }
+                if( curvature )
+                {
+                    std::cout << " BCk";
+                }
+            }
             if (options.at(3) != '0')
-                std::cout << " IIk";
+            {
+                if( curvature )
+                {
+                    std::cout << " IIk";
+                }
+            }
             std::cout << std::endl;
 
             unsigned int i = 0;
@@ -675,25 +742,76 @@ computeLocalEstimations( const std::string & name,
                  it != itEnd; ++it, ++i)
             {
                 std::cout << i << std::setprecision( 15 )
-                          << " " << it->operator[](0) << " " << it->operator[](1)
-                                                         << " " << trueTangents[ i ][ 0 ]
-                                                         << " " << trueTangents[ i ][ 1 ]
-                                                         << " " << trueCurvatures[ i ];
+                          << " " << it->operator[](0) << " " << it->operator[](1);
+
+                if( tangeant )
+                {
+                    std::cout << " " << trueTangents[ i ][ 0 ]
+                              << " " << trueTangents[ i ][ 1 ];
+                }
+                if( curvature )
+                {
+                    std::cout << " " << trueCurvatures[ i ];
+                }
+
                 if (options.at(0) != '0')
-                    std::cout << " " << MDSSTangents[ i ][ 0 ]
-                              << " " << MDSSTangents[ i ][ 1 ]
-                              << " " << MDSSCurvatures1[ i ]
-                                 << " " << MDSSCurvatures2[ i ];
+                {
+                    if( tangeant )
+                    {
+                        std::cout << " " << MDSSTangents[ i ][ 0 ]
+                                  << " " << MDSSTangents[ i ][ 1 ];
+                    }
+                    if( curvature )
+                    {
+                        std::cout << " " << MDSSCurvatures1[ i ]
+                                  << " " << MDSSCurvatures2[ i ];
+                    }
+                }
                 if (options.at(1) != '0')
-                    std::cout << " " << MDCATangents[ i ][ 0 ]
-                              << " " << MDCATangents[ i ][ 1 ]
-                              << " " << MDCACurvatures[ i ];
+                {
+                    if( tangeant )
+                    {
+                        std::cout << " " << MDCATangents[ i ][ 0 ]
+                                  << " " << MDCATangents[ i ][ 1 ];
+                    }
+                    if( curvature )
+                    {
+                        std::cout << " " << MDCACurvatures[ i ];
+                    }
+                }
                 if (options.at(2) != '0')
-                    std::cout << " " << BCTangents[ i ][ 0 ]
-                              << " " << BCTangents[ i ][ 1 ]
-                              << " " << BCCurvatures[ i ];
+                {
+                    if ( tangeant )
+                    {
+                        if( BCTangents.size() > 0 )
+                        {
+                            std::cout << " " << BCTangents[ i ][ 0 ]
+                                      << " " << BCTangents[ i ][ 1 ];
+                        }
+                        else
+                        {
+                            std::cout << " NA NA";
+                        }
+                    }
+                    if ( curvature )
+                    {
+                        if( BCCurvatures.size() > 0 )
+                        {
+                            std::cout << " " << BCCurvatures[ i ];
+                        }
+                        else
+                        {
+                            std::cout << " NA";
+                        }
+                    }
+                }
                 if (options.at(3) != '0')
-                    std::cout << " " << IICurvatures[ prsize - i ];
+                {
+                    if( curvature )
+                    {
+                        std::cout << " " << IICurvatures[ prsize - i ];
+                    }
+                }
                 std::cout << std::endl;
             }
 
@@ -741,6 +859,7 @@ int main( int argc, char** argv )
             ("center_y,y",   po::value<double>()->default_value(0.0), "y-coordinate of the shape center (double)" )
             ("gridstep,g",  po::value<double>()->default_value(1.0), "Grid step for the digitization" )
             ("noise,n",  po::value<double>()->default_value(0.0), "Level of noise to perturb the shape" )
+            ("properties",  po::value<std::string>()->default_value("11"), "the i-th property is disabled iff there is a 0 at position i" )
             ("estimators,e",  po::value<std::string>()->default_value("1000"), "the i-th estimator is disabled iff there is a 0 at position i" );
     
 
@@ -757,7 +876,7 @@ int main( int argc, char** argv )
     {
         trace.info()<< "Compare local estimators on implicit shapes using DGtal library" <<std::endl
                     << "Basic usage: "<<std::endl
-                    << "\tlocalEstimators --shape <shapeName> [required parameters] --estimators <binaryWord>"<<std::endl
+                    << "\tlocalEstimators --shape <shapeName> [required parameters] --estimators <binaryWord> --properties <binaryWord>"<<std::endl
                     << std::endl
                     << "Below are the different available families of estimators: " << std::endl
                     << "\t - Maximal DSS based estimators" << std::endl
@@ -768,6 +887,10 @@ int main( int argc, char** argv )
                     << "The i-th family of estimators is enabled if the i-th character of the binary word is not 0. "
                     << "The default binary word is '100'. This means that the first family of estimators, "
                     << "ie. maximal DSS based estimators, is enabled, whereas the next ones are disabled. "
+                    << std::endl
+                    << "Below are the different available properties: " << std::endl
+                    << "\t - Tangeant" << std::endl
+                    << "\t - Curvature" << std::endl
                     << std::endl
                     << general_opt << std::endl;
         return 0;
@@ -793,6 +916,17 @@ int main( int argc, char** argv )
         trace.error() << " At least " << nb
                       << " characters are required "
                       << " with option --estimators.";
+        trace.info() << std::endl;
+        exit(1);
+    }
+
+    nb = 2; //number of available properties
+    std::string properties = vm["properties"].as<std::string>();
+    if (properties.size() < nb)
+    {
+        trace.error() << " At least " << nb
+                      << " characters are required "
+                      << " with option --properties.";
         trace.info() << std::endl;
         exit(1);
     }
@@ -823,7 +957,7 @@ int main( int argc, char** argv )
         double radius = vm["radius"].as<double>();
 
         Ball2D<Space> ball(Z2i::Point(0,0), radius);
-        computeLocalEstimations<Space>( "Ball", ball, h, optII, options, noiseLevel );
+        computeLocalEstimations<Space>( "Ball", ball, h, optII, options, properties, noiseLevel );
     }
     else if (id ==1)
     {
@@ -858,7 +992,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         Flower2D<Space> flower( center, radius, varsmallradius, k, phi );
-        computeLocalEstimations<Space>( "Flower", flower, h, optII, options, noiseLevel );
+        computeLocalEstimations<Space>( "Flower", flower, h, optII, options, properties, noiseLevel );
     }
     else if (id ==4)
     {
@@ -871,7 +1005,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         NGon2D<Space> object( center, radius, k, phi );
-        computeLocalEstimations<Space>( "NGon", object, h, optII, options, noiseLevel );
+        computeLocalEstimations<Space>( "NGon", object, h, optII, options, properties, noiseLevel );
     }
     else if (id ==5)
     {
@@ -886,7 +1020,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         AccFlower2D<Space> accflower( center, radius, varsmallradius, k, phi );
-        computeLocalEstimations<Space>( "AccFlower", accflower, h, optII, options, noiseLevel );
+        computeLocalEstimations<Space>( "AccFlower", accflower, h, optII, options, properties, noiseLevel );
     }
     else if (id ==6)
     {
@@ -899,6 +1033,6 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         Ellipse2D<Space> ellipse( center, a1, a2, phi );
-        computeLocalEstimations<Space>( "Ellipse", ellipse, h, optII, options, noiseLevel );
+        computeLocalEstimations<Space>( "Ellipse", ellipse, h, optII, options, properties, noiseLevel );
     }
 }
