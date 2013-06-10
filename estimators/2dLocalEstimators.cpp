@@ -517,21 +517,24 @@ computeLocalEstimations( const std::string & name,
 
                 if( curvature )
                 {
-                    std::cout << "# Most centered maximal DCA curvature estimation"
-                              << std::endl;
+                    if( h > 0.0012 ) /// @bug Jérémy <! In order to avoid swap
                     {
-                        typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
-                        typedef typename Range::ConstCirculator C;
-                        Range r = gridcurve.getIncidentPointsRange();
-                        typedef GeometricalDCA<C> SegmentComputer;
-                        typedef CurvatureFromDCAEstimator<SegmentComputer> SCFunctor;
-                        SegmentComputer sc;
-                        SCFunctor f;
-                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCACurvatureEstimator(sc, f);
-                        estimation( MDCACurvatureEstimator, h,
-                                    r.c(), r.c(),
-                                    std::back_inserter(MDCACurvatures) );
-                        estimationError(MDCACurvatures.size(), pointsRange.size());
+                        std::cout << "# Most centered maximal DCA curvature estimation"
+                                  << std::endl;
+                        {
+                            typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
+                            typedef typename Range::ConstCirculator C;
+                            Range r = gridcurve.getIncidentPointsRange();
+                            typedef GeometricalDCA<C> SegmentComputer;
+                            typedef CurvatureFromDCAEstimator<SegmentComputer> SCFunctor;
+                            SegmentComputer sc;
+                            SCFunctor f;
+                            MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCACurvatureEstimator(sc, f);
+                            estimation( MDCACurvatureEstimator, h,
+                                        r.c(), r.c(),
+                                        std::back_inserter(MDCACurvatures) );
+                            estimationError(MDCACurvatures.size(), pointsRange.size());
+                        }
                     }
                 }
             }
@@ -776,7 +779,14 @@ computeLocalEstimations( const std::string & name,
                     }
                     if( curvature )
                     {
-                        std::cout << " " << MDCACurvatures[ i ];
+                        if( MDCACurvatures.size() > 0 )
+                        {
+                            std::cout << " " << MDCACurvatures[ i ];
+                        }
+                        else
+                        {
+                            std::cout << " NA";
+                        }
                     }
                 }
                 if (options.at(2) != '0')
