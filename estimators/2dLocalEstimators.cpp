@@ -517,7 +517,7 @@ computeLocalEstimations( const std::string & name,
 
                 if( curvature )
                 {
-                    if( h > 0.0012 ) /// @bug Jérémy <! In order to avoid swap
+                    if( h > 0.0024 ) /// @bug Jérémy <! In order to avoid swap
                     {
                         std::cout << "# Most centered maximal DCA curvature estimation"
                                   << std::endl;
