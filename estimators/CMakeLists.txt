@@ -1,5 +1,6 @@
 SET(DGTAL_TOOLS_SRC
   2dLocalEstimators
+  2dLocalEstimatorsII
   3dLocalEstimators
   lengthEstimators
   vol2normalField

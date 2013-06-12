@@ -80,6 +80,8 @@
 #include "DGtal/geometry/surfaces/FunctorOnCells.h"
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator.h"
 
+#include "DGtal/kernel/BasicPointFunctors.h"
+
 using namespace DGtal;
 
 
@@ -103,7 +105,7 @@ struct OptionsIntegralInvariant
 };
 
 
-/** 
+/**
  * Create the static list of shapes.
  *
  */
@@ -161,7 +163,7 @@ void createList()
 
 }
 
-/** 
+/**
  * Display the shape list with parameters.
  *
  */
@@ -180,7 +182,7 @@ void displayList()
 }
 
 
-/** 
+/**
  * Check if a given shape is available. If not, we exit with an error.
  * If it is, we return the corresponding index in the global vectors.
  *
@@ -205,7 +207,7 @@ unsigned int checkAndReturnIndex(const std::string &shapeName)
     return pos;
 }
 
-/** 
+/**
  * Missing parameter error message.
  *
  * @param param
@@ -217,7 +219,7 @@ void missingParam(std::string param)
     exit(1);
 }
 
-/** 
+/**
  * Estimation error message.
  *
  * @param currentSize number of values returned by the estimator
@@ -236,7 +238,7 @@ void estimationError(int currentSize, int expectedSize)
 
 }
 
-/** 
+/**
  * Estimation. Merely call the init and eval methods of the
  * given estimator.
  *
@@ -248,7 +250,7 @@ void estimationError(int currentSize, int expectedSize)
  */
 template <typename Estimator, typename ConstIterator, typename OutputIterator>
 void
-estimation( Estimator & estimator, double h,  
+estimation( Estimator & estimator, double h,
             const ConstIterator& itb, const ConstIterator& ite, const OutputIterator& ito )
 {
     Clock c;
@@ -296,7 +298,6 @@ unsigned int suggestedSizeIntegralInvariant( const double h,
  * Estimation of tangents and curvature
  * from several different methods
  *
- * @param name shape name
  * @param aShape shape
  * @param h grid step
  * @param noiseLevel level to noised the shape. 0 <= noiseLevel < 1
@@ -306,8 +307,7 @@ unsigned int suggestedSizeIntegralInvariant( const double h,
  */
 template <typename Space, typename Shape>
 bool
-computeLocalEstimations( const std::string & name,
-                         Shape & aShape,
+computeLocalEstimations( Shape & aShape,
                          double h,
                          struct OptionsIntegralInvariant< Z2i::RealPoint > optionsII,
                          const std::string & options,
@@ -330,24 +330,24 @@ computeLocalEstimations( const std::string & name,
     if( withNoise )
         noiseLevel *= h;
 
-    bool tangeant = ( properties.at( 0 ) != '0' ) ? true : false;
+    bool tangent = ( properties.at( 0 ) != '0' ) ? true : false;
     bool curvature = ( properties.at( 1 ) != '0' ) ? true : false;
 
     // Digitizer
-    Digitizer dig;
-    dig.attach( aShape ); // attaches the shape.
+    Digitizer* dig = new Digitizer();
+    dig->attach( aShape ); // attaches the shape.
     Vector vlow(-1,-1); Vector vup(1,1);
-    dig.init( aShape.getLowerBound()+vlow, aShape.getUpperBound()+vup, h );
-    Domain domain = dig.getDomain();
+    dig->init( aShape.getLowerBound()+vlow, aShape.getUpperBound()+vup, h );
+    Domain domain = dig->getDomain();
 
     //Noise
 
     // Create cellular space
     KSpace K;
-    bool ok = K.init( dig.getLowerBound(), dig.getUpperBound(), true );
+    bool ok = K.init( dig->getLowerBound(), dig->getUpperBound(), true );
     if ( ! ok )
     {
-        std::cerr << "[computeLocalEstimations]"
+        std::cerr << "[2dLocalEstimators]"
                   << " error in creating KSpace." << std::endl;
         return false;
     }
@@ -361,11 +361,11 @@ computeLocalEstimations( const std::string & name,
         KanungoPredicate  *noisifiedObject;
         if ( withNoise )
         {
-            noisifiedObject = new KanungoPredicate( dig, domain, noiseLevel );
+            noisifiedObject = new KanungoPredicate( *dig, domain, noiseLevel );
             bel = Surfaces< KSpace >::findABel( K, *noisifiedObject, 10000 );
             Surfaces< KSpace >::track2DBoundaryPoints( points, K, SAdj, *noisifiedObject, bel );
 
-            double minsize = dig.getUpperBound()[0] - dig.getLowerBound()[0];
+            double minsize = dig->getUpperBound()[0] - dig->getLowerBound()[0];
             while( points.size() < 2 * minsize )
             {
                 points.clear();
@@ -375,8 +375,8 @@ computeLocalEstimations( const std::string & name,
         }
         else
         {
-            bel = Surfaces< KSpace >::findABel( K, dig, 10000 );
-            Surfaces< KSpace >::track2DBoundaryPoints( points, K, SAdj, dig, bel );
+            bel = Surfaces< KSpace >::findABel( K, *dig, 10000 );
+            Surfaces< KSpace >::track2DBoundaryPoints( points, K, SAdj, *dig, bel );
         }
 
         // Create GridCurve
@@ -399,7 +399,7 @@ computeLocalEstimations( const std::string & name,
         if (gridcurve.isClosed())
         {
             std::vector< RealPoint > trueTangents;
-            if( tangeant )
+            if( tangent )
             {
                 std::cout << "# True tangents computation..." << std::endl;
 
@@ -440,7 +440,7 @@ computeLocalEstimations( const std::string & name,
             std::vector<double> MDSSCurvatures2;
             if (options.at(0) != '0')
             {
-                if( tangeant )
+                if( tangent )
                 {
                     std::cout << "# Most centered maximal DSS tangent estimation" << std::endl;
                     {
@@ -495,7 +495,7 @@ computeLocalEstimations( const std::string & name,
             std::vector<double> MDCACurvatures;
             if (options.at(1) != '0')
             {
-                if( tangeant )
+                if( tangent )
                 {
                     std::cout << "# Most centered maximal DCA tangents estimation"
                               << std::endl;
@@ -544,7 +544,7 @@ computeLocalEstimations( const std::string & name,
             std::vector <double> BCCurvatures;
             if (options.at(2) != '0')
             {
-                if( tangeant )
+                if( tangent )
                 {
                     std::cout << "# Tangents estimation from binomial convolution" << std::endl;
                     typedef typename PointsRange::ConstIterator I;
@@ -599,7 +599,7 @@ computeLocalEstimations( const std::string & name,
 
                     if( optionsII.radius <= 0.0 )
                     {
-                        optionsII.radius = suggestedSizeIntegralInvariant( h, dig.round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
+                        optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
                         std::cout << "# Estimated radius: " << optionsII.radius << std::endl;
                     }
                     double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
@@ -620,18 +620,11 @@ computeLocalEstimations( const std::string & name,
                         LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
                         DigSurface digSurf( LightImplDigSurf );
 
-                        typedef typename ImageSelector< Domain, unsigned int >::Type Image;
-                        Image image( domain );
+                        typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
+                        KanungoFunctor noisifiedFunctor( noisifiedObject, domain, 1, 0 );
 
-                        typedef typename Z2i::DigitalSet DigitalSet;
-                        DigitalSet set( domain );
-                        Shapes< Domain >::digitalShaper ( set, dig );
-                        DGtal::imageFromRangeAndValue( set.begin(), set.end(), image, 1 );
-
-                        typedef ImageToConstantFunctor< Image, KanungoPredicate > MyPointFunctor;
-                        MyPointFunctor pointFct( &image, noisifiedObject, 1 );
-                        typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-                        CurvatureIIFct functor ( pointFct, K );
+                        typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
+                        CurvatureIIFct functor ( noisifiedFunctor, K );
 
                         VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
                         I ibegin = range.begin();
@@ -654,17 +647,14 @@ computeLocalEstimations( const std::string & name,
                         typedef GraphVisitorRange< Visitor > VisitorRange;
                         typedef typename VisitorRange::ConstIterator I;
 
-                        LightImplicitDigSurface LightImplDigSurf( K, dig, SAdj, bel );
+                        LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
                         DigSurface digSurf( LightImplDigSurf );
 
-                        typedef typename ImageSelector< Domain, unsigned int >::Type Image;
-                        Image image( domain );
-                        DGtal::imageFromRangeAndValue( domain.begin(), domain.end(), image );
+                        typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
+                        MyPointFunctor pointFunctor( dig, domain, 1, 0 );
 
-                        typedef ImageToConstantFunctor< Image, Digitizer > MyPointFunctor;
-                        MyPointFunctor pointFct( &image, &dig, 1 );
                         typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-                        CurvatureIIFct functor ( pointFct, K );
+                        CurvatureIIFct functor ( pointFunctor, K );
 
                         VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
                         I ibegin = range.begin();
@@ -687,7 +677,7 @@ computeLocalEstimations( const std::string & name,
 
             // Output
             std::cout << "# id x y";
-            if( tangeant )
+            if( tangent )
             {
                 std::cout << "tx ty";
             }
@@ -697,7 +687,7 @@ computeLocalEstimations( const std::string & name,
             }
             if (options.at(0) != '0')
             {
-                if( tangeant )
+                if( tangent )
                 {
                     std::cout << " MDSStx MDSSty";
                 }
@@ -708,7 +698,7 @@ computeLocalEstimations( const std::string & name,
             }
             if (options.at(1) != '0')
             {
-                if( tangeant )
+                if( tangent )
                 {
                     std::cout << " MDCAtx MDCAty";
                 }
@@ -719,7 +709,7 @@ computeLocalEstimations( const std::string & name,
             }
             if (options.at(2) != '0')
             {
-                if( tangeant )
+                if( tangent )
                 {
                     std::cout << " BCtx BCty";
                 }
@@ -747,7 +737,7 @@ computeLocalEstimations( const std::string & name,
                 std::cout << i << std::setprecision( 15 )
                           << " " << it->operator[](0) << " " << it->operator[](1);
 
-                if( tangeant )
+                if( tangent )
                 {
                     std::cout << " " << trueTangents[ i ][ 0 ]
                               << " " << trueTangents[ i ][ 1 ];
@@ -759,7 +749,7 @@ computeLocalEstimations( const std::string & name,
 
                 if (options.at(0) != '0')
                 {
-                    if( tangeant )
+                    if( tangent )
                     {
                         std::cout << " " << MDSSTangents[ i ][ 0 ]
                                   << " " << MDSSTangents[ i ][ 1 ];
@@ -772,7 +762,7 @@ computeLocalEstimations( const std::string & name,
                 }
                 if (options.at(1) != '0')
                 {
-                    if( tangeant )
+                    if( tangent )
                     {
                         std::cout << " " << MDCATangents[ i ][ 0 ]
                                   << " " << MDCATangents[ i ][ 1 ];
@@ -791,7 +781,7 @@ computeLocalEstimations( const std::string & name,
                 }
                 if (options.at(2) != '0')
                 {
-                    if ( tangeant )
+                    if ( tangent )
                     {
                         if( BCTangents.size() > 0 )
                         {
@@ -871,7 +861,7 @@ int main( int argc, char** argv )
             ("noise,n",  po::value<double>()->default_value(0.0), "Level of noise to perturb the shape" )
             ("properties",  po::value<std::string>()->default_value("11"), "the i-th property is disabled iff there is a 0 at position i" )
             ("estimators,e",  po::value<std::string>()->default_value("1000"), "the i-th estimator is disabled iff there is a 0 at position i" );
-    
+
 
     bool parseOK=true;
     po::variables_map vm;
@@ -918,7 +908,7 @@ int main( int argc, char** argv )
     //Parse options
     if (!(vm.count("shape"))) missingParam("--shape");
     std::string shapeName = vm["shape"].as<std::string>();
-    
+
     int nb = 4; //number of available methods
     std::string options = vm["estimators"].as<std::string>();
     if (options.size() < nb)
@@ -940,7 +930,7 @@ int main( int argc, char** argv )
         trace.info() << std::endl;
         exit(1);
     }
-    
+
     //We check that the shape is known
     unsigned int id = checkAndReturnIndex(shapeName);
 
@@ -967,7 +957,7 @@ int main( int argc, char** argv )
         double radius = vm["radius"].as<double>();
 
         Ball2D<Space> ball(Z2i::Point(0,0), radius);
-        computeLocalEstimations<Space>( "Ball", ball, h, optII, options, properties, noiseLevel );
+        computeLocalEstimations<Space>( ball, h, optII, options, properties, noiseLevel );
     }
     else if (id ==1)
     {
@@ -1002,7 +992,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         Flower2D<Space> flower( center, radius, varsmallradius, k, phi );
-        computeLocalEstimations<Space>( "Flower", flower, h, optII, options, properties, noiseLevel );
+        computeLocalEstimations<Space>( flower, h, optII, options, properties, noiseLevel );
     }
     else if (id ==4)
     {
@@ -1015,7 +1005,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         NGon2D<Space> object( center, radius, k, phi );
-        computeLocalEstimations<Space>( "NGon", object, h, optII, options, properties, noiseLevel );
+        computeLocalEstimations<Space>( object, h, optII, options, properties, noiseLevel );
     }
     else if (id ==5)
     {
@@ -1030,7 +1020,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         AccFlower2D<Space> accflower( center, radius, varsmallradius, k, phi );
-        computeLocalEstimations<Space>( "AccFlower", accflower, h, optII, options, properties, noiseLevel );
+        computeLocalEstimations<Space>( accflower, h, optII, options, properties, noiseLevel );
     }
     else if (id ==6)
     {
@@ -1043,6 +1033,6 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         Ellipse2D<Space> ellipse( center, a1, a2, phi );
-        computeLocalEstimations<Space>( "Ellipse", ellipse, h, optII, options, properties, noiseLevel );
+        computeLocalEstimations<Space>( ellipse, h, optII, options, properties, noiseLevel );
     }
 }
