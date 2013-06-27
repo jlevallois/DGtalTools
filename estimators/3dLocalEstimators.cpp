@@ -146,9 +146,10 @@ compareShapeEstimators( const std::string & name,
                         double border_max[],
                         double h,
                         double radius_kernel,
-                        const bool export_vol,
+                        bool lambda_optimized )
+/*const bool export_vol,
                         const std::string & pathToSaveVolFile = "",
-                        const std::string & nameVolFile = "" )
+                        const std::string & nameVolFile = "" )*/
 {
     typedef typename Space::RealPoint RealPoint;
     typedef typename Space::Integer Integer;
@@ -236,8 +237,15 @@ compareShapeEstimators( const std::string & name,
         abegin = range3.begin();
         aend = range3.end();
 
-        std::vector<double> IIMeanCurvatures =
-                estimateQuantity( IIMeanCurvatureEstimator, abegin, aend );
+        std::vector<double> IIMeanCurvatures;
+        if( !lambda_optimized )
+        {
+            IIMeanCurvatures = estimateQuantity( IIMeanCurvatureEstimator, abegin, aend );
+        }
+        else
+        {
+            IIMeanCurvatures = estimateQuantityWithShape( IIMeanCurvatureEstimator, aShape, abegin, aend );
+        }
         double TIIMeanCurv = c.stopClock();
 
         // Integral Invariant Gaussian Curvature
@@ -253,8 +261,15 @@ compareShapeEstimators( const std::string & name,
         abegin = range4.begin();
         aend = range4.end();
 
-        std::vector<double> IIGaussianCurvatures = estimateQuantity( IIGaussianCurvatureEstimator, abegin, aend );
-//        std::vector<double> IIGaussianCurvatures = estimateQuantity( IIGaussianCurvatureEstimator, abegin, aend );
+        std::vector<double> IIGaussianCurvatures;
+        if( !lambda_optimized )
+        {
+            IIGaussianCurvatures = estimateQuantity( IIGaussianCurvatureEstimator, abegin, aend );
+        }
+        else
+        {
+            IIGaussianCurvatures = estimateQuantityWithShape( IIGaussianCurvatureEstimator, aShape, abegin, aend );
+        }
         double TIIGaussCurv = c.stopClock();
 
         // Output
@@ -269,7 +284,7 @@ compareShapeEstimators( const std::string & name,
         abegin = range5.begin();
         aend = range5.end();
 
-        Z3i::DigitalSet set3d( domain );
+        //        Z3i::DigitalSet set3d( domain );
 
         for ( int i = 0; abegin != aend; ++abegin, ++i )
         {
@@ -279,9 +294,9 @@ compareShapeEstimators( const std::string & name,
                       << " " << 0.2 /*trueMeanCurvatures[ i ]*/
                       << " " << 0.04 /*trueGaussianCurvatures[ i ]*/
                       << " " << IIMeanCurvatures[ i ]
-                         << " " << IIGaussianCurvatures[ i ]
-                            << std::endl;
-            set3d.insert ( K.sCoords ( p ));
+                      << " " << IIGaussianCurvatures[ i ]
+                      << std::endl;
+            //            set3d.insert ( K.sCoords ( p ));
         }
 
         //    if ( export_vol )
@@ -313,7 +328,7 @@ compareShapeEstimators( const std::string & name,
 
 void usage( int /*argc*/, char** argv )
 {
-    std::cerr << "Usage: " << argv[ 0 ] << " <Polynomial> <Px> <Py> <Pz> <Qx> <Qy> <Qz> <step> <radius> (<path_to_save>) (<name_of_vol_file>)" << std::endl;
+    std::cerr << "Usage: " << argv[ 0 ] << " <Polynomial> <Px> <Py> <Pz> <Qx> <Qy> <Qz> <step> <radius> <use optimised lambda (0 or 1)> (<path_to_save>) (<name_of_vol_file>)" << std::endl;
     std::cerr << "\t - displays the boundary of a shape defined implicitly by a 3-polynomial <Polynomial>." << std::endl;
     std::cerr << "\t - P and Q defines the bounding box." << std::endl;
     std::cerr << "\t - step is the grid step." << std::endl;
@@ -324,7 +339,7 @@ void usage( int /*argc*/, char** argv )
 
 int main( int argc, char** argv )
 {
-    if ( argc < 10 )
+    if ( argc < 11 )
     {
         usage( argc, argv );
         return 1;
@@ -339,49 +354,79 @@ int main( int argc, char** argv )
     double h = atof( argv[ 8 ] );
     double radius = atof( argv[ 9 ] );
 
+    bool lambda_optimized = atoi( argv[10] );
+    ASSERT(( lambda_optimized == 0 || lambda_optimized == 1 ));
+
     typedef Z3i::Space::RealPoint RealPoint;
     typedef Z3i::Space::RealPoint::Coordinate Ring;
-    typedef MPolynomial< 3, Ring > Polynomial3;
-    typedef MPolynomialReader<3, Ring> Polynomial3Reader;
-    typedef ImplicitPolynomial3Shape<Z3i::Space> ImplicitShape;
 
     /// Construction of the polynomial shape
-    Polynomial3 poly;
-    Polynomial3Reader reader;
+
     std::string poly_str = argv[ 1 ];
-    std::string::const_iterator iter = reader.read( poly, poly_str.begin(), poly_str.end() );
-    if ( iter != poly_str.end() )
+    if( poly_str.compare("sphere") == 0 )
     {
-        std::cerr << "ERROR: I read only <"
-                  << poly_str.substr( 0, iter - poly_str.begin() )
-                  << ">, and I built P=" << poly << std::endl;
-        return 1;
+        typedef ImplicitBall< Z3i::Space > ImpBall;
+        ImpBall ball( Z3i::RealPoint(0,0,0), 5.0 );
+
+        compareShapeEstimators< Z3i::Space, ImpBall > (
+                    poly_str,
+                    ball,
+                    border_min, border_max,
+                    h,
+                    radius,
+                    lambda_optimized );
+    }
+    else
+    {
+        typedef MPolynomial< 3, Ring > Polynomial3;
+        typedef MPolynomialReader<3, Ring> Polynomial3Reader;
+        typedef ImplicitPolynomial3Shape<Z3i::Space> ImplicitShape;
+
+        Polynomial3 poly;
+        Polynomial3Reader reader;
+        std::string::const_iterator iter = reader.read( poly, poly_str.begin(), poly_str.end() );
+        if ( iter != poly_str.end() )
+        {
+            std::cerr << "ERROR: I read only <"
+                      << poly_str.substr( 0, iter - poly_str.begin() )
+                      << ">, and I built P=" << poly << std::endl;
+            return 1;
+        }
+
+        ImplicitShape shape( poly );
+        compareShapeEstimators< Z3i::Space, ImplicitShape > (
+                    poly_str,
+                    shape,
+                    border_min, border_max,
+                    h,
+                    radius,
+                    lambda_optimized );
     }
 
+    //    bool export_vol = false;
+    //    std::string pathToSaveVolFile = "";
+    //    std::string nameVolFile = "";
+    //    if( argc >= 12 )
+    //    {
+    //        export_vol = true;
+    //        pathToSaveVolFile = argv[ 10 ];
+    //        nameVolFile = argv[ 11 ];
+    //    }
 
-    bool export_vol = false;
-    std::string pathToSaveVolFile = "";
-    std::string nameVolFile = "";
-    if( argc >= 12 )
-    {
-        export_vol = true;
-        pathToSaveVolFile = argv[ 10 ];
-        nameVolFile = argv[ 11 ];
-    }
+    //    ImplicitShape shape( poly );
 
-    ImplicitShape shape( poly );
+    //    typedef ImplicitBall< Z3i::Space > ImpBall;
+    //    ImpBall ball( Z3i::RealPoint(0,0,0), 5.0 );
 
-    typedef ImplicitBall< Z3i::Space > ImpBall;
-    ImpBall ball( Z3i::RealPoint(0,0,0), 5.0 );
-
-    /// Computation of 3D curvature estimators (mean & Gaussian) on the implicit shape
-    compareShapeEstimators< Z3i::Space, ImpBall >
-            (
-                poly_str,
-                ball,//shape,
-                border_min, border_max,
-                h,
-                radius,
-                export_vol, pathToSaveVolFile, nameVolFile
-                );
+    //    /// Computation of 3D curvature estimators (mean & Gaussian) on the implicit shape
+    //    compareShapeEstimators< Z3i::Space, ImpBall >
+    //            (
+    //                poly_str,
+    //                ball,//shape,
+    //                border_min, border_max,
+    //                h,
+    //                radius,
+    //                lambda_optimized );/*,
+    //                export_vol, pathToSaveVolFile, nameVolFile
+    //                );*/
 }
