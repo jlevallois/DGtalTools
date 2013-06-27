@@ -459,6 +459,8 @@ computeLocalEstimations( Shape & aShape,
     }
 
     delete dig;
+
+    return true;
 }
 
 

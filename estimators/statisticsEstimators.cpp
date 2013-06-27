@@ -99,24 +99,14 @@ int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsign
     itdata2 = current;
 
     std::string cstring = ( (std::string)(*itdata1) );
-    if ( cstring != "NA" && cstring != "" )
-    {
-      data1.push_back ( atof ( cstring.c_str() ) );
-    }
-    else
-    {
-      return 0;
-    }
+    std::string cstring2 = ( (std::string)(*itdata2) );
 
-    cstring = ( (std::string)(*itdata2) );
-    if ( cstring != "NA" && cstring != "" )
-    {
-      data2.push_back ( atof ( cstring.c_str() ) );
-    }
-    else
-    {
-      return 0;
-    }
+    if ( cstring == "NA" || cstring == "-nan" || cstring == "-inf" || cstring == "inf" || cstring == "" || cstring2 == "NA" || cstring2 == "-nan" || cstring2 == "-inf" || cstring2 == "inf" || cstring2 == "" )
+        continue;
+
+    data1.push_back ( atof ( cstring.c_str() ) );
+    data2.push_back ( atof ( cstring2.c_str() ) );
+
   }
 
   unsigned int sizeVector1 = data1.size();
@@ -136,7 +126,7 @@ int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsign
     if ( h != 0.0 )//&& radius != 0.0 )
       break;
 
-    int pos;
+    typename std::string::size_type pos;
 
     pos = line.find("# h = ");
     if ( pos != std::string::npos )
@@ -176,6 +166,8 @@ int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsign
       absd1d2 = std::abs ( (double)( data1[index] - data2[index] ));
       if ( Linf < absd1d2 )
           Linf = absd1d2;
+      if( Linf > 10 )
+          std::cout << "here " << data1[index] << " " << data2[index] << std::endl;
       L1 += absd1d2;
       L2 += absd1d2 * absd1d2;
   }
