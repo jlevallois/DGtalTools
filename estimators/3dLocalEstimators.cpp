@@ -238,14 +238,14 @@ compareShapeEstimators( const std::string & name,
         aend = range3.end();
 
         std::vector<double> IIMeanCurvatures;
-        if( !lambda_optimized )
-        {
-            IIMeanCurvatures = estimateQuantity( IIMeanCurvatureEstimator, abegin, aend );
-        }
-        else
-        {
-            IIMeanCurvatures = estimateQuantityWithShape( IIMeanCurvatureEstimator, aShape, abegin, aend );
-        }
+//        if( !lambda_optimized )
+//        {
+//            IIMeanCurvatures = estimateQuantity( IIMeanCurvatureEstimator, abegin, aend );
+//        }
+//        else
+//        {
+//            IIMeanCurvatures = estimateQuantityWithShape( IIMeanCurvatureEstimator, aShape, abegin, aend );
+//        }
         double TIIMeanCurv = c.stopClock();
 
         // Integral Invariant Gaussian Curvature
@@ -293,7 +293,7 @@ compareShapeEstimators( const std::string & name,
                       << " " << p.myCoordinates[ 0 ] << " " << p.myCoordinates[ 1 ] << " " << p.myCoordinates[ 2 ]
                       << " " << 0.2 /*trueMeanCurvatures[ i ]*/
                       << " " << 0.04 /*trueGaussianCurvatures[ i ]*/
-                      << " " << IIMeanCurvatures[ i ]
+                      << " " << "NA"//IIMeanCurvatures[ i ]
                       << " " << IIGaussianCurvatures[ i ]
                       << std::endl;
             //            set3d.insert ( K.sCoords ( p ));

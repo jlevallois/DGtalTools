@@ -167,7 +167,7 @@ int main( int argc, char** argv )
 
             MyIIGaussianEstimator estimator ( KSpaceShape, functor );
             estimator.init( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
-//            estimator.eval ( abegin, aend, resultsIterator ); // Computation
+            estimator.eval ( abegin, aend, resultsIterator ); // Computation
         }
 
         // Drawing results
