@@ -127,13 +127,14 @@ estimateQuantity( Estimator & estimator,
 
 template <typename Estimator, typename Shape, typename ConstIterator>
 std::vector<typename Estimator::Quantity>
-estimateQuantityWithShape( Estimator & estimator, Shape & shape,
-                           ConstIterator it, ConstIterator it_end )
+estimateQuantityWithShape( Estimator & estimator,
+                           ConstIterator it, ConstIterator it_end,
+                           Shape & shape )
 {
     std::vector<typename Estimator::Quantity> values;
 
     std::back_insert_iterator< std::vector< typename Estimator::Quantity > > valuesIterator( values );
-    estimator.eval ( it, it_end, shape, valuesIterator );
+    estimator.eval ( it, it_end, valuesIterator, shape );
 
     return values;
 }
@@ -240,11 +241,11 @@ compareShapeEstimators( const std::string & name,
         std::vector<double> IIMeanCurvatures;
 //        if( !lambda_optimized )
 //        {
-//            IIMeanCurvatures = estimateQuantity( IIMeanCurvatureEstimator, abegin, aend );
+//            IIMeanCurvatures = estimateQuantity( abegin, aend, IIMeanCurvatureEstimator );
 //        }
 //        else
 //        {
-//            IIMeanCurvatures = estimateQuantityWithShape( IIMeanCurvatureEstimator, aShape, abegin, aend );
+//            IIMeanCurvatures = estimateQuantityWithShape( abegin, aend, aShape, IIMeanCurvatureEstimator );
 //        }
         double TIIMeanCurv = c.stopClock();
 
@@ -268,7 +269,7 @@ compareShapeEstimators( const std::string & name,
         }
         else
         {
-            IIGaussianCurvatures = estimateQuantityWithShape( IIGaussianCurvatureEstimator, aShape, abegin, aend );
+            IIGaussianCurvatures = estimateQuantityWithShape( IIGaussianCurvatureEstimator, abegin, aend, aShape );
         }
         double TIIGaussCurv = c.stopClock();
 
