@@ -208,12 +208,12 @@ compareShapeEstimators( const std::string & name,
         //    std::vector<double> trueMeanCurvatures =
         //      estimateTrueMeanCurvatureQuantity ( aShape, K, h, abegin, aend );
 
-        //    VisitorRange range2( new Visitor( surf, *surf.begin() ) );
-        //    abegin = range2.begin();
-        //    aend = range2.end();
+            VisitorRange range2( new Visitor( surf, *surf.begin() ) );
+            abegin = range2.begin();
+            aend = range2.end();
 
-        //    std::vector<double> trueGaussianCurvatures =
-        //      estimateTrueGaussianCurvatureQuantity ( aShape, K, h, abegin, aend );
+            std::vector<double> trueGaussianCurvatures =
+              estimateTrueGaussianCurvatureQuantity ( aShape, K, h, abegin, aend );
 
         typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
         MyPointFunctor pointFunctor( dig, domain, 1, 0 );
@@ -293,7 +293,7 @@ compareShapeEstimators( const std::string & name,
             std::cout << i << std::setprecision( 15 )
                       << " " << p.myCoordinates[ 0 ] << " " << p.myCoordinates[ 1 ] << " " << p.myCoordinates[ 2 ]
                       << " " << 0.2 /*trueMeanCurvatures[ i ]*/
-                      << " " << 0.04 /*trueGaussianCurvatures[ i ]*/
+                      << " " << trueGaussianCurvatures[ i ]
                       << " " << "NA"//IIMeanCurvatures[ i ]
                       << " " << IIGaussianCurvatures[ i ]
                       << std::endl;
@@ -364,20 +364,20 @@ int main( int argc, char** argv )
     /// Construction of the polynomial shape
 
     std::string poly_str = argv[ 1 ];
-    if( poly_str.compare("sphere") == 0 )
-    {
-        typedef ImplicitBall< Z3i::Space > ImpBall;
-        ImpBall ball( Z3i::RealPoint(0,0,0), 5.0 );
+//    if( poly_str.compare("sphere") == 0 )
+//    {
+//        typedef ImplicitBall< Z3i::Space > ImpBall;
+//        ImpBall ball( Z3i::RealPoint(0,0,0), 5.0 );
 
-        compareShapeEstimators< Z3i::Space, ImpBall > (
-                    poly_str,
-                    ball,
-                    border_min, border_max,
-                    h,
-                    radius,
-                    lambda_optimized );
-    }
-    else
+//        compareShapeEstimators< Z3i::Space, ImpBall > (
+//                    poly_str,
+//                    ball,
+//                    border_min, border_max,
+//                    h,
+//                    radius,
+//                    lambda_optimized );
+//    }
+//    else
     {
         typedef MPolynomial< 3, Ring > Polynomial3;
         typedef MPolynomialReader<3, Ring> Polynomial3Reader;
