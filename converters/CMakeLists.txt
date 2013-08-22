@@ -5,7 +5,11 @@ SET(DGTAL_TOOLS_SRC
   vol2raw
   raw2vol
   ofs2off
-  convertVol )
+  convertVol 
+  vol2sdp
+  slice2vol
+  vol2slice
+  longvol2vol)
 
 FOREACH(FILE ${DGTAL_TOOLS_SRC})
   add_executable(${FILE} ${FILE})
