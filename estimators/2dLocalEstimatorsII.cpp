@@ -576,7 +576,7 @@ int main( int argc, char** argv )
 
     struct OptionsIntegralInvariant< RealPoint > optII;
     optII.radius = vm["kernelradius"].as<double>();
-    optII.alpha = vm["alpha"].as<std::vector<double>>();
+    optII.alpha = vm["alpha"].as<std::vector<double> >();
     optII.center = center;
 
     double noiseLevel = vm["noise"].as<double>();
