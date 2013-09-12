@@ -151,8 +151,6 @@ compareShapeEstimators( const std::string & filename,
     dshape->attach( *aShape );
     dshape->init( RealPoint( -10.0, -10.0, -10.0 ), RealPoint( 10.0, 10.0, 10.0 ), h );
 
-    std::cout << "h=" << h << std::endl;
-
     KSpace K;
     bool ok = K.init( dshape->getLowerBound(), dshape->getUpperBound(), true );
     if ( ! ok )
@@ -173,7 +171,6 @@ compareShapeEstimators( const std::string & filename,
         {
             std::stringstream ss;
             ss << filename << "_True_mean" << ".dat";
-            std::cout << ss.str().c_str() << std::endl;
             std::ofstream file( ss.str().c_str() );
             file.flags( std::ios_base::unitbuf );
             file << "# h = " << h << std::endl;
@@ -232,11 +229,11 @@ compareShapeEstimators( const std::string & filename,
             file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
 
             std::ostream_iterator< double > out_it( file, "\n" );
-            /*if( !lambda_optimized )
+            if( !lambda_optimized )
             {
                 IIMeanCurvatureEstimator.eval( boundary.begin(), boundary.end(), out_it );
             }
-            else*/
+            else
             {
                 IIMeanCurvatureEstimator.eval( boundary.begin(), boundary.end(), out_it, *aShape );
             }
@@ -247,7 +244,7 @@ compareShapeEstimators( const std::string & filename,
 
         // Integral Invariant Gaussian Curvature
 
-        /*{
+        {
             IntegralInvariantGaussianCurvatureEstimator_0memory< KSpace, MyCellFunctor > IIGaussianCurvatureEstimator ( K, functor );
 
             c.startClock();
@@ -275,7 +272,7 @@ compareShapeEstimators( const std::string & filename,
             double TIIGaussCurv = c.stopClock();
             file << "# time = " << TIIGaussCurv << std::endl;
             file.close();
-        }*/
+        }
     }
     catch ( InputException e )
     {
@@ -325,7 +322,7 @@ int main( int argc, char** argv )
 
     /// Construction of the polynomial shape
 
-    std::string poly_str = "x^2+y^2+z^2-25";//argv[ 2 ];
+    std::string poly_str = argv[ 2 ];
     {
         typedef MPolynomial< 3, Ring > Polynomial3;
         typedef MPolynomialReader<3, Ring> Polynomial3Reader;
