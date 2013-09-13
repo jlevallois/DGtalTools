@@ -35,6 +35,7 @@
 #include <string>
 #include <cmath>
 #include <math.h>
+#include <limits>
 #include <boost/foreach.hpp>
 #include <boost/tokenizer.hpp>
 /*
