@@ -273,7 +273,7 @@ int main( int argc, char** argv )
     int column2 = atoi( argv[ 4 ] );
     std::string output_filename = argv[ 5 ];
 
-    std::ofstream file( output_filename.c_str() );
+    std::ofstream file( output_filename.c_str(), std::ofstream::out | std::ofstream::app );
     file.flags( std::ios_base::unitbuf );
 
     if( file.eof() )
