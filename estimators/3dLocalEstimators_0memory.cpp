@@ -47,6 +47,8 @@
 #include "DGtal/shapes/GaussDigitizer.h"
 //#include "DGtal/geometry/volumes/KanungoNoise.h"
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
+#include "DGtal/topology/DigitalSurface.h"
+
 
 
 //Estimators
@@ -135,6 +137,9 @@ compareShapeEstimators( const std::string & filename,
     typedef GaussDigitizer< Z3i::Space, Shape > DigitalShape;
     typedef Z3i::KSpace KSpace;
     typedef LightImplicitDigitalSurface< KSpace, DigitalShape > Boundary;
+    typedef DigitalSurface< Boundary > MyDigitalSurface;
+    typedef typename MyDigitalSurface::ConstIterator ConstIterator;
+
     typedef Z3i::Domain Domain;
     typedef typename KSpace::Surfel Surfel;
     typedef PointFunctorFromPointPredicateAndDomain< DigitalShape, Domain, unsigned int > MyPointFunctor;
@@ -156,6 +161,7 @@ compareShapeEstimators( const std::string & filename,
         // Extracts shape boundary
         Surfel bel = Surfaces<KSpace>::findABel ( K, *dshape, 10000 );
         Boundary boundary ( K, *dshape, SurfelAdjacency< KSpace::dimension >( true ), bel );
+        MyDigitalSurface surf ( boundary );
 
         // Estimations
 
@@ -267,6 +273,58 @@ compareShapeEstimators( const std::string & filename,
         file.close();
 
         delete IIGaussianCurvatureEstimator;
+
+
+        // Monge Gaussian Curvature
+        typedef MongeJetFittingGaussianCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorGaussian;
+        typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorGaussian> ReporterK;
+        FunctorGaussian estimatorK( (CanonicSCellEmbedder<KSpace>( K )), h );
+        ReporterK reporterK(surf.container(), Z3i::l2Metric, estimatorK);
+        c.startClock();
+        reporterK.init( h , re_convolution_kernel / h  );
+
+        typename ReporterK::SurfelConstIterator aaabegin = surf.container().begin();
+        typename ReporterK::SurfelConstIterator aaaend = surf.container().end();
+
+        ss.str( std::string() );
+        ss << filename << "_MongeJetFitting_gaussian" << ".dat";
+        file.open( ss.str().c_str() );
+        file.flags( std::ios_base::unitbuf );
+        file << "# h = " << h << std::endl;
+        file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
+        file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+        std::ostream_iterator< double > out_it_monge_gaussian( file, "\n" );
+        reporterK.eval(aaabegin, aaaend , out_it_monge_gaussian);
+        double TMongeGaussCurv = c.stopClock();
+        file << "# time = " << TMongeGaussCurv << std::endl;
+        file.close();
+
+
+        // Monge Mean Curvature
+        typedef MongeJetFittingMeanCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorMean;
+        typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorMean> ReporterH;
+        FunctorMean estimatorH( (CanonicSCellEmbedder<KSpace>( K )), h );
+        ReporterH reporterH(surf.container(), Z3i::l2Metric, estimatorH);
+        c.startClock();
+        reporterH.init( h , re_convolution_kernel / h  );
+
+        ss.str( std::string() );
+        ss << filename << "_MongeJetFitting_mean" << ".dat";
+        file.open( ss.str().c_str() );
+        file.flags( std::ios_base::unitbuf );
+        file << "# h = " << h << std::endl;
+        file << "# Mean Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
+        file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+        std::ostream_iterator< double > out_it_monge_mean( file, "\n" );
+
+        typename ReporterK::SurfelConstIterator aabegin = surf.container().begin();
+        typename ReporterK::SurfelConstIterator aaend = surf.container().end();
+        reporterK.eval(aabegin, aaend , out_it_monge_mean);
+        double TMongeMeanCurv = c.stopClock();
+        file << "# time = " << TMongeMeanCurv << std::endl;
+        file.close();
+
+
     }
     catch ( InputException e )
     {
