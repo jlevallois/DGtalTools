@@ -136,6 +136,8 @@ int ComputeStatistics_0memory ( const std::string & inputdata1, const std::strin
            << meanL2 << " "
            << Linf
            << std::endl;
+
+    return 1; //I Guess (dc)
 }
 /*
 int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsigned int idColumnData2, const std::string & inputdata, const std::string & inputparam )

@@ -57,6 +57,10 @@
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator_0memory.h"
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator_0memory.h"
 
+#include "DGtal/geometry/surfaces/estimation/LocalEstimatorFromSurfelFunctorAdapter.h"
+#include "DGtal/geometry/surfaces/estimation/estimationFunctors/MongeJetFittingGaussianCurvatureEstimator.h"
+#include "DGtal/geometry/surfaces/estimation/estimationFunctors/MongeJetFittingMeanCurvatureEstimator.h"
+
 using namespace DGtal;
 
 template < typename Shape, typename KSpace, typename ConstIterator, typename OutputIterator >
@@ -288,6 +292,15 @@ void usage( int /*argc*/, char** argv )
 
 int main( int argc, char** argv )
 {
+
+
+#ifndef WITH_CGAL
+#error You need to have activated CGAL (WITH_CGAL) to include this file.
+#endif
+#ifndef WITH_EIGEN
+#error You need to have activated EIGEN (WITH_EIGEN) to include this file.
+#endif
+
     if ( argc < 12 )
     {
         usage( argc, argv );
