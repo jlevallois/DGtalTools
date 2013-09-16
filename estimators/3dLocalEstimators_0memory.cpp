@@ -319,7 +319,7 @@ compareShapeEstimators( const std::string & filename,
 
         typename ReporterK::SurfelConstIterator aabegin = surf.container().begin();
         typename ReporterK::SurfelConstIterator aaend = surf.container().end();
-        reporterK.eval(aabegin, aaend , out_it_monge_mean);
+        reporterH.eval(aabegin, aaend , out_it_monge_mean);
         double TMongeMeanCurv = c.stopClock();
         file << "# time = " << TMongeMeanCurv << std::endl;
         file.close();
