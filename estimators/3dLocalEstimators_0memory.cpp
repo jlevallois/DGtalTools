@@ -123,8 +123,8 @@ template <typename Space, typename Shape>
 bool
 compareShapeEstimators( const std::string & filename,
                         const Shape * aShape,
-                        const double border_min[],
-                        const double border_max[],
+                        const typename Space::RealPoint & border_min,
+                        const typename Space::RealPoint & border_max,
                         const double & h,
                         const double & radius_kernel,
                         const double & alpha,
@@ -153,7 +153,7 @@ compareShapeEstimators( const std::string & filename,
     // Digitizer
     DigitalShape* dshape = new DigitalShape();
     dshape->attach( *aShape );
-    dshape->init( RealPoint( border_min[ 0 ], border_min[ 1 ], border_min[ 2 ] ), RealPoint( border_max[ 0 ], border_max[ 1 ], border_max[ 2 ] ), h );
+    dshape->init( border_min, border_max, h );
 
     KSpace K;
     if ( ! K.init( dshape->getLowerBound(), dshape->getUpperBound(), true ) )
@@ -353,7 +353,17 @@ compareShapeEstimators( const std::string & filename,
     {
         std::cerr << "[estimatorCurvatureComparator3D]"
                   << " error."
-                  << e.what() << std::endl;
+                  << e.what()
+                  << " "
+                  << filename << " "
+                  << border_min[0] << " "
+                  << border_max[0] << " "
+                  << h << " "
+                  << radius_kernel << " "
+                  << lambda_optimized << " "
+                  << options << " "
+                  << alpha << " "
+                  << std::endl;
         return false;
     }
 
@@ -399,7 +409,7 @@ int main( int argc, char** argv )
             ("minAABB,a",  po::value< double >()->default_value( -10.0 ), "Min value of the AABB bounding box (domain)" )
             ("maxAABB,A",  po::value< double >()->default_value( 10.0 ), "Max value of the AABB bounding box (domain)" )
             ("lambda,l",  po::value< bool >()->default_value( false ), "Use the shape to get a better approximation of the surface (optional)" )
-            ("estimators,e",  po::value<std::string>()->default_value("1100"), "the i-th estimator is disabled iff there is a 0 at position i" );
+            ("estimators,e",  po::value< std::string >()->default_value("1100"), "the i-th estimator is disabled iff there is a 0 at position i" );
 
 
     bool parseOK = true;
@@ -447,17 +457,11 @@ int main( int argc, char** argv )
     std::string poly_str = vm["shape"].as< std::string >();
     bool lambda_optimized = vm["lambda"].as< bool >();
 
-
-    double border_min[ 3 ];
-    double border_max[ 3 ];
-    for ( unsigned int i = 0; i < 3; ++i )
-    {
-        border_min[ i ] = vm["minAABB"].as< double >();
-        border_max[ i ] = vm["maxAABB"].as< double >();
-    }
-
     typedef Z3i::Space::RealPoint RealPoint;
     typedef Z3i::Space::RealPoint::Coordinate Ring;
+
+    RealPoint border_min( vm["minAABB"].as< double >(), vm["minAABB"].as< double >(), vm["minAABB"].as< double >() );
+    RealPoint border_max( vm["maxAABB"].as< double >(), vm["maxAABB"].as< double >(), vm["maxAABB"].as< double >() );
 
     /// Construction of the polynomial shape
 
