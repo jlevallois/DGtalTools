@@ -31,13 +31,20 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <vector>
 #include <string>
 #include <cmath>
 #include <math.h>
 #include <limits>
 #include <boost/foreach.hpp>
 #include <boost/tokenizer.hpp>
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
+
+#include "DGtal/base/Common.h"
+
+using namespace DGtal;
+
 /*
 int LoadingStringFromFile ( std::string & parseDataFile, std::string & parseParamFile, const std::string filename )
 {
@@ -83,7 +90,12 @@ bool LoadingStringFromFile_0memory( std::ifstream & file, std::string & value )
     return false;
 }
 
-int ComputeStatistics_0memory ( const std::string & inputdata1, const std::string & inputdata2, const unsigned int idColumnData1, const unsigned int idColumnData2, std::ofstream & output )
+int ComputeStatistics_0memory ( const std::string & inputdata1,
+                                const std::string & inputdata2,
+                                const unsigned int & idColumnData1,
+                                const unsigned int & idColumnData2,
+                                const bool & isMongeMean,
+                                std::ofstream & output )
 {
   std::ifstream file1( inputdata1.c_str() );
   std::ifstream file2( inputdata2.c_str() );
@@ -116,6 +128,11 @@ int ComputeStatistics_0memory ( const std::string & inputdata1, const std::strin
 
         v1 = atof( s1.c_str() );
         v2 = atof( s2.c_str() );
+
+        if( isMongeMean && !(( v1 >= 0.0 ) ^ ( v2 >= 0.0 ))) // hack for Monge. Can be reversed.
+        {
+            v2 = -v2;
+        }
 
         absd1d2 = std::abs ( v1 - v2 );
         if ( Linf < absd1d2 )
@@ -260,18 +277,69 @@ int ComputeStatisticsFromString ( const unsigned int idColumnData1, const unsign
     return 1;
 }
 */
+
+/**
+ * Missing parameter error message.
+ *
+ * @param param
+ */
+void missingParam( std::string param )
+{
+    trace.error() << " Parameter: " << param << " is required.";
+    trace.info() << std::endl;
+    exit( 1 );
+}
+
+namespace po = boost::program_options;
+
 int main( int argc, char** argv )
 {
-    if( argc != 6 )
+    po::options_description general_opt("Allowed options are");
+    general_opt.add_options()
+            ("help,h", "display this message")
+            ("file1,f", po::value< std::string >(), "File 1")
+            ("file2,F", po::value< std::string >(), "File 2")
+            ("column1,c",  po::value< unsigned int >(), "Column of file 1" )
+            ("column2,C",  po::value< unsigned int >(), "Column of file 2" )
+            ("output,o", po::value< std::string >(), "Output file")
+            ("monge,m",  po::value< bool >()->default_value( false ), "Is from Monge mean computation (optional)" );
+
+
+    bool parseOK = true;
+    po::variables_map vm;
+    try
     {
-        std::cout << "argc = " << argc << std::endl;
-        std::cout << "ERROR. You need to specify two input files, two column ID and an output file" << std::endl;
+        po::store( po::parse_command_line( argc, argv, general_opt ), vm );
     }
-    std::string filename1 = argv[ 1 ];
-    std::string filename2 = argv[ 2 ];
-    int column1 = atoi( argv[ 3 ] );
-    int column2 = atoi( argv[ 4 ] );
-    std::string output_filename = argv[ 5 ];
+    catch( const std::exception & ex )
+    {
+        parseOK = false;
+        trace.info() << "Error checking program options: " << ex.what() << std::endl;
+    }
+    po::notify( vm );
+    if( !parseOK || vm.count("help") || argc <= 1 )
+    {
+        trace.info()<< "Compute satistics (L1, L2, Loo) from results of two extimators" <<std::endl
+                    << "Basic usage: "<<std::endl
+                    << "\tstatisticsEstimators_0memory --file1 <file1> --column1 <column1> --file2 <file2> --column2 <column2> --output <output>"<<std::endl
+                    << std::endl;
+
+        return 0;
+    }
+
+
+    if (!(vm.count("file1"))) missingParam("--file1");
+    if (!(vm.count("file2"))) missingParam("--file2");
+    if (!(vm.count("column1"))) missingParam("--column1");
+    if (!(vm.count("column2"))) missingParam("--column2");
+    if (!(vm.count("output"))) missingParam("--output");
+
+    std::string filename1 = vm["file1"].as< std::string >();
+    std::string filename2 = vm["file2"].as< std::string >();
+    unsigned int column1 = vm["column1"].as< unsigned int >();
+    unsigned int column2 = vm["column2"].as< unsigned int >();
+    std::string output_filename = vm["output"].as< std::string >();
+    bool isMongeMean = vm["monge"].as< bool >();
 
     std::ofstream file( output_filename.c_str(), std::ofstream::out | std::ofstream::app );
     file.flags( std::ios_base::unitbuf );
@@ -285,7 +353,7 @@ int main( int argc, char** argv )
              << std::endl;
     }
 
-    if ( ComputeStatistics_0memory( filename1, filename2, column1, column2, file ) == 0 )
+    if ( ComputeStatistics_0memory( filename1, filename2, column1, column2, isMongeMean, file ) == 0 )
     {
         file.close();
         return -1;

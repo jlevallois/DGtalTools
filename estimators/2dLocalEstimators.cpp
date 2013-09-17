@@ -102,6 +102,7 @@ struct OptionsIntegralInvariant
     double alpha; // <! Alpha parameter for the convolution kernel. 1/3 by default
     double radius; // <! Radius of the convolution kernel.
     RealPoint center; // <! Center of the shape.
+    bool lambda_optimized;
 };
 
 
@@ -307,8 +308,9 @@ unsigned int suggestedSizeIntegralInvariant( const double h,
  */
 template <typename Space, typename Shape>
 bool
-computeLocalEstimations( Shape & aShape,
-                         double h,
+computeLocalEstimations( const std::string & filename,
+                         Shape * aShape,
+                         const double & h,
                          struct OptionsIntegralInvariant< Z2i::RealPoint > optionsII,
                          const std::string & options,
                          const std::string & properties,
@@ -335,9 +337,9 @@ computeLocalEstimations( Shape & aShape,
 
     // Digitizer
     Digitizer* dig = new Digitizer();
-    dig->attach( aShape ); // attaches the shape.
+    dig->attach( *aShape ); // attaches the shape.
     Vector vlow(-1,-1); Vector vup(1,1);
-    dig->init( aShape.getLowerBound()+vlow, aShape.getUpperBound()+vup, h );
+    dig->init( aShape->getLowerBound()+vlow, aShape->getUpperBound()+vup, h );
     Domain domain = dig->getDomain();
 
     //Noise
@@ -386,193 +388,295 @@ computeLocalEstimations( Shape & aShape,
         // Ranges
         typedef typename GridCurve< KSpace >::PointsRange PointsRange;
         PointsRange pointsRange = gridcurve.getPointsRange();
-        std::cout << "# h = " << h << std::endl;
-        std::cout << "# range size = " << pointsRange.size() << std::endl;
-
-        if ( withNoise )
-        {
-            std::cout << "# noise level (init) = " << noiseLevel/h << std::endl;
-            std::cout << "# noise level (current) = " << noiseLevel << std::endl;
-        }
 
         // Estimations
         if (gridcurve.isClosed())
         {
-            std::vector< RealPoint > trueTangents;
-            if( tangent )
-            {
-                std::cout << "# True tangents computation..." << std::endl;
-
-                {
-                    typedef ParametricShapeTangentFunctor< Shape > TangentFunctor;
-                    typedef typename PointsRange::ConstCirculator C;
-                    TrueLocalEstimatorOnPoints< C, Shape, TangentFunctor >
-                            trueTangentEstimator;
-                    trueTangentEstimator.attach( &aShape );
-                    estimation( trueTangentEstimator, h,
-                                pointsRange.c(), pointsRange.c(),
-                                std::back_inserter(trueTangents) );
-                    estimationError(trueTangents.size(), pointsRange.size());
-                }
-            }
-
-            std::vector< double > trueCurvatures;
-            if( curvature )
-            {
-                std::cout << "# True curvature values computation..." << std::endl;
-
-                {
-                    typedef ParametricShapeCurvatureFunctor< Shape > CurvatureFunctor;
-                    typedef typename PointsRange::ConstCirculator C;
-                    TrueLocalEstimatorOnPoints< C, Shape, CurvatureFunctor >
-                            trueCurvatureEstimator;
-                    trueCurvatureEstimator.attach( &aShape );
-                    estimation( trueCurvatureEstimator, h,
-                                pointsRange.c(), pointsRange.c(),
-                                std::back_inserter(trueCurvatures) );
-                    estimationError(trueCurvatures.size(), pointsRange.size());
-                }
-            }
-
-            // Maximal Segments
-            std::vector<RealPoint> MDSSTangents;
-            std::vector<double> MDSSCurvatures1;
-            std::vector<double> MDSSCurvatures2;
             if (options.at(0) != '0')
             {
                 if( tangent )
                 {
-                    std::cout << "# Most centered maximal DSS tangent estimation" << std::endl;
+                    char full_filename[80];
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_True_tangeant.dat" );
+                    std::ofstream file( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# True tangents computation" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
                     {
-                        typedef typename PointsRange::ConstCirculator C;
-                        typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
-                        typedef TangentFromDSSEstimator<SegmentComputer> SCFunctor;
-                        SegmentComputer sc;
-                        SCFunctor f;
-                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSTangentEstimator(sc, f);
-                        estimation( MDSSTangentEstimator, h,
-                                    pointsRange.c(), pointsRange.c(),
-                                    std::back_inserter(MDSSTangents) );
-                        estimationError(MDSSTangents.size(), pointsRange.size());
-                    }
-                }
-                if( curvature )
-                {
-                    std::cout << "# Most centered maximal DSS curvature estimation"
-                              << " (from length only)" << std::endl;
-                    {
-                        typedef typename PointsRange::ConstCirculator C;
-                        typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
-                        typedef CurvatureFromDSSLengthEstimator<SegmentComputer> SCFunctor;
-                        SegmentComputer sc;
-                        SCFunctor f;
-                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSCurvatureEstimator(sc, f);
-                        estimation( MDSSCurvatureEstimator, h,
-                                    pointsRange.c(), pointsRange.c(),
-                                    std::back_inserter(MDSSCurvatures1) );
-                        estimationError(MDSSCurvatures1.size(), pointsRange.size());
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
                     }
 
-                    std::cout << "# Most centered maximal DSS curvature estimation"
-                              << " (from length and width)" << std::endl;
+                    std::ostream_iterator< RealPoint > out_it( file, "\n" );
+
+                    typedef ParametricShapeTangentFunctor< Shape > TangentFunctor;
+                    typedef typename PointsRange::ConstCirculator C;
+                    TrueLocalEstimatorOnPoints< C, Shape, TangentFunctor >
+                            trueTangentEstimator;
+                    trueTangentEstimator.attach( aShape );
+                    estimation( trueTangentEstimator, h,
+                                pointsRange.c(), pointsRange.c(),
+                                out_it );
+
+                    file.close();
+
+                }
+
+                if( curvature )
+                {
+                    char full_filename[80];
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_True_curvature.dat" );
+                    std::ofstream file( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# True curvature computation" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
                     {
-                        typedef typename PointsRange::ConstCirculator C;
-                        typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
-                        typedef CurvatureFromDSSEstimator<SegmentComputer> SCFunctor;
-                        SegmentComputer sc;
-                        SCFunctor f;
-                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSCurvatureEstimator(sc, f);
-                        estimation( MDSSCurvatureEstimator, h,
-                                    pointsRange.c(), pointsRange.c(),
-                                    std::back_inserter(MDSSCurvatures2) );
-                        estimationError(MDSSCurvatures2.size(), pointsRange.size());
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
                     }
+
+                    std::ostream_iterator< double > out_it( file, "\n" );
+
+                    typedef ParametricShapeCurvatureFunctor< Shape > CurvatureFunctor;
+                    typedef typename PointsRange::ConstCirculator C;
+                    TrueLocalEstimatorOnPoints< C, Shape, CurvatureFunctor >
+                            trueCurvatureEstimator;
+                    trueCurvatureEstimator.attach( aShape );
+                    estimation( trueCurvatureEstimator, h,
+                                pointsRange.c(), pointsRange.c(),
+                                out_it );
+
+                    file.close();
                 }
             }
 
-            //Maximal circular arcs
-            std::vector<RealPoint> MDCATangents;
-            std::vector<double> MDCACurvatures;
+            // Maximal Segments
             if (options.at(1) != '0')
             {
                 if( tangent )
                 {
-                    std::cout << "# Most centered maximal DCA tangents estimation"
-                              << std::endl;
+                    char full_filename[80];
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_MDSS_tangeant.dat" );
+                    std::ofstream file( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# Most centered maximal DSS tangent estimation" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
                     {
-                        typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
-                        typedef typename Range::ConstCirculator C;
-                        Range r = gridcurve.getIncidentPointsRange();
-                        typedef GeometricalDCA<C> SegmentComputer;
-                        typedef TangentFromDCAEstimator<SegmentComputer> SCFunctor;
-                        SegmentComputer sc;
-                        SCFunctor f;
-                        MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCATangentEstimator(sc, f);
-                        estimation( MDCATangentEstimator, h,
-                                    r.c(), r.c(),
-                                    std::back_inserter(MDCATangents) );
-                        estimationError(MDCATangents.size(), pointsRange.size());
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
                     }
-                }
 
+                    std::ostream_iterator< RealPoint > out_it( file, "\n" );
+
+                    typedef typename PointsRange::ConstCirculator C;
+                    typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
+                    typedef TangentFromDSSEstimator<SegmentComputer> SCFunctor;
+                    SegmentComputer sc;
+                    SCFunctor f;
+                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSTangentEstimator(sc, f);
+                    estimation( MDSSTangentEstimator, h,
+                                pointsRange.c(), pointsRange.c(),
+                                out_it );
+
+                    file.close();
+                }
                 if( curvature )
                 {
-                    if( h > 0.0024 ) /// @bug Jérémy <! In order to avoid swap
+                    char full_filename[80];
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_MDSSl_curvature.dat" );
+                    std::ofstream file( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# Most centered maximal DSS (length) curvature estimation" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
                     {
-                        std::cout << "# Most centered maximal DCA curvature estimation"
-                                  << std::endl;
-                        {
-                            typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
-                            typedef typename Range::ConstCirculator C;
-                            Range r = gridcurve.getIncidentPointsRange();
-                            typedef GeometricalDCA<C> SegmentComputer;
-                            typedef CurvatureFromDCAEstimator<SegmentComputer> SCFunctor;
-                            SegmentComputer sc;
-                            SCFunctor f;
-                            MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCACurvatureEstimator(sc, f);
-                            estimation( MDCACurvatureEstimator, h,
-                                        r.c(), r.c(),
-                                        std::back_inserter(MDCACurvatures) );
-                            estimationError(MDCACurvatures.size(), pointsRange.size());
-                        }
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
                     }
+
+                    std::ostream_iterator< double > out_it( file, "\n" );
+
+                    typedef typename PointsRange::ConstCirculator C;
+                    typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
+                    typedef CurvatureFromDSSLengthEstimator<SegmentComputer> SCFunctor;
+                    SegmentComputer sc;
+                    SCFunctor f;
+                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSCurvatureEstimator(sc, f);
+                    estimation( MDSSCurvatureEstimator, h,
+                                pointsRange.c(), pointsRange.c(),
+                                out_it );
+
+                    file.close();
+
+
+                    memset(&full_filename[0], 0, sizeof(full_filename));
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_MDSSlw_curvature.dat" );
+                    file.open( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# Most centered maximal DSS (length & width) curvature estimation" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
+                    {
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
+                    }
+
+                    std::ostream_iterator< double > out_it2( file, "\n" );
+
+//                    typedef typename PointsRange::ConstCirculator C;
+//                    typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
+                    typedef CurvatureFromDSSEstimator<SegmentComputer> SCFunctor2;
+                    SegmentComputer sc2;
+                    SCFunctor2 f2;
+                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor2> MDSSCurvatureEstimator2(sc2, f2);
+                    estimation( MDSSCurvatureEstimator2, h,
+                                pointsRange.c(), pointsRange.c(),
+                                out_it2 );
+
+                    file.close();
+
                 }
             }
 
-            //Binomial convolver
-            std::vector <RealPoint> BCTangents;
-            std::vector <double> BCCurvatures;
+            //Maximal circular arcs
             if (options.at(2) != '0')
             {
                 if( tangent )
                 {
-                    std::cout << "# Tangents estimation from binomial convolution" << std::endl;
+                    char full_filename[80];
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_MDCA_tangent.dat" );
+                    std::ofstream file( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# Most centered maximal DCA tangents estimation" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
+                    {
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
+                    }
+
+                    std::ostream_iterator< RealPoint > out_it( file, "\n" );
+
+                    typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
+                    typedef typename Range::ConstCirculator C;
+                    Range r = gridcurve.getIncidentPointsRange();
+                    typedef GeometricalDCA<C> SegmentComputer;
+                    typedef TangentFromDCAEstimator<SegmentComputer> SCFunctor;
+                    SegmentComputer sc;
+                    SCFunctor f;
+                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCATangentEstimator(sc, f);
+                    estimation( MDCATangentEstimator, h,
+                                r.c(), r.c(),
+                                out_it );
+
+                    file.close();
+                }
+
+                if( curvature )
+                {
+                    char full_filename[80];
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_MDCA_curvature.dat" );
+                    std::ofstream file( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# Most centered maximal DCA curvature estimation" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
+                    {
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
+                    }
+
+                    std::ostream_iterator< double > out_it( file, "\n" );
+
+                    typedef typename GridCurve<KSpace>::IncidentPointsRange Range;
+                    typedef typename Range::ConstCirculator C;
+                    Range r = gridcurve.getIncidentPointsRange();
+                    typedef GeometricalDCA<C> SegmentComputer;
+                    typedef CurvatureFromDCAEstimator<SegmentComputer> SCFunctor;
+                    SegmentComputer sc;
+                    SCFunctor f;
+                    MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDCACurvatureEstimator(sc, f);
+                    estimation( MDCACurvatureEstimator, h,
+                                r.c(), r.c(),
+                                out_it );
+
+                    file.close();
+                }
+            }
+
+            //Binomial convolver
+            if (options.at(3) != '0')
+            {
+                if( tangent )
+                {
+                    char full_filename[80];
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_BC_tangeant.dat" );
+                    std::ofstream file( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# Tangents estimation from binomial convolution" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
+                    {
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
+                    }
+
                     typedef typename PointsRange::ConstIterator I;
                     typedef BinomialConvolver<I, double> MyBinomialConvolver;
-                    std::cout << "# mask size = " <<
-                                 MyBinomialConvolver::suggestedSize( h, pointsRange.begin(), pointsRange.end() ) << std::endl;
+                    file << "# mask size = " <<
+                            MyBinomialConvolver::suggestedSize( h, pointsRange.begin(), pointsRange.end() ) << std::endl;
+
                     typedef TangentFromBinomialConvolverFunctor< MyBinomialConvolver, RealPoint >
                             TangentBCFct;
                     BinomialConvolverEstimator< MyBinomialConvolver, TangentBCFct> BCTangentEstimator;
+
+                    std::ostream_iterator< RealPoint > out_it( file, "\n" );
 
                     if( BCTangentEstimator.init( h, pointsRange.begin(), pointsRange.end(), true ))
                     {
                         Clock c;
                         c.startClock();
-                        BCTangentEstimator.eval( pointsRange.begin(), pointsRange.end(), std::back_inserter(BCTangents) );
+                        BCTangentEstimator.eval( pointsRange.begin(), pointsRange.end(), out_it );
                         double time = c.stopClock();
-                        std::cout << "# Time: " << time << std::endl;
-                        estimationError(BCTangents.size(), pointsRange.size());
+                        file << "# Time: " << time << std::endl;
                     }
+
+                    file.close();
                 }
 
                 if( curvature )
                 {
-                    std::cout << "# Curvature estimation from binomial convolution" << std::endl;
+                    char full_filename[80];
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_BC_curvature.dat" );
+                    std::ofstream file( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# Curvature estimation from binomial convolution" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
+                    {
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
+                    }
+
                     typedef typename PointsRange::ConstIterator I;
                     typedef BinomialConvolver<I, double> MyBinomialConvolver;
-                    std::cout << "# mask size = " <<
-                                 MyBinomialConvolver::suggestedSize( h, pointsRange.begin(), pointsRange.end() ) << std::endl;
+                    file << "# mask size = " <<
+                            MyBinomialConvolver::suggestedSize( h, pointsRange.begin(), pointsRange.end() ) << std::endl;
+
+                    std::ostream_iterator< double > out_it( file, "\n" );
+
                     typedef CurvatureFromBinomialConvolverFunctor< MyBinomialConvolver, double >
                             CurvatureBCFct;
                     BinomialConvolverEstimator< MyBinomialConvolver, CurvatureBCFct> BCCurvatureEstimator;
@@ -581,241 +685,112 @@ computeLocalEstimations( Shape & aShape,
                     {
                         Clock c;
                         c.startClock();
-                        BCCurvatureEstimator.eval( pointsRange.begin(), pointsRange.end(), std::back_inserter(BCCurvatures) );
+                        BCCurvatureEstimator.eval( pointsRange.begin(), pointsRange.end(), out_it );
                         double time = c.stopClock();
-                        std::cout << "# Time: " << time << std::endl;
-                        estimationError(BCCurvatures.size(), pointsRange.size());
+                        file << "# Time: " << time << std::endl;
                     }
+
+                    file.close();
                 }
             }
 
             //Integral Invariants
-            std::vector <double> IICurvatures;
-            if (options.at(3) != '0')
+            if (options.at(4) != '0')
             {
                 if( curvature )
                 {
-                    std::cout << "# Curvature estimation from integral invariants" << std::endl;
+                    char full_filename[80];
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature.dat" );
+                    std::ofstream file( full_filename );
+                    file.flags( std::ios_base::unitbuf );
+                    file << "# h = " << h << std::endl;
+                    file << "# Integral Invariant curvature estimation" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
+                    {
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
+                    }
 
                     if( optionsII.radius <= 0.0 )
                     {
                         optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-                        std::cout << "# Estimated radius: " << optionsII.radius << std::endl;
+                        file << "# Estimated radius: " << optionsII.radius << std::endl;
                     }
                     double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
-                    std::cout << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
-                                 re_convolution_kernel / h << std::endl;
+                    file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
+                            re_convolution_kernel / h << std::endl;
 
                     double time;
                     Clock c;
+
+                    std::ostream_iterator< double > out_it( file, "\n" );
 
                     if ( withNoise )
                     {
                         typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > LightImplicitDigSurface;
                         typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-                        typedef DepthFirstVisitor< DigSurface > Visitor;
-                        typedef GraphVisitorRange< Visitor > VisitorRange;
-                        typedef typename VisitorRange::ConstIterator I;
 
                         LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
-                        DigSurface digSurf( LightImplDigSurf );
+                        DigSurface surf( LightImplDigSurf );
 
                         typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
-                        KanungoFunctor noisifiedFunctor( noisifiedObject, domain, 1, 0 );
+                        KanungoFunctor * noisifiedFunctor = new KanungoFunctor( noisifiedObject, domain, 1, 0 );
 
                         typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
-                        CurvatureIIFct functor ( noisifiedFunctor, K );
+                        CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
 
-                        VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
-                        I ibegin = range.begin();
-                        I iend = range.end();
-
-                        IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> IICurvatureEstimator( K, functor );
+                        IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
 
                         c.startClock();
 
-                        IICurvatureEstimator.init( h, re_convolution_kernel );
-                        std::back_insert_iterator< std::vector< double > > IICurvaturesIterator( IICurvatures );
-                        IICurvatureEstimator.eval( ibegin, iend, IICurvaturesIterator );
+                        IICurvatureEstimator->init( h, re_convolution_kernel );
+                        IICurvatureEstimator->eval( surf.begin(), surf.end(), out_it );
+
+                        delete functor;
+                        delete noisifiedFunctor;
+                        delete IICurvatureEstimator;
+
                         time = c.stopClock();
                     }
                     else
                     {
                         typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
                         typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-                        typedef DepthFirstVisitor< DigSurface > Visitor;
-                        typedef GraphVisitorRange< Visitor > VisitorRange;
-                        typedef typename VisitorRange::ConstIterator I;
 
                         LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
-                        DigSurface digSurf( LightImplDigSurf );
+                        DigSurface surf( LightImplDigSurf );
 
                         typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
-                        MyPointFunctor pointFunctor( dig, domain, 1, 0 );
+                        MyPointFunctor * pointFunctor = new MyPointFunctor( dig, domain, 1, 0 );
 
                         typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-                        CurvatureIIFct functor ( pointFunctor, K );
+                        CurvatureIIFct * functor = new CurvatureIIFct( *pointFunctor, K );
 
-                        VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
-                        I ibegin = range.begin();
-                        I iend = range.end();
-
-                        IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> IICurvatureEstimator( K, functor );
+                        IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
 
                         c.startClock();
 
-                        IICurvatureEstimator.init( h, re_convolution_kernel );
-                        std::back_insert_iterator< std::vector< double > > IICurvaturesIterator( IICurvatures );
-                        IICurvatureEstimator.eval( ibegin, iend, IICurvaturesIterator );
+                        IICurvatureEstimator->init( h, re_convolution_kernel );
+                        if( !optionsII.lambda_optimized )
+                        {
+                            IICurvatureEstimator->eval( surf.begin(), surf.end(), out_it );
+                        }
+                        else
+                        {
+                            IICurvatureEstimator->eval( surf.begin(), surf.end(), out_it, *aShape );
+                        }
+
+                        delete functor;
+                        delete pointFunctor;
+                        delete IICurvatureEstimator;
                         time = c.stopClock();
                     }
 
-                    std::cout << "# Time: " << time << std::endl;
-                    estimationError( IICurvatures.size(), pointsRange.size() );
+                    file << "# Time: " << time << std::endl;
+                    file.close();
                 }
             }
-
-            // Output
-            std::cout << "# id x y";
-            if( tangent )
-            {
-                std::cout << "tx ty";
-            }
-            if( curvature )
-            {
-                std::cout << " k";
-            }
-            if (options.at(0) != '0')
-            {
-                if( tangent )
-                {
-                    std::cout << " MDSStx MDSSty";
-                }
-                if( curvature )
-                {
-                    std::cout << " MDSSkFromLendth MDSSkFromLengthAndWidth";
-                }
-            }
-            if (options.at(1) != '0')
-            {
-                if( tangent )
-                {
-                    std::cout << " MDCAtx MDCAty";
-                }
-                if( curvature )
-                {
-                    std::cout << " MDCAk";
-                }
-            }
-            if (options.at(2) != '0')
-            {
-                if( tangent )
-                {
-                    std::cout << " BCtx BCty";
-                }
-                if( curvature )
-                {
-                    std::cout << " BCk";
-                }
-            }
-            if (options.at(3) != '0')
-            {
-                if( curvature )
-                {
-                    std::cout << " IIk";
-                }
-            }
-            std::cout << std::endl;
-
-            unsigned int i = 0;
-            unsigned int prsize = pointsRange.size() - 1;
-
-            for (typename PointsRange::ConstIterator it = pointsRange.begin(),
-                 itEnd = pointsRange.end();
-                 it != itEnd; ++it, ++i)
-            {
-                std::cout << i << std::setprecision( 15 )
-                          << " " << it->operator[](0) << " " << it->operator[](1);
-
-                if( tangent )
-                {
-                    std::cout << " " << trueTangents[ i ][ 0 ]
-                              << " " << trueTangents[ i ][ 1 ];
-                }
-                if( curvature )
-                {
-                    std::cout << " " << trueCurvatures[ i ];
-                }
-
-                if (options.at(0) != '0')
-                {
-                    if( tangent )
-                    {
-                        std::cout << " " << MDSSTangents[ i ][ 0 ]
-                                  << " " << MDSSTangents[ i ][ 1 ];
-                    }
-                    if( curvature )
-                    {
-                        std::cout << " " << MDSSCurvatures1[ i ]
-                                  << " " << MDSSCurvatures2[ i ];
-                    }
-                }
-                if (options.at(1) != '0')
-                {
-                    if( tangent )
-                    {
-                        std::cout << " " << MDCATangents[ i ][ 0 ]
-                                  << " " << MDCATangents[ i ][ 1 ];
-                    }
-                    if( curvature )
-                    {
-                        if( MDCACurvatures.size() > 0 )
-                        {
-                            std::cout << " " << MDCACurvatures[ i ];
-                        }
-                        else
-                        {
-                            std::cout << " NA";
-                        }
-                    }
-                }
-                if (options.at(2) != '0')
-                {
-                    if ( tangent )
-                    {
-                        if( BCTangents.size() > 0 )
-                        {
-                            std::cout << " " << BCTangents[ i ][ 0 ]
-                                      << " " << BCTangents[ i ][ 1 ];
-                        }
-                        else
-                        {
-                            std::cout << " NA NA";
-                        }
-                    }
-                    if ( curvature )
-                    {
-                        if( BCCurvatures.size() > 0 )
-                        {
-                            std::cout << " " << BCCurvatures[ i ];
-                        }
-                        else
-                        {
-                            std::cout << " NA";
-                        }
-                    }
-                }
-                if (options.at(3) != '0')
-                {
-                    if( curvature )
-                    {
-                        std::cout << " " << IICurvatures[ prsize - i ];
-                    }
-                }
-                std::cout << std::endl;
-            }
-
-            return true;
         }
         else
         {
@@ -843,6 +818,7 @@ int main( int argc, char** argv )
     general_opt.add_options()
             ("help,h", "display this message")
             ("list,l",  "List all available shapes")
+            ("output,o", po::value<std::string>(), "Output")
             ("shape,s", po::value<std::string>(), "Shape name")
             ("radius,R",  po::value<double>(), "Radius of the shape" )
             ("kernelradius,K",  po::value<double>()->default_value(0.0), "Radius of the convolution kernel (Integral invariants estimators)" )
@@ -860,7 +836,8 @@ int main( int argc, char** argv )
             ("gridstep,g",  po::value<double>()->default_value(1.0), "Grid step for the digitization" )
             ("noise,n",  po::value<double>()->default_value(0.0), "Level of noise to perturb the shape" )
             ("properties",  po::value<std::string>()->default_value("11"), "the i-th property is disabled iff there is a 0 at position i" )
-            ("estimators,e",  po::value<std::string>()->default_value("1000"), "the i-th estimator is disabled iff there is a 0 at position i" );
+            ("estimators,e",  po::value<std::string>()->default_value("10000"), "the i-th estimator is disabled iff there is a 0 at position i" )
+            ("lambda,l",  po::value< bool >()->default_value( false ), "Use the shape to get a better approximation of the surface (optional)" );
 
 
     bool parseOK=true;
@@ -876,17 +853,18 @@ int main( int argc, char** argv )
     {
         trace.info()<< "Compare local estimators on implicit shapes using DGtal library" <<std::endl
                     << "Basic usage: "<<std::endl
-                    << "\tlocalEstimators --shape <shapeName> [required parameters] --estimators <binaryWord> --properties <binaryWord>"<<std::endl
+                    << "\tlocalEstimators --output <output> --shape <shapeName> [required parameters] --estimators <binaryWord> --properties <binaryWord>"<<std::endl
                     << std::endl
                     << "Below are the different available families of estimators: " << std::endl
+                    << "\t - True estimators" << std::endl
                     << "\t - Maximal DSS based estimators" << std::endl
                     << "\t - Maximal DCA based estimators" << std::endl
                     << "\t - Binomial convolver based estimators" << std::endl
                     << "\t - Integral Invariants based estimators" << std::endl
                     << std::endl
                     << "The i-th family of estimators is enabled if the i-th character of the binary word is not 0. "
-                    << "The default binary word is '100'. This means that the first family of estimators, "
-                    << "ie. maximal DSS based estimators, is enabled, whereas the next ones are disabled. "
+                    << "The default binary word is '10000'. This means that the first family of estimators, "
+                    << "ie. true estimators, is enabled, whereas the next ones are disabled. "
                     << std::endl
                     << "Below are the different available properties: " << std::endl
                     << "\t - Tangeant" << std::endl
@@ -907,7 +885,10 @@ int main( int argc, char** argv )
 
     //Parse options
     if (!(vm.count("shape"))) missingParam("--shape");
+    if (!(vm.count("output"))) missingParam("--output");
+
     std::string shapeName = vm["shape"].as<std::string>();
+    std::string filename = vm["output"].as<std::string>();
 
     int nb = 4; //number of available methods
     std::string options = vm["estimators"].as<std::string>();
@@ -946,6 +927,7 @@ int main( int argc, char** argv )
     struct OptionsIntegralInvariant< RealPoint > optII;
     optII.radius = vm["kernelradius"].as<double>();
     optII.alpha = vm["alpha"].as<double>();
+    optII.lambda_optimized = vm["lambda"].as< bool >();
     optII.center = center;
 
     double noiseLevel = vm["noise"].as<double>();
@@ -956,8 +938,9 @@ int main( int argc, char** argv )
         //if (!(vm.count("kernelradius"))) missingParam("--kernelradius");
         double radius = vm["radius"].as<double>();
 
-        Ball2D<Space> ball(Z2i::Point(0,0), radius);
-        computeLocalEstimations<Space>( ball, h, optII, options, properties, noiseLevel );
+        Ball2D<Space> * ball = new Ball2D<Space>(Z2i::Point(0,0), radius);
+        computeLocalEstimations<Space>( filename, ball, h, optII, options, properties, noiseLevel );
+        delete ball;
     }
     else if (id ==1)
     {
@@ -991,8 +974,9 @@ int main( int argc, char** argv )
         unsigned int k = vm["k"].as<unsigned int>();
         double phi = vm["phi"].as<double>();
 
-        Flower2D<Space> flower( center, radius, varsmallradius, k, phi );
-        computeLocalEstimations<Space>( flower, h, optII, options, properties, noiseLevel );
+        Flower2D<Space> * flower = new Flower2D<Space>( center, radius, varsmallradius, k, phi );
+        computeLocalEstimations<Space>( filename, flower, h, optII, options, properties, noiseLevel );
+        delete flower;
     }
     else if (id ==4)
     {
@@ -1004,8 +988,9 @@ int main( int argc, char** argv )
         unsigned int k = vm["k"].as<unsigned int>();
         double phi = vm["phi"].as<double>();
 
-        NGon2D<Space> object( center, radius, k, phi );
-        computeLocalEstimations<Space>( object, h, optII, options, properties, noiseLevel );
+        NGon2D<Space> * object = new NGon2D<Space>( center, radius, k, phi );
+        computeLocalEstimations<Space>( filename, object, h, optII, options, properties, noiseLevel );
+        delete object;
     }
     else if (id ==5)
     {
@@ -1019,8 +1004,9 @@ int main( int argc, char** argv )
         unsigned int k = vm["k"].as<unsigned int>();
         double phi = vm["phi"].as<double>();
 
-        AccFlower2D<Space> accflower( center, radius, varsmallradius, k, phi );
-        computeLocalEstimations<Space>( accflower, h, optII, options, properties, noiseLevel );
+        AccFlower2D<Space> * accflower = new AccFlower2D<Space>( center, radius, varsmallradius, k, phi );
+        computeLocalEstimations<Space>( filename, accflower, h, optII, options, properties, noiseLevel );
+        delete accflower;
     }
     else if (id ==6)
     {
@@ -1032,7 +1018,8 @@ int main( int argc, char** argv )
         double a2 = vm["axis2"].as<double>();
         double phi = vm["phi"].as<double>();
 
-        Ellipse2D<Space> ellipse( center, a1, a2, phi );
-        computeLocalEstimations<Space>( ellipse, h, optII, options, properties, noiseLevel );
+        Ellipse2D<Space> * ellipse = new Ellipse2D<Space>( center, a1, a2, phi );
+        computeLocalEstimations<Space>( filename, ellipse, h, optII, options, properties, noiseLevel );
+        delete ellipse;
     }
 }
