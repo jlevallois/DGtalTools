@@ -110,17 +110,32 @@ int ComputeStatistics_0memory ( const std::string & inputdata1,
     double h = - std::numeric_limits<double>::max();
 
     unsigned int nb_elements = 0;
-    while( LoadingStringFromFile_0memory( file1, s1 ) && LoadingStringFromFile_0memory( file2, s2 ))
+    bool finish = false;
+    while(( LoadingStringFromFile_0memory( file1, s1 ) && LoadingStringFromFile_0memory( file2, s2 )) || !finish )
     {
-        if ( s1[ 0 ] == '#' )
+        while ( s1[ 0 ] == '#' )
         {
             int p = s1.find( "# h = " );
             if ( p != std::string::npos )
             {
                 h = atof((s1.erase( p, 5 )).c_str());
-                continue;
+            }
+            if( ! LoadingStringFromFile_0memory( file1, s1 ) )
+            {
+                s1 = "NA";
+                finish = true;
             }
         }
+
+        while ( s2[ 0 ] == '#' )
+        {
+            if( ! LoadingStringFromFile_0memory( file2, s2 ) )
+            {
+                s2 = "NA";
+                finish = true;
+            }
+        }
+
         if ( s1 == "NA" || s1 == "-nan" || s1 == "-inf" || s1 == "inf" || s1 == "" || s1 == " " )
             continue;
         if ( s2 == "NA" || s2 == "-nan" || s2 == "-inf" || s2 == "inf" || s2 == "" || s2 == " " )
