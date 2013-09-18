@@ -262,6 +262,7 @@ bool
 computeLocalEstimations( const std::string & filename,
                          Shape * aShape,
                          const double & h,
+                         const std::string & options,
                          const double & radius_kernel,
                          const double & alpha,
                          const bool & lambda_optimized )
@@ -300,66 +301,93 @@ computeLocalEstimations( const std::string & filename,
         Boundary boundary( K, *dshape, SurfelAdjacency< KSpace::dimension >( true ), bel );
         MyDigitalSurface surf ( boundary );
 
+        typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
+        typedef GraphVisitorRange< Visitor > VisitorRange;
+        typedef typename VisitorRange::ConstIterator ConstIterator;
+
         // Estimations
 
-        // True
         char full_filename[360];
-        sprintf( full_filename, "%s%s", filename.c_str(), "_True_curvature.dat" );
-        std::ofstream file( full_filename );
-        file.flags( std::ios_base::unitbuf );
-        file << "# h = " << h << std::endl;
-        file << "# True Curvature estimation" << std::endl;
+        std::ofstream file;
 
-        std::ostream_iterator< double > out_it_true( file, "\n" );
+        VisitorRange * range;
+        ConstIterator ibegin;
+        ConstIterator iend;
 
-        estimationTrueCurvature( surf.begin(),
-                                 surf.end(),
-                                 out_it_true,
-                                 K,
-                                 h,
-                                 aShape );
+        // True
+        if (options.at(0) != '0')
+        {
+            memset(&full_filename[0], 0, sizeof(full_filename));
+            sprintf( full_filename, "%s%s", filename.c_str(), "_True_curvature.dat" );
+            file.open( full_filename );
+            file.flags( std::ios_base::unitbuf );
+            file << "# h = " << h << std::endl;
+            file << "# True Curvature estimation" << std::endl;
 
-        file.close();
+            std::ostream_iterator< double > out_it_true( file, "\n" );
+
+            range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+            ibegin = range->begin();
+            iend = range->end();
+
+            estimationTrueCurvature( ibegin,
+                                     iend,
+                                     out_it_true,
+                                     K,
+                                     h,
+                                     aShape );
+
+            file.close();
+            delete range;
+        }
 
         //Integral Invariants
 
-        Clock c;
-        double re_convolution_kernel = radius_kernel * std::pow( h, alpha );
-
-        MyPointFunctor * pointFunctor = new MyPointFunctor( dshape, dshape->getDomain(), 1, 0 );
-        MySpelFunctor * functor = new MySpelFunctor( *pointFunctor, K );
-
-        IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, MySpelFunctor > * IIMeanCurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, MySpelFunctor >( K, *functor );
-
-        c.startClock();
-        IIMeanCurvatureEstimator->init ( h, re_convolution_kernel );
-
-
-        memset(&full_filename[0], 0, sizeof(full_filename));
-        sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature.dat" );
-        file.open( full_filename );
-        file.flags( std::ios_base::unitbuf );
-        file << "# h = " << h << std::endl;
-        file << "# Curvature estimation from the Integral Invariant" << std::endl;
-        file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
-
-        std::ostream_iterator< double > out_it_ii( file, "\n" );
-        if( !lambda_optimized )
+        if (options.at(1) != '0')
         {
-            IIMeanCurvatureEstimator->eval( surf.begin(), surf.end(), out_it_ii );
-        }
-        else
-        {
-            IIMeanCurvatureEstimator->eval( surf.begin(), surf.end(), out_it_ii, *aShape );
-        }
+            Clock c;
+            double re_convolution_kernel = radius_kernel * std::pow( h, alpha );
 
-        double TIICurv = c.stopClock();
-        file << "# time = " << TIICurv << std::endl;
-        file.close();
+            MyPointFunctor * pointFunctor = new MyPointFunctor( dshape, dshape->getDomain(), 1, 0 );
+            MySpelFunctor * functor = new MySpelFunctor( *pointFunctor, K );
 
-        delete pointFunctor;
-        delete functor;
-        delete IIMeanCurvatureEstimator;
+            IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, MySpelFunctor > * IIMeanCurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, MySpelFunctor >( K, *functor );
+
+            range = new VisitorRange( new Visitor( surf, *surf.begin() ) ); //smartpointer, don't need to destruct Visitor
+            ibegin = range->begin();
+            iend = range->end();
+
+            c.startClock();
+            IIMeanCurvatureEstimator->init ( h, re_convolution_kernel );
+
+
+            memset(&full_filename[0], 0, sizeof(full_filename));
+            sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature.dat" );
+            file.open( full_filename );
+            file.flags( std::ios_base::unitbuf );
+            file << "# h = " << h << std::endl;
+            file << "# Curvature estimation from the Integral Invariant" << std::endl;
+            file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+
+            std::ostream_iterator< double > out_it_ii( file, "\n" );
+            if( !lambda_optimized )
+            {
+                IIMeanCurvatureEstimator->eval( ibegin, iend, out_it_ii );
+            }
+            else
+            {
+                IIMeanCurvatureEstimator->eval( ibegin, iend, out_it_ii, *aShape );
+            }
+
+            double TIICurv = c.stopClock();
+            file << "# time = " << TIICurv << std::endl;
+            file.close();
+
+            delete range;
+            delete pointFunctor;
+            delete functor;
+            delete IIMeanCurvatureEstimator;
+        }
 
         return true;
     }
@@ -398,6 +426,7 @@ int main( int argc, char** argv )
             ("center_x,x",   po::value<double>()->default_value(0.0), "x-coordinate of the shape center (double)" )
             ("center_y,y",   po::value<double>()->default_value(0.0), "y-coordinate of the shape center (double)" )
             ("gridstep,g",  po::value<double>()->default_value(1.0), "Grid step for the digitization" )
+            ("estimators,e",  po::value<std::string>()->default_value("11"), "the i-th estimator is disabled iff there is a 0 at position i" )
             ("lambda,l",  po::value< bool >()->default_value( false ), "Use the shape to get a better approximation of the surface (optional)" );
 
 
@@ -435,6 +464,8 @@ int main( int argc, char** argv )
     std::string shapeName = vm["shape"].as< std::string >();
     std::string filename = vm["output"].as< std::string >();
 
+    std::string options = vm["estimators"].as< std::string >();
+
     //We check that the shape is known
     unsigned int id = checkAndReturnIndex(shapeName);
 
@@ -447,7 +478,7 @@ int main( int argc, char** argv )
             vm["center_y"].as< double >() );
     double h = vm["gridstep"].as< double >();
 
-    double radius = vm["kernelradius"].as< double >();
+    double radius_kernel = vm["kernelradius"].as< double >();
     double alpha = vm["alpha"].as< double >();
     bool lambda = vm["lambda"].as< bool >();
 
@@ -458,7 +489,7 @@ int main( int argc, char** argv )
         double radius = vm["radius"].as<double>();
 
         Ball2D<Space> * ball = new Ball2D<Space>( center, radius );
-        computeLocalEstimations<Space>( filename, ball, h, radius, alpha, lambda );
+        computeLocalEstimations<Space>( filename, ball, h, options, radius_kernel, alpha, lambda );
         delete ball;
     }
     else if (id ==1)
@@ -494,7 +525,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         Flower2D<Space> * flower = new Flower2D<Space>( center, radius, varsmallradius, k, phi );
-        computeLocalEstimations<Space>( filename, flower, h, radius, alpha, lambda );
+        computeLocalEstimations<Space>( filename, flower, h, options, radius_kernel, alpha, lambda );
         delete flower;
     }
     else if (id ==4)
@@ -508,7 +539,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         NGon2D<Space> * object = new NGon2D<Space>( center, radius, k, phi );
-        computeLocalEstimations<Space>( filename, object, h, radius, alpha, lambda );
+        computeLocalEstimations<Space>( filename, object, h, options, radius_kernel, alpha, lambda );
         delete object;
     }
     else if (id ==5)
@@ -524,7 +555,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         AccFlower2D<Space> * accflower = new AccFlower2D<Space>( center, radius, varsmallradius, k, phi );
-        computeLocalEstimations<Space>( filename, accflower, h, radius, alpha, lambda );
+        computeLocalEstimations<Space>( filename, accflower, h, options, radius_kernel, alpha, lambda );
         delete accflower;
     }
     else if (id ==6)
@@ -538,7 +569,7 @@ int main( int argc, char** argv )
         double phi = vm["phi"].as<double>();
 
         Ellipse2D<Space> * ellipse = new Ellipse2D<Space>( center, a1, a2, phi );
-        computeLocalEstimations<Space>( filename, ellipse, h, radius, alpha, lambda );
+        computeLocalEstimations<Space>( filename, ellipse, h, options, radius_kernel, alpha, lambda );
         delete ellipse;
     }
 }

@@ -79,6 +79,8 @@
 #include "DGtal/images/ImageHelper.h"
 #include "DGtal/geometry/surfaces/FunctorOnCells.h"
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator.h"
+#include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator_0memory.h"
+
 
 #include "DGtal/kernel/BasicPointFunctors.h"
 
@@ -742,10 +744,18 @@ computeLocalEstimations( const std::string & filename,
 
                         IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
 
+                        typedef DepthFirstVisitor< DigSurface > Visitor;
+                        typedef GraphVisitorRange< Visitor > VisitorRange;
+                        typedef typename VisitorRange::ConstIterator I;
+
+                        VisitorRange range( new Visitor( surf, *surf.begin() ) );
+                        I ibegin = range.begin();
+                        I iend = range.end();
+
                         c.startClock();
 
                         IICurvatureEstimator->init( h, re_convolution_kernel );
-                        IICurvatureEstimator->eval( surf.begin(), surf.end(), out_it );
+                        IICurvatureEstimator->eval( ibegin, iend, out_it );
 
                         delete functor;
                         delete noisifiedFunctor;
@@ -767,18 +777,27 @@ computeLocalEstimations( const std::string & filename,
                         typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
                         CurvatureIIFct * functor = new CurvatureIIFct( *pointFunctor, K );
 
-                        IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
+                        IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, CurvatureIIFct>( K, *functor );
+
+                        typedef DepthFirstVisitor< DigSurface > Visitor;
+                        typedef GraphVisitorRange< Visitor > VisitorRange;
+                        typedef typename VisitorRange::ConstIterator I;
+
+                        VisitorRange range( new Visitor( surf, *surf.begin() ) );
+                        I ibegin = range.begin();
+                        I iend = range.end();
 
                         c.startClock();
 
                         IICurvatureEstimator->init( h, re_convolution_kernel );
                         if( !optionsII.lambda_optimized )
                         {
-                            IICurvatureEstimator->eval( surf.begin(), surf.end(), out_it );
+                            IICurvatureEstimator->eval( ibegin, iend, out_it );
+                            std::cout << "here" << std::endl;
                         }
                         else
                         {
-                            IICurvatureEstimator->eval( surf.begin(), surf.end(), out_it, *aShape );
+                            IICurvatureEstimator->eval( ibegin, iend, out_it, *aShape );
                         }
 
                         delete functor;
@@ -891,7 +910,7 @@ int main( int argc, char** argv )
     std::string filename = vm["output"].as<std::string>();
 
     int nb = 4; //number of available methods
-    std::string options = vm["estimators"].as<std::string>();
+    std::string options = vm["estimators"].as< std::string >();
     if (options.size() < nb)
     {
         trace.error() << " At least " << nb
