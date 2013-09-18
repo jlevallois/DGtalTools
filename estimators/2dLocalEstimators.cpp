@@ -396,7 +396,7 @@ computeLocalEstimations( const std::string & filename,
             {
                 if( tangent )
                 {
-                    char full_filename[80];
+                    char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_True_tangeant.dat" );
                     std::ofstream file( full_filename );
                     file.flags( std::ios_base::unitbuf );
@@ -426,7 +426,7 @@ computeLocalEstimations( const std::string & filename,
 
                 if( curvature )
                 {
-                    char full_filename[80];
+                    char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_True_curvature.dat" );
                     std::ofstream file( full_filename );
                     file.flags( std::ios_base::unitbuf );
@@ -459,7 +459,7 @@ computeLocalEstimations( const std::string & filename,
             {
                 if( tangent )
                 {
-                    char full_filename[80];
+                    char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDSS_tangeant.dat" );
                     std::ofstream file( full_filename );
                     file.flags( std::ios_base::unitbuf );
@@ -488,7 +488,7 @@ computeLocalEstimations( const std::string & filename,
                 }
                 if( curvature )
                 {
-                    char full_filename[80];
+                    char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDSSl_curvature.dat" );
                     std::ofstream file( full_filename );
                     file.flags( std::ios_base::unitbuf );
@@ -551,7 +551,7 @@ computeLocalEstimations( const std::string & filename,
             {
                 if( tangent )
                 {
-                    char full_filename[80];
+                    char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDCA_tangent.dat" );
                     std::ofstream file( full_filename );
                     file.flags( std::ios_base::unitbuf );
@@ -583,7 +583,7 @@ computeLocalEstimations( const std::string & filename,
 
                 if( curvature )
                 {
-                    char full_filename[80];
+                    char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDCA_curvature.dat" );
                     std::ofstream file( full_filename );
                     file.flags( std::ios_base::unitbuf );
@@ -619,7 +619,7 @@ computeLocalEstimations( const std::string & filename,
             {
                 if( tangent )
                 {
-                    char full_filename[80];
+                    char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_BC_tangeant.dat" );
                     std::ofstream file( full_filename );
                     file.flags( std::ios_base::unitbuf );
@@ -657,7 +657,7 @@ computeLocalEstimations( const std::string & filename,
 
                 if( curvature )
                 {
-                    char full_filename[80];
+                    char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_BC_curvature.dat" );
                     std::ofstream file( full_filename );
                     file.flags( std::ios_base::unitbuf );
@@ -699,7 +699,7 @@ computeLocalEstimations( const std::string & filename,
             {
                 if( curvature )
                 {
-                    char full_filename[80];
+                    char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature.dat" );
                     std::ofstream file( full_filename );
                     file.flags( std::ios_base::unitbuf );
@@ -938,7 +938,7 @@ int main( int argc, char** argv )
         //if (!(vm.count("kernelradius"))) missingParam("--kernelradius");
         double radius = vm["radius"].as<double>();
 
-        Ball2D<Space> * ball = new Ball2D<Space>(Z2i::Point(0,0), radius);
+        Ball2D<Space> * ball = new Ball2D<Space>( center, radius);
         computeLocalEstimations<Space>( filename, ball, h, optII, options, properties, noiseLevel );
         delete ball;
     }

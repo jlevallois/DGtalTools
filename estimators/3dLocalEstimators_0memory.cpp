@@ -175,7 +175,7 @@ compareShapeEstimators( const std::string & filename,
 
         if( options.at( 0 ) != '0' || options.at( 2 ) != '0' )
         {
-            char full_filename[80];
+            char full_filename[360];
             sprintf( full_filename, "%s%s", filename.c_str(), "_True_mean.dat" );
             std::ofstream file( full_filename );
             file.flags( std::ios_base::unitbuf );
@@ -197,7 +197,7 @@ compareShapeEstimators( const std::string & filename,
 
         if( options.at( 1 ) != '0' || options.at( 3 ) != '0' )
         {
-            char full_filename[80];
+            char full_filename[360];
             sprintf( full_filename, "%s%s", filename.c_str(), "_True_gaussian.dat" );
             std::ofstream file( full_filename );
             file.flags( std::ios_base::unitbuf );
@@ -232,7 +232,7 @@ compareShapeEstimators( const std::string & filename,
                 c.startClock();
                 IIMeanCurvatureEstimator->init ( h, re_convolution_kernel );
 
-                char full_filename[80];
+                char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_II_mean.dat" );
                 std::ofstream file( full_filename );
                 file.flags( std::ios_base::unitbuf );
@@ -265,7 +265,7 @@ compareShapeEstimators( const std::string & filename,
                 c.startClock();
                 IIGaussianCurvatureEstimator->init( h, re_convolution_kernel );
 
-                char full_filename[80];
+                char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_II_gaussian.dat" );
                 std::ofstream file( full_filename );
                 file.flags( std::ios_base::unitbuf );
@@ -308,7 +308,7 @@ compareShapeEstimators( const std::string & filename,
             typename ReporterK::SurfelConstIterator aaabegin = surf.begin();
             typename ReporterK::SurfelConstIterator aaaend = surf.end();
 
-            char full_filename[80];
+            char full_filename[360];
             sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_gaussian.dat" );
             std::ofstream file( full_filename );
             file.flags( std::ios_base::unitbuf );
@@ -332,7 +332,7 @@ compareShapeEstimators( const std::string & filename,
             c.startClock();
             reporterH.init( h , re_convolution_kernel / h  );
 
-            char full_filename[80];
+            char full_filename[360];
             sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_mean.dat" );
             std::ofstream file( full_filename );
             file.flags( std::ios_base::unitbuf );

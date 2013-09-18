@@ -95,19 +95,10 @@ int ComputeStatistics_0memory ( const std::string & inputdata1,
                                 const unsigned int & idColumnData1,
                                 const unsigned int & idColumnData2,
                                 const bool & isMongeMean,
-                                const bool & reverseOrderFile2,
                                 std::ofstream & output )
 {
-  std::ifstream file1( inputdata1.c_str() );
-  std::ifstream file2;
-  if( !reverseOrderFile2 )
-  {
-    file2.open( inputdata2.c_str() );
-  }
-  else
-  {
-      file2.open( inputdata2.c_str() );
-  }
+    std::ifstream file1( inputdata1.c_str() );
+    std::ifstream file2( inputdata2.c_str() );
 
     double absd1d2;
     double L1 = 0.0;
