@@ -793,7 +793,6 @@ computeLocalEstimations( const std::string & filename,
                         if( !optionsII.lambda_optimized )
                         {
                             IICurvatureEstimator->eval( ibegin, iend, out_it );
-                            std::cout << "here" << std::endl;
                         }
                         else
                         {
