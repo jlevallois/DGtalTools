@@ -111,7 +111,7 @@ int ComputeStatistics_0memory ( const std::string & inputdata1,
 
     unsigned int nb_elements = 0;
     bool finish = false;
-    while(( LoadingStringFromFile_0memory( file1, s1 ) && LoadingStringFromFile_0memory( file2, s2 )) || !finish )
+    while(( LoadingStringFromFile_0memory( file1, s1 ) && LoadingStringFromFile_0memory( file2, s2 )) && !finish )
     {
         while ( s1[ 0 ] == '#' )
         {
