@@ -144,7 +144,7 @@ int ComputeStatistics_0memory ( const std::string & inputdata1,
         v1 = atof( s1.c_str() );
         v2 = atof( s2.c_str() );
 
-        if( isMongeMean && !(( v1 >= 0.0 ) ^ ( v2 >= 0.0 ))) // hack for Monge. Can be reversed.
+        if( isMongeMean && (( v1 >= 0.0 ) ^ ( v2 >= 0.0 ))) // hack for Monge. Can be reversed.
         {
             v2 = -v2;
         }
