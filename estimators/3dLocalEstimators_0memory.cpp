@@ -51,6 +51,7 @@
 //#include "DGtal/geometry/volumes/KanungoNoise.h"
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
 #include "DGtal/topology/DigitalSurface.h"
+#include "DGtal/graph/DepthFirstVisitor.h"
 
 
 
@@ -147,6 +148,10 @@ compareShapeEstimators( const std::string & filename,
     typedef DigitalSurface< Boundary > MyDigitalSurface;
     typedef typename MyDigitalSurface::ConstIterator ConstIterator;
 
+    typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
+    typedef GraphVisitorRange< Visitor > VisitorRange;
+    typedef typename VisitorRange::ConstIterator VisitorConstIterator;
+
     typedef PointFunctorFromPointPredicateAndDomain< DigitalShape, Z3i::Domain, unsigned int > MyPointFunctor;
     typedef FunctorOnCells< MyPointFunctor, KSpace > MySpelFunctor;
 
@@ -169,11 +174,15 @@ compareShapeEstimators( const std::string & filename,
         Boundary boundary ( K, *dshape, SurfelAdjacency< KSpace::dimension >( true ), bel );
         MyDigitalSurface surf ( boundary );
 
+        VisitorRange * range;
+        VisitorConstIterator ibegin;
+        VisitorConstIterator iend;
+
         // Estimations
 
         // True Mean Curvature
 
-        if( options.at( 0 ) != '0' || options.at( 2 ) != '0' )
+        if( options.at( 0 ) != '0' )
         {
             char full_filename[360];
             sprintf( full_filename, "%s%s", filename.c_str(), "_True_mean.dat" );
@@ -184,18 +193,24 @@ compareShapeEstimators( const std::string & filename,
 
             std::ostream_iterator< double > out_it_true_mean( file, "\n" );
 
-            estimateTrueMeanCurvatureQuantity( surf.begin(),
-                                               surf.end(),
+            range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+            ibegin = range->begin();
+            iend = range->end();
+
+            estimateTrueMeanCurvatureQuantity( ibegin,
+                                               iend,
                                                out_it_true_mean,
                                                K,
                                                h,
                                                aShape );
             file.close();
+
+            delete range;
         }
 
         // True Gaussian Curvature
 
-        if( options.at( 1 ) != '0' || options.at( 3 ) != '0' )
+        if( options.at( 1 ) != '0' )
         {
             char full_filename[360];
             sprintf( full_filename, "%s%s", filename.c_str(), "_True_gaussian.dat" );
@@ -206,25 +221,31 @@ compareShapeEstimators( const std::string & filename,
 
             std::ostream_iterator< double > out_it_true_gaussian( file, "\n" );
 
-            estimateTrueGaussianCurvatureQuantity( surf.begin(),
-                                                   surf.end(),
+            range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+            ibegin = range->begin();
+            iend = range->end();
+
+            estimateTrueGaussianCurvatureQuantity( ibegin,
+                                                   iend,
                                                    out_it_true_gaussian,
                                                    K,
                                                    h,
                                                    aShape );
             file.close();
+
+            delete range;
         }
 
 
         Clock c;
         double re_convolution_kernel = radius_kernel * std::pow( h, 1.0/3.0 ); // to obtains convergence results, re must follow the rule re=kh^(1/3)
 
-        if( options.at( 0 ) != '0' || options.at( 1 ) != '0' )
+        if( options.at( 2 ) != '0' || options.at( 3 ) != '0' )
         {
             MyPointFunctor * pointFunctor = new MyPointFunctor( dshape, dshape->getDomain(), 1, 0 );
             MySpelFunctor * functor = new MySpelFunctor( *pointFunctor, K );
 
-            if( options.at( 0 ) != '0' )
+            if( options.at( 2 ) != '0' )
             {
                 // Integral Invariant Mean Curvature
                 IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, MySpelFunctor > * IIMeanCurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, MySpelFunctor >( K, *functor );
@@ -240,24 +261,29 @@ compareShapeEstimators( const std::string & filename,
                 file << "# Mean Curvature estimation from the Integral Invariant" << std::endl;
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
 
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
+
                 std::ostream_iterator< double > out_it_ii_mean( file, "\n" );
                 if( !lambda_optimized )
                 {
-                    IIMeanCurvatureEstimator->eval( surf.begin(), surf.end(), out_it_ii_mean );
+                    IIMeanCurvatureEstimator->eval( ibegin, iend, out_it_ii_mean );
                 }
                 else
                 {
-                    IIMeanCurvatureEstimator->eval( surf.begin(), surf.end(), out_it_ii_mean, *aShape );
+                    IIMeanCurvatureEstimator->eval( ibegin, iend, out_it_ii_mean, *aShape );
                 }
 
                 double TIIMeanCurv = c.stopClock();
                 file << "# time = " << TIIMeanCurv << std::endl;
                 file.close();
 
+                delete range;
                 delete IIMeanCurvatureEstimator;
             }
 
-            if( options.at( 1 ) != '0' )
+            if( options.at( 3 ) != '0' )
             {
                 // Integral Invariant Gaussian Curvature
                 IntegralInvariantGaussianCurvatureEstimator_0memory< KSpace, MySpelFunctor > * IIGaussianCurvatureEstimator = new IntegralInvariantGaussianCurvatureEstimator_0memory< KSpace, MySpelFunctor >( K, *functor );
@@ -275,19 +301,23 @@ compareShapeEstimators( const std::string & filename,
 
                 std::ostream_iterator< double > out_it_ii_gaussian( file, "\n" );
 
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
 
                 if( !lambda_optimized )
                 {
-                    IIGaussianCurvatureEstimator->eval ( surf.begin(), surf.end(), out_it_ii_gaussian );
+                    IIGaussianCurvatureEstimator->eval ( ibegin, iend, out_it_ii_gaussian );
                 }
                 else
                 {
-                    IIGaussianCurvatureEstimator->eval ( surf.begin(), surf.end(), out_it_ii_gaussian, *aShape );
+                    IIGaussianCurvatureEstimator->eval ( ibegin, iend, out_it_ii_gaussian, *aShape );
                 }
                 double TIIGaussCurv = c.stopClock();
                 file << "# time = " << TIIGaussCurv << std::endl;
                 file.close();
 
+                delete range;
                 delete IIGaussianCurvatureEstimator;
             }
 
@@ -295,7 +325,7 @@ compareShapeEstimators( const std::string & filename,
             delete functor;
         }
 
-        if( options.at( 3 ) != '0' )
+        if( options.at( 5 ) != '0' )
         {
             // Monge Gaussian Curvature
             typedef MongeJetFittingGaussianCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorGaussian;
@@ -322,7 +352,7 @@ compareShapeEstimators( const std::string & filename,
             file.close();
         }
 
-        if( options.at( 2 ) != '0' )
+        if( options.at( 4 ) != '0' )
         {
             // Monge Mean Curvature
             typedef MongeJetFittingMeanCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorMean;
@@ -409,7 +439,7 @@ int main( int argc, char** argv )
             ("minAABB,a",  po::value< double >()->default_value( -10.0 ), "Min value of the AABB bounding box (domain)" )
             ("maxAABB,A",  po::value< double >()->default_value( 10.0 ), "Max value of the AABB bounding box (domain)" )
             ("lambda,l",  po::value< bool >()->default_value( false ), "Use the shape to get a better approximation of the surface (optional)" )
-            ("estimators,e",  po::value< std::string >()->default_value("1100"), "the i-th estimator is disabled iff there is a 0 at position i" );
+            ("estimators,e",  po::value< std::string >()->default_value("111100"), "the i-th estimator is disabled iff there is a 0 at position i" );
 
 
     bool parseOK = true;
