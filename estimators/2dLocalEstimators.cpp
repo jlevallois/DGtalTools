@@ -360,36 +360,44 @@ computeLocalEstimations( const std::string & filename,
         // Extracts shape boundary
         SurfelAdjacency< KSpace::dimension > SAdj( true );
         SCell bel;
-        std::vector< Point > points;
+//        std::vector< Point > points;
+        std::vector< SCell > points;
 
         KanungoPredicate  *noisifiedObject;
         if ( withNoise )
         {
             noisifiedObject = new KanungoPredicate( *dig, domain, noiseLevel );
             bel = Surfaces< KSpace >::findABel( K, *noisifiedObject, 10000 );
-            Surfaces< KSpace >::track2DBoundaryPoints( points, K, SAdj, *noisifiedObject, bel );
+            Surfaces< KSpace >::track2DBoundary( points, K, SAdj, *noisifiedObject, bel );
+//            Surfaces< KSpace >::track2DBoundaryPoints( points, K, SAdj, *noisifiedObject, bel );
 
             double minsize = dig->getUpperBound()[0] - dig->getLowerBound()[0];
             while( points.size() < 2 * minsize )
             {
                 points.clear();
                 bel = Surfaces< KSpace >::findABel( K, *noisifiedObject, 10000 );
-                Surfaces< KSpace >::track2DBoundaryPoints( points, K, SAdj, *noisifiedObject, bel );
+                Surfaces< KSpace >::track2DBoundary( points, K, SAdj, *noisifiedObject, bel );
+//                Surfaces< KSpace >::track2DBoundaryPoints( points, K, SAdj, *noisifiedObject, bel );
             }
         }
         else
         {
             bel = Surfaces< KSpace >::findABel( K, *dig, 10000 );
-            Surfaces< KSpace >::track2DBoundaryPoints( points, K, SAdj, *dig, bel );
+            Surfaces< KSpace >::track2DBoundary( points, K, SAdj, *dig, bel );
+//            Surfaces< KSpace >::track2DBoundaryPoints( points, K, SAdj, *dig, bel );
         }
 
         // Create GridCurve
+//        GridCurve< KSpace > gridcurve;
+//        gridcurve.initFromVector( points );
         GridCurve< KSpace > gridcurve;
-        gridcurve.initFromVector( points );
+        gridcurve.initFromSCellsVector( points );
 
         // Ranges
-        typedef typename GridCurve< KSpace >::PointsRange PointsRange;
-        PointsRange pointsRange = gridcurve.getPointsRange();
+        typedef typename GridCurve< KSpace >::MidPointsRange PointsRange;
+        PointsRange pointsRange = gridcurve.getMidPointsRange();
+//        typedef typename GridCurve< KSpace >::PointsRange PointsRange;
+//        PointsRange pointsRange = gridcurve.getPointsRange();
 
         // Estimations
         if (gridcurve.isClosed())
