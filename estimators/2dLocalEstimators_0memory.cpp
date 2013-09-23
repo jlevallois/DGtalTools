@@ -230,18 +230,16 @@ estimationTrueCurvature( const ConstIterator & it_begin,
                          const double & h,
                          Shape * aShape )
 {
-    typedef typename KSpace::SCell Spel;
-    typedef typename KSpace::Point Point;
     typedef typename KSpace::Space::RealPoint RealPoint;
+    typedef SCellToMidPoint< KSpace > Embedder;
 
-    Spel currentInnerSpel;
-    Point currentInnerRealPoint;
+    Embedder embedder( K );
+    RealPoint currentRealPoint;
 
     for ( ConstIterator it = it_begin; it != it_end; ++it )
     {
-        currentInnerSpel = K.sDirectIncident( *it_begin, K.sOrthDir( *it_begin ) ); /// Spel on the border, but inside the shape
-        currentInnerRealPoint = ((RealPoint)(K.sCoords( currentInnerSpel ))) * h;
-        output = aShape->curvature( aShape->parameter( currentInnerRealPoint ));
+        currentRealPoint = embedder( *it_begin ) * h;
+        output = aShape->curvature( aShape->parameter( currentRealPoint ));
         ++output;
     }
 }

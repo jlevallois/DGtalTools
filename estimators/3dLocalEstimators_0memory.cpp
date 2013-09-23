@@ -78,18 +78,16 @@ estimateTrueMeanCurvatureQuantity( const ConstIterator & it_begin,
                                    const double & h,
                                    Shape * aShape )
 {
-    typedef typename KSpace::SCell Spel;
-    typedef typename KSpace::Point Point;
     typedef typename KSpace::Space::RealPoint RealPoint;
+    typedef SCellToMidPoint< KSpace > Embedder;
 
-    Spel currentInnerSpel;
-    RealPoint currentInnerRealPoint;
+    Embedder embedder( K );
+    RealPoint currentRealPoint;
 
     for ( ConstIterator it = it_begin; it != it_end; ++it )
     {
-        currentInnerSpel = K.sDirectIncident( *it_begin, K.sOrthDir( *it_begin ) ); /// Spel on the border, but inside the shape
-        currentInnerRealPoint = ((RealPoint)(K.sCoords( currentInnerSpel ))) * h;
-        output = aShape->meanCurvature( currentInnerRealPoint );
+        currentRealPoint = embedder( *it_begin ) * h;
+        output = aShape->meanCurvature( currentRealPoint );
         ++output;
     }
 }
@@ -103,18 +101,16 @@ estimateTrueGaussianCurvatureQuantity( const ConstIterator & it_begin,
                                        const double & h,
                                        Shape * aShape )
 {
-    typedef typename KSpace::SCell Spel;
-    typedef typename KSpace::Point Point;
     typedef typename KSpace::Space::RealPoint RealPoint;
+    typedef SCellToMidPoint< KSpace > Embedder;
 
-    Spel currentInnerSpel;
-    RealPoint currentInnerRealPoint;
+    Embedder embedder( K );
+    RealPoint currentRealPoint;
 
     for ( ConstIterator it = it_begin; it != it_end; ++it )
     {
-        currentInnerSpel = K.sDirectIncident( *it_begin, K.sOrthDir( *it_begin ) ); /// Spel on the border, but inside the shape
-        currentInnerRealPoint = ((RealPoint)(K.sCoords( currentInnerSpel ))) * h;
-        output = aShape->gaussianCurvature( currentInnerRealPoint );
+        currentRealPoint = embedder( *it_begin ) * h;
+        output = aShape->gaussianCurvature( currentRealPoint );
         ++output;
     }
 }
