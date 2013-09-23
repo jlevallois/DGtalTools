@@ -128,13 +128,6 @@ compareShapeEstimators( const std::string & filename,
                         const std::string & options,
                         const bool & lambda_optimized )
 {
-    ////////
-    typedef Z3i::Space::RealPoint::Coordinate Ring;
-    typedef MPolynomial< 3, Ring > Polynomial3;
-    typedef MPolynomialReader<3, Ring> Polynomial3Reader;
-    typedef ImplicitPolynomial3Shape<Z3i::Space> ImplicitShape;
-    ////////
-
     typedef typename Space::RealPoint RealPoint;
     typedef GaussDigitizer< Z3i::Space, Shape > DigitalShape;
     typedef Z3i::KSpace KSpace;
