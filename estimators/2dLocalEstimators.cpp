@@ -818,12 +818,12 @@ computeLocalEstimations( const std::string & filename,
                 }
             }
 
-            delete noisifiedObject;
+            //delete noisifiedObject;
             delete dig;
         }
         else
         {
-            delete noisifiedObject;
+            //delete noisifiedObject;
             delete dig;
             std::cerr << "[computeLocalEstimations]"
                       << " error: open digital curve found." << std::endl;

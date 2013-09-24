@@ -352,7 +352,7 @@ compareShapeEstimators( const std::string & filename,
                     delete IIGaussianCurvatureEstimator;
                 }
 
-                delete noisifiedObject;
+                //delete noisifiedObject;
                 delete boundary;
                 delete pointFunctor;
                 delete functor;
@@ -414,7 +414,6 @@ compareShapeEstimators( const std::string & filename,
         }
         else
         {
-            std::cout << "NO NOISE" << std::endl;
             typedef LightImplicitDigitalSurface< KSpace, DigitalShape > Boundary;
             typedef DigitalSurface< Boundary > MyDigitalSurface;
             typedef typename MyDigitalSurface::ConstIterator ConstIterator;
@@ -434,8 +433,6 @@ compareShapeEstimators( const std::string & filename,
             VisitorRange * range;
             VisitorConstIterator ibegin;
             VisitorConstIterator iend;
-
-            std::cout << "DIG SHAPE DONE" << std::endl;
 
             // Estimations
             Clock c;
@@ -464,15 +461,12 @@ compareShapeEstimators( const std::string & filename,
                                                    K,
                                                    h,
                                                    aShape );
-                file.close();
 
                 double TTrueMeanCurv = c.stopClock();
+                file << "# time = " << TTrueMeanCurv << std::endl;
 
+                file.close();
                 delete range;
-
-                std::cout << "TRUE MEAN DONE" << std::endl;
-                std::cout << "in " << (TTrueMeanCurv / 1000.0) << "s" << std::endl;
-                std::cout << "--------------------------------------" << std::endl;
             }
 
             // True Gaussian Curvature
@@ -500,15 +494,13 @@ compareShapeEstimators( const std::string & filename,
                                                        K,
                                                        h,
                                                        aShape );
-                file.close();
 
                 double TTrueGaussianCurv = c.stopClock();
+                file << "# time = " << TTrueGaussianCurv << std::endl;
+
+                file.close();
 
                 delete range;
-
-                std::cout << "TRUE GAUSSIAN DONE" << std::endl;
-                std::cout << "in " << (TTrueGaussianCurv / 1000.0) << "s" << std::endl;
-                std::cout << "--------------------------------------" << std::endl;
             }
 
 
@@ -555,10 +547,6 @@ compareShapeEstimators( const std::string & filename,
 
                     delete range;
                     delete IIMeanCurvatureEstimator;
-
-                    std::cout << "II MEAN DONE" << std::endl;
-                    std::cout << "in " << (TIIMeanCurv / 1000.0) << "s" << std::endl;
-                    std::cout << "--------------------------------------" << std::endl;
                 }
 
                 if( options.at( 3 ) != '0' )
@@ -597,10 +585,6 @@ compareShapeEstimators( const std::string & filename,
 
                     delete range;
                     delete IIGaussianCurvatureEstimator;
-
-                    std::cout << "II GAUSSIAN DONE" << std::endl;
-                    std::cout << "in " << (TIIGaussCurv / 1000.0) << "s" << std::endl;
-                    std::cout << "--------------------------------------" << std::endl;
                 }
 
                 delete pointFunctor;
@@ -632,10 +616,6 @@ compareShapeEstimators( const std::string & filename,
                 double TMongeGaussCurv = c.stopClock();
                 file << "# time = " << TMongeGaussCurv << std::endl;
                 file.close();
-
-                std::cout << "MONGE GAUSSIAN DONE" << std::endl;
-                std::cout << "in " << (TMongeGaussCurv / 1000.0) << "s" << std::endl;
-                std::cout << "--------------------------------------" << std::endl;
             }
 
             if( options.at( 4 ) != '0' )
@@ -663,10 +643,6 @@ compareShapeEstimators( const std::string & filename,
                 double TMongeMeanCurv = c.stopClock();
                 file << "# time = " << TMongeMeanCurv << std::endl;
                 file.close();
-
-                std::cout << "MONGE MEAN DONE" << std::endl;
-                std::cout << "in " << (TMongeMeanCurv / 1000.0) << "s" << std::endl;
-                std::cout << "--------------------------------------" << std::endl;
             }
         }
     }
