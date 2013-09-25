@@ -160,6 +160,12 @@ int ComputeStatistics_0memory ( const std::string & inputdata1,
         ++nb_elements;
     }
 
+    if( h == - std::numeric_limits<double>::max())
+    {
+        std::cerr << "Can't found h value on file1. Is the file exist ?" << std::endl;
+        return 0;
+    }
+
     double meanL1 = L1 / (double)nb_elements;
     double meanL2 = ( sqrt ( L2 )) / (double)nb_elements;
 
