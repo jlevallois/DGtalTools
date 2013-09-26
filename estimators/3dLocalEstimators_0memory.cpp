@@ -328,8 +328,6 @@ compareShapeEstimators( const std::string & filename,
                     file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
 
                     std::ostream_iterator< double > out_it_ii_gaussian( file, "\n" );
-   std::vector<double> IIMeanCurvatures;
-   std::back_insert_iterator< std::vector< double> > valuesIterator( IIMeanCurvatures );
 
                     range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                     ibegin = range->begin();
@@ -338,7 +336,7 @@ compareShapeEstimators( const std::string & filename,
 
                     if( !lambda_optimized )
                     {
-                        IIGaussianCurvatureEstimator->eval ( ibegin, iend, valuesIterator );
+                        IIGaussianCurvatureEstimator->eval ( ibegin, iend, out_it_ii_gaussian );
                     }
                     else
                     {
