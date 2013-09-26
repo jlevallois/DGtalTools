@@ -226,7 +226,6 @@ compareShapeEstimators( const std::string & filename,
                 range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                 ibegin = range->begin();
                 iend = range->end();
-                trace.beginBlock("Running true mean");
                 estimateTrueMeanCurvatureQuantity( ibegin,
                                                    iend,
                                                    out_it_true_mean,
@@ -234,7 +233,6 @@ compareShapeEstimators( const std::string & filename,
                                                    h,
                                                    aShape );
                 file.close();
-    trace.endBlock();
                 delete range;
             }
 
@@ -253,7 +251,6 @@ compareShapeEstimators( const std::string & filename,
                 range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                 ibegin = range->begin();
                 iend = range->end();
-                trace.beginBlock("Running true gaussian");
                 estimateTrueGaussianCurvatureQuantity( ibegin,
                                                        iend,
                                                        out_it_true_gaussian,
@@ -261,7 +258,6 @@ compareShapeEstimators( const std::string & filename,
                                                        h,
                                                        aShape );
                 file.close();
-    trace.endBlock();
                 delete range;
             }
 
@@ -292,7 +288,6 @@ compareShapeEstimators( const std::string & filename,
                     range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                     ibegin = range->begin();
                     iend = range->end();
-                    trace.beginBlock("Running ii mean");
 
                     std::ostream_iterator< double > out_it_ii_mean( file, "\n" );
                     if( !lambda_optimized )
@@ -303,7 +298,6 @@ compareShapeEstimators( const std::string & filename,
                     {
                         IIMeanCurvatureEstimator->eval( ibegin, iend, out_it_ii_mean, *aShape );
                     }
-                    trace.endBlock();
                     double TIIMeanCurv = c.stopClock();
                     file << "# time = " << TIIMeanCurv << std::endl;
                     file.close();
@@ -332,7 +326,6 @@ compareShapeEstimators( const std::string & filename,
                     range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                     ibegin = range->begin();
                     iend = range->end();
-                    trace.beginBlock("Running II gaussian");
 
                     if( !lambda_optimized )
                     {
@@ -345,7 +338,6 @@ compareShapeEstimators( const std::string & filename,
                     double TIIGaussCurv = c.stopClock();
                     file << "# time = " << TIIGaussCurv << std::endl;
                     file.close();
-                    trace.endBlock();
 
                     delete range;
                     delete IIGaussianCurvatureEstimator;
