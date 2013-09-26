@@ -409,7 +409,7 @@ computeLocalEstimations( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_True_tangeant.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# True tangents computation" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;
@@ -439,7 +439,7 @@ computeLocalEstimations( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_True_curvature.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# True curvature computation" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;
@@ -472,7 +472,7 @@ computeLocalEstimations( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDSS_tangeant.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# Most centered maximal DSS tangent estimation" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;
@@ -501,7 +501,7 @@ computeLocalEstimations( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDSSl_curvature.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# Most centered maximal DSS (length) curvature estimation" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;
@@ -529,7 +529,7 @@ computeLocalEstimations( const std::string & filename,
                     memset(&full_filename[0], 0, sizeof(full_filename));
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDSSlw_curvature.dat" );
                     file.open( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# Most centered maximal DSS (length & width) curvature estimation" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;
@@ -564,7 +564,7 @@ computeLocalEstimations( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDCA_tangent.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# Most centered maximal DCA tangents estimation" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;
@@ -596,7 +596,7 @@ computeLocalEstimations( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDCA_curvature.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# Most centered maximal DCA curvature estimation" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;
@@ -632,7 +632,7 @@ computeLocalEstimations( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_BC_tangeant.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# Tangents estimation from binomial convolution" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;
@@ -670,7 +670,7 @@ computeLocalEstimations( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_BC_curvature.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# Curvature estimation from binomial convolution" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;
@@ -712,7 +712,7 @@ computeLocalEstimations( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
+
                     file << "# h = " << h << std::endl;
                     file << "# Integral Invariant curvature estimation" << std::endl;
                     file << "# range size = " << pointsRange.size() << std::endl;

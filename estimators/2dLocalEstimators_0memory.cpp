@@ -348,7 +348,7 @@ computeLocalEstimations( const std::string & filename,
                 memset(&full_filename[0], 0, sizeof(full_filename));
                 sprintf( full_filename, "%s%s", filename.c_str(), "_True_curvature.dat" );
                 file.open( full_filename );
-                file.flags( std::ios_base::unitbuf );
+
                 file << "# h = " << h << std::endl;
                 file << "# True Curvature estimation" << std::endl;
 
@@ -398,7 +398,7 @@ computeLocalEstimations( const std::string & filename,
                 memset(&full_filename[0], 0, sizeof(full_filename));
                 sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature.dat" );
                 file.open( full_filename );
-                file.flags( std::ios_base::unitbuf );
+
                 file << "# h = " << h << std::endl;
                 file << "# Curvature estimation from the Integral Invariant" << std::endl;
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
@@ -424,7 +424,7 @@ computeLocalEstimations( const std::string & filename,
                 delete IIMeanCurvatureEstimator;
             }
 
-            delete boundary;
+            //delete boundary;
             //delete noisifiedObject;
         }
         else
@@ -460,7 +460,6 @@ computeLocalEstimations( const std::string & filename,
                 memset(&full_filename[0], 0, sizeof(full_filename));
                 sprintf( full_filename, "%s%s", filename.c_str(), "_True_curvature.dat" );
                 file.open( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# True Curvature estimation" << std::endl;
 
@@ -509,7 +508,6 @@ computeLocalEstimations( const std::string & filename,
                 memset(&full_filename[0], 0, sizeof(full_filename));
                 sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature.dat" );
                 file.open( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# Curvature estimation from the Integral Invariant" << std::endl;
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;

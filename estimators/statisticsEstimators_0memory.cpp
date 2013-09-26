@@ -363,7 +363,7 @@ int main( int argc, char** argv )
     bool isMongeMean = vm["monge"].as< bool >();
 
     std::ofstream file( output_filename.c_str(), std::ofstream::out | std::ofstream::app );
-    file.flags( std::ios_base::unitbuf );
+    //file.flags( std::ios_base::unitbuf );
 
     if( file.eof() )
     {

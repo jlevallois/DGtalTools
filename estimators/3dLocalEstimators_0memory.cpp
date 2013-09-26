@@ -218,7 +218,6 @@ compareShapeEstimators( const std::string & filename,
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_True_mean.dat" );
                 std::ofstream file( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# True Mean Curvature estimation" << std::endl;
 
@@ -227,7 +226,7 @@ compareShapeEstimators( const std::string & filename,
                 range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                 ibegin = range->begin();
                 iend = range->end();
-
+                trace.beginBlock("Running true mean");
                 estimateTrueMeanCurvatureQuantity( ibegin,
                                                    iend,
                                                    out_it_true_mean,
@@ -235,7 +234,7 @@ compareShapeEstimators( const std::string & filename,
                                                    h,
                                                    aShape );
                 file.close();
-
+    trace.endBlock();
                 delete range;
             }
 
@@ -246,7 +245,6 @@ compareShapeEstimators( const std::string & filename,
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_True_gaussian.dat" );
                 std::ofstream file( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# True Gaussian Curvature estimation" << std::endl;
 
@@ -255,7 +253,7 @@ compareShapeEstimators( const std::string & filename,
                 range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                 ibegin = range->begin();
                 iend = range->end();
-
+                trace.beginBlock("Running true gaussian");
                 estimateTrueGaussianCurvatureQuantity( ibegin,
                                                        iend,
                                                        out_it_true_gaussian,
@@ -263,7 +261,7 @@ compareShapeEstimators( const std::string & filename,
                                                        h,
                                                        aShape );
                 file.close();
-
+    trace.endBlock();
                 delete range;
             }
 
@@ -287,7 +285,6 @@ compareShapeEstimators( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_II_mean.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
                     file << "# h = " << h << std::endl;
                     file << "# Mean Curvature estimation from the Integral Invariant" << std::endl;
                     file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
@@ -295,6 +292,7 @@ compareShapeEstimators( const std::string & filename,
                     range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                     ibegin = range->begin();
                     iend = range->end();
+                    trace.beginBlock("Running ii mean");
 
                     std::ostream_iterator< double > out_it_ii_mean( file, "\n" );
                     if( !lambda_optimized )
@@ -305,7 +303,7 @@ compareShapeEstimators( const std::string & filename,
                     {
                         IIMeanCurvatureEstimator->eval( ibegin, iend, out_it_ii_mean, *aShape );
                     }
-
+                    trace.endBlock();
                     double TIIMeanCurv = c.stopClock();
                     file << "# time = " << TIIMeanCurv << std::endl;
                     file.close();
@@ -325,20 +323,22 @@ compareShapeEstimators( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_II_gaussian.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
                     file << "# h = " << h << std::endl;
                     file << "# Gaussian Curvature estimation from the Integral Invariant" << std::endl;
                     file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
 
                     std::ostream_iterator< double > out_it_ii_gaussian( file, "\n" );
+   std::vector<double> IIMeanCurvatures;
+   std::back_insert_iterator< std::vector< double> > valuesIterator( IIMeanCurvatures );
 
                     range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                     ibegin = range->begin();
                     iend = range->end();
+                    trace.beginBlock("Running II gaussian");
 
                     if( !lambda_optimized )
                     {
-                        IIGaussianCurvatureEstimator->eval ( ibegin, iend, out_it_ii_gaussian );
+                        IIGaussianCurvatureEstimator->eval ( ibegin, iend, valuesIterator );
                     }
                     else
                     {
@@ -347,6 +347,7 @@ compareShapeEstimators( const std::string & filename,
                     double TIIGaussCurv = c.stopClock();
                     file << "# time = " << TIIGaussCurv << std::endl;
                     file.close();
+                    trace.endBlock();
 
                     delete range;
                     delete IIGaussianCurvatureEstimator;
@@ -375,7 +376,6 @@ compareShapeEstimators( const std::string & filename,
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_gaussian.dat" );
                 std::ofstream file( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
@@ -401,7 +401,6 @@ compareShapeEstimators( const std::string & filename,
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_mean.dat" );
                 std::ofstream file( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# Mean Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
@@ -447,7 +446,6 @@ compareShapeEstimators( const std::string & filename,
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_True_mean.dat" );
                 std::ofstream file( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# True Mean Curvature estimation" << std::endl;
 
@@ -480,7 +478,6 @@ compareShapeEstimators( const std::string & filename,
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_True_gaussian.dat" );
                 std::ofstream file( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# True Gaussian Curvature estimation" << std::endl;
 
@@ -526,7 +523,6 @@ compareShapeEstimators( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_II_mean.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
                     file << "# h = " << h << std::endl;
                     file << "# Mean Curvature estimation from the Integral Invariant" << std::endl;
                     file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
@@ -564,7 +560,6 @@ compareShapeEstimators( const std::string & filename,
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_II_gaussian.dat" );
                     std::ofstream file( full_filename );
-                    file.flags( std::ios_base::unitbuf );
                     file << "# h = " << h << std::endl;
                     file << "# Gaussian Curvature estimation from the Integral Invariant" << std::endl;
                     file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
@@ -612,7 +607,6 @@ compareShapeEstimators( const std::string & filename,
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_gaussian.dat" );
                 std::ofstream file( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
@@ -638,7 +632,6 @@ compareShapeEstimators( const std::string & filename,
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_mean.dat" );
                 std::ofstream file( full_filename );
-                file.flags( std::ios_base::unitbuf );
                 file << "# h = " << h << std::endl;
                 file << "# Mean Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
