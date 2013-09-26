@@ -363,7 +363,8 @@ compareShapeEstimators( const std::string & filename,
                 // Monge Gaussian Curvature
                 typedef MongeJetFittingGaussianCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorGaussian;
                 typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorGaussian> ReporterK;
-                FunctorGaussian estimatorK( (CanonicSCellEmbedder<KSpace>( K )), h );
+                CanonicSCellEmbedder<KSpace> * embedder = new CanonicSCellEmbedder<KSpace>( K );
+                FunctorGaussian estimatorK( *embedder, h );
                 ReporterK reporterK(surf.container(), Z3i::l2Metric, estimatorK);
                 c.startClock();
                 reporterK.init( h , re_convolution_kernel / h  );
@@ -383,6 +384,7 @@ compareShapeEstimators( const std::string & filename,
                 double TMongeGaussCurv = c.stopClock();
                 file << "# time = " << TMongeGaussCurv << std::endl;
                 file.close();
+                delete embedder;
             }
 
             if( options.at( 4 ) != '0' )
@@ -390,7 +392,8 @@ compareShapeEstimators( const std::string & filename,
                 // Monge Mean Curvature
                 typedef MongeJetFittingMeanCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorMean;
                 typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorMean> ReporterH;
-                FunctorMean estimatorH( (CanonicSCellEmbedder<KSpace>( K )), h );
+                CanonicSCellEmbedder<KSpace> * embedder = new CanonicSCellEmbedder<KSpace>( K );
+                FunctorMean estimatorH( *embedder, h );
                 ReporterH reporterH(surf.container(), Z3i::l2Metric, estimatorH);
                 c.startClock();
                 reporterH.init( h , re_convolution_kernel / h  );
@@ -410,6 +413,7 @@ compareShapeEstimators( const std::string & filename,
                 double TMongeMeanCurv = c.stopClock();
                 file << "# time = " << TMongeMeanCurv << std::endl;
                 file.close();
+                delete embedder;
             }
         }
         else
@@ -596,7 +600,8 @@ compareShapeEstimators( const std::string & filename,
                 // Monge Gaussian Curvature
                 typedef MongeJetFittingGaussianCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorGaussian;
                 typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorGaussian> ReporterK;
-                FunctorGaussian estimatorK( (CanonicSCellEmbedder<KSpace>( K )), h );
+                CanonicSCellEmbedder<KSpace> * embedder = new CanonicSCellEmbedder<KSpace>( K );
+                FunctorGaussian estimatorK( *embedder, h );
                 ReporterK reporterK(surf.container(), Z3i::l2Metric, estimatorK);
                 c.startClock();
                 reporterK.init( h , re_convolution_kernel / h  );
@@ -616,6 +621,7 @@ compareShapeEstimators( const std::string & filename,
                 double TMongeGaussCurv = c.stopClock();
                 file << "# time = " << TMongeGaussCurv << std::endl;
                 file.close();
+                delete embedder;
             }
 
             if( options.at( 4 ) != '0' )
@@ -623,7 +629,8 @@ compareShapeEstimators( const std::string & filename,
                 // Monge Mean Curvature
                 typedef MongeJetFittingMeanCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorMean;
                 typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorMean> ReporterH;
-                FunctorMean estimatorH( (CanonicSCellEmbedder<KSpace>( K )), h );
+                CanonicSCellEmbedder<KSpace> * embedder = new CanonicSCellEmbedder<KSpace>( K );
+                FunctorMean estimatorH( *embedder, h );
                 ReporterH reporterH(surf.container(), Z3i::l2Metric, estimatorH);
                 c.startClock();
                 reporterH.init( h , re_convolution_kernel / h  );
@@ -643,6 +650,7 @@ compareShapeEstimators( const std::string & filename,
                 double TMongeMeanCurv = c.stopClock();
                 file << "# time = " << TMongeMeanCurv << std::endl;
                 file.close();
+                delete embedder;
             }
         }
     }
