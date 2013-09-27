@@ -484,14 +484,19 @@ computeLocalEstimations( const std::string & filename,
 
                     std::ostream_iterator< RealPoint > out_it( file, "\n" );
 
-                    typedef typename PointsRange::ConstCirculator C;
+                    typedef typename GridCurve< KSpace >::PointsRange PointsRange2;
+                    PointsRange2 pointsRange2 = gridcurve.getPointsRange();
+
+                    typedef typename PointsRange2::ConstCirculator C;
                     typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
                     typedef TangentFromDSSEstimator<SegmentComputer> SCFunctor;
                     SegmentComputer sc;
                     SCFunctor f;
+
+
                     MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSTangentEstimator(sc, f);
                     estimation( MDSSTangentEstimator, h,
-                                pointsRange.c(), pointsRange.c(),
+                                pointsRange2.c(), pointsRange2.c(),
                                 out_it );
 
                     file.close();
@@ -513,14 +518,18 @@ computeLocalEstimations( const std::string & filename,
 
                     std::ostream_iterator< double > out_it( file, "\n" );
 
-                    typedef typename PointsRange::ConstCirculator C;
+                    typedef typename GridCurve< KSpace >::PointsRange PointsRange2;
+                    PointsRange2 pointsRange2 = gridcurve.getPointsRange();
+
+                    typedef typename PointsRange2::ConstCirculator C;
                     typedef ArithmeticalDSS< C, int, 4 > SegmentComputer;
                     typedef CurvatureFromDSSLengthEstimator<SegmentComputer> SCFunctor;
                     SegmentComputer sc;
                     SCFunctor f;
                     MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor> MDSSCurvatureEstimator(sc, f);
+
                     estimation( MDSSCurvatureEstimator, h,
-                                pointsRange.c(), pointsRange.c(),
+                                pointsRange2.c(), pointsRange2.c(),
                                 out_it );
 
                     file.close();
@@ -548,7 +557,7 @@ computeLocalEstimations( const std::string & filename,
                     SCFunctor2 f2;
                     MostCenteredMaximalSegmentEstimator<SegmentComputer,SCFunctor2> MDSSCurvatureEstimator2(sc2, f2);
                     estimation( MDSSCurvatureEstimator2, h,
-                                pointsRange.c(), pointsRange.c(),
+                                pointsRange2.c(), pointsRange2.c(),
                                 out_it2 );
 
                     file.close();
