@@ -263,7 +263,7 @@ compareShapeEstimators( const std::string & filename,
 
 
             Clock c;
-            double re_convolution_kernel = radius_kernel * std::pow( h, 1.0/3.0 ); // to obtains convergence results, re must follow the rule re=kh^(1/3)
+            double re_convolution_kernel = radius_kernel * std::pow( h, alpha ); // to obtains convergence results, re must follow the rule re=kh^(1/3)
 
             if( options.at( 2 ) != '0' || options.at( 3 ) != '0' )
             {
