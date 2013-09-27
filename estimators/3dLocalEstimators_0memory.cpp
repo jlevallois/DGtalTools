@@ -360,8 +360,12 @@ compareShapeEstimators( const std::string & filename,
                 c.startClock();
                 reporterK.init( h , re_convolution_kernel / h  );
 
-                typename ReporterK::SurfelConstIterator aaabegin = surf.begin();
-                typename ReporterK::SurfelConstIterator aaaend = surf.end();
+                //typename ReporterK::SurfelConstIterator aaabegin = surf.begin();
+                //typename ReporterK::SurfelConstIterator aaaend = surf.end();
+
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
 
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_gaussian.dat" );
@@ -370,10 +374,11 @@ compareShapeEstimators( const std::string & filename,
                 file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
                 std::ostream_iterator< double > out_it_monge_gaussian( file, "\n" );
-                reporterK.eval(aaabegin, aaaend , out_it_monge_gaussian);
+                reporterK.eval(ibegin, iend , out_it_monge_gaussian);
                 double TMongeGaussCurv = c.stopClock();
                 file << "# time = " << TMongeGaussCurv << std::endl;
                 file.close();
+                delete range;
                 delete embedder;
             }
 
@@ -396,12 +401,16 @@ compareShapeEstimators( const std::string & filename,
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
                 std::ostream_iterator< double > out_it_monge_mean( file, "\n" );
 
-                typename ReporterH::SurfelConstIterator aabegin = surf.begin();
-                typename ReporterH::SurfelConstIterator aaend = surf.end();
-                reporterH.eval(aabegin, aaend , out_it_monge_mean);
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
+                //typename ReporterH::SurfelConstIterator aabegin = surf.begin();
+                //typename ReporterH::SurfelConstIterator aaend = surf.end();
+                reporterH.eval(ibegin, iend , out_it_monge_mean);
                 double TMongeMeanCurv = c.stopClock();
                 file << "# time = " << TMongeMeanCurv << std::endl;
                 file.close();
+                delete range;
                 delete embedder;
             }
         }
@@ -495,7 +504,7 @@ compareShapeEstimators( const std::string & filename,
             }
 
 
-            double re_convolution_kernel = radius_kernel * std::pow( h, 1.0/3.0 ); // to obtains convergence results, re must follow the rule re=kh^(1/3)
+            double re_convolution_kernel = radius_kernel * std::pow( h, alpha ); // to obtains convergence results, re must follow the rule re=kh^(1/3)
 
             if( options.at( 2 ) != '0' || options.at( 3 ) != '0' )
             {
@@ -591,8 +600,9 @@ compareShapeEstimators( const std::string & filename,
                 c.startClock();
                 reporterK.init( h , re_convolution_kernel / h  );
 
-                typename ReporterK::SurfelConstIterator aaabegin = surf.begin();
-                typename ReporterK::SurfelConstIterator aaaend = surf.end();
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
 
                 char full_filename[360];
                 sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_gaussian.dat" );
@@ -601,10 +611,11 @@ compareShapeEstimators( const std::string & filename,
                 file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
                 std::ostream_iterator< double > out_it_monge_gaussian( file, "\n" );
-                reporterK.eval(aaabegin, aaaend , out_it_monge_gaussian);
+                reporterK.eval(ibegin, iend , out_it_monge_gaussian);
                 double TMongeGaussCurv = c.stopClock();
                 file << "# time = " << TMongeGaussCurv << std::endl;
                 file.close();
+                delete range;
                 delete embedder;
             }
 
@@ -627,12 +638,15 @@ compareShapeEstimators( const std::string & filename,
                 file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
                 std::ostream_iterator< double > out_it_monge_mean( file, "\n" );
 
-                typename ReporterH::SurfelConstIterator aabegin = surf.begin();
-                typename ReporterH::SurfelConstIterator aaend = surf.end();
-                reporterH.eval(aabegin, aaend , out_it_monge_mean);
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
+
+                reporterH.eval(ibegin, iend , out_it_monge_mean);
                 double TMongeMeanCurv = c.stopClock();
                 file << "# time = " << TMongeMeanCurv << std::endl;
                 file.close();
+                delete range;
                 delete embedder;
             }
         }
