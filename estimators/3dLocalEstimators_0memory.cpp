@@ -149,11 +149,11 @@ compareShapeEstimators( const std::string & filename,
     typedef typename KSpace::SCell SCell;
     typedef typename KSpace::Surfel Surfel;
 
-    ASSERT (( noiseLevel < 1.0 ));
     bool withNoise = ( noiseLevel <= 0.0 ) ? false : true;
     if( withNoise )
         noiseLevel *= h;
 
+    ASSERT (( noiseLevel < 1.0 ));
     // Digitizer
     DigitalShape* dshape = new DigitalShape();
     dshape->attach( *aShape );
