@@ -90,6 +90,17 @@ bool LoadingStringFromFile_0memory( std::ifstream & file, std::string & value )
     return false;
 }
 
+std::vector< std::string > & split( const std::string & s, char delim, std::vector< std::string > & elems )
+{
+    std::stringstream ss( s );
+    std::string item;
+    while( std::getline( ss, item, delim ))
+    {
+        elems.push_back( item );
+    }
+    return elems;
+}
+
 int ComputeStatistics_0memory ( const std::string & inputdata1,
                                 const std::string & inputdata2,
                                 const unsigned int & idColumnData1,
@@ -141,8 +152,24 @@ int ComputeStatistics_0memory ( const std::string & inputdata1,
         if ( s2 == "NA" || s2 == "-nan" || s2 == "-inf" || s2 == "inf" || s2 == "" || s2 == " " )
             continue;
 
-        v1 = atof( s1.c_str() );
-        v2 = atof( s2.c_str() );
+        std::vector< std::string > elems1;
+        split( s1, ' ', elems1 );
+        std::vector< std::string > elems2;
+        split( s2, ' ', elems2 );
+
+        if( elems1.size() <= idColumnData1 )
+        {
+            std::cerr << "Can't found " << idColumnData1 << " column on file1. Is the file/column exist ?" << std::endl;
+            continue;
+        }
+        if( elems2.size() <= idColumnData2 )
+        {
+            std::cerr << "Can't found " << idColumnData2 << " column on file2. Is the file/column exist ?" << std::endl;
+            continue;
+        }
+
+        v1 = atof( elems1[ idColumnData1 ].c_str() );
+        v2 = atof( elems2[ idColumnData2 ].c_str() );
 
         if( isMongeMean && (( v1 >= 0.0 ) ^ ( v2 >= 0.0 ))) // hack for Monge. Can be reversed.
         {

@@ -67,8 +67,9 @@
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator_0memory.h"
 
 #include "DGtal/geometry/surfaces/estimation/LocalEstimatorFromSurfelFunctorAdapter.h"
-#include "DGtal/geometry/surfaces/estimation/estimationFunctors/MongeJetFittingGaussianCurvatureEstimator.h"
 #include "DGtal/geometry/surfaces/estimation/estimationFunctors/MongeJetFittingMeanCurvatureEstimator.h"
+#include "DGtal/geometry/surfaces/estimation/estimationFunctors/MongeJetFittingGaussianCurvatureEstimator.h"
+#include "DGtal/geometry/surfaces/estimation/estimationFunctors/MongeJetFittingPrincipalCurvaturesEstimator.h"
 
 using namespace DGtal;
 
@@ -138,7 +139,10 @@ estimateTruePrincipalCurvaturesQuantity( const ConstIterator & it_begin,
         currentRealPoint = embedder( *it_begin ) * h;
         double k1, k2;
         aShape->principalCurvatures( currentRealPoint, k1, k2 );
-        output = k1 + " " + k2;
+        CurvatureInformations result;
+        result.k1 = k1;
+        result.k2 = k2;
+        output = result;
         ++output;
     }
 }
@@ -594,7 +598,7 @@ compareShapeEstimators( const std::string & filename,
                     file << "# h = " << h << std::endl;
                     file << "# True Gaussian Curvature estimation" << std::endl;
 
-                    std::ostream_iterator< double > out_it_true_pc( file, "\n" );
+                    std::ostream_iterator< CurvatureInformations > out_it_true_pc( file, "\n" );
 
                     range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                     ibegin = range->begin();
@@ -727,9 +731,7 @@ compareShapeEstimators( const std::string & filename,
                     file << "# Gaussian Curvature estimation from the Integral Invariant" << std::endl;
                     file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
 
-                    typedef IntegralInvariantGaussianCurvatureEstimator_0memory< KSpace, MySpelFunctor >::ValuesFunctor ValuesFunctor;
-
-                    std::ostream_iterator< ValuesFunctor > out_it_ii_principal( file, "\n" );
+                    std::ostream_iterator< CurvatureInformations > out_it_ii_principal( file, "\n" );
 
                     range = new VisitorRange( new Visitor( surf, *surf.begin() ));
                     ibegin = range->begin();
@@ -831,14 +833,14 @@ compareShapeEstimators( const std::string & filename,
                 }
 
                 // Monge Principal Curvatures
-                if( properties.at( 1 ) != '0' )
+                if( properties.at( 2 ) != '0' )
                 {
                     trace.beginBlock( "Monge Principal Curvature" );
 
-                    typedef MongeJetFittingGaussianCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorGaussian;
-                    typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorGaussian> ReporterK;
+                    typedef MongeJetFittingPrincipalCurvaturesEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorPrincCurv;
+                    typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorPrincCurv> ReporterK;
                     CanonicSCellEmbedder<KSpace> * embedder = new CanonicSCellEmbedder<KSpace>( K );
-                    FunctorGaussian estimatorK( *embedder, h );
+                    FunctorPrincCurv estimatorK( *embedder, h );
                     ReporterK reporterK(surf.container(), Z3i::l2Metric, estimatorK);
                     c.startClock();
                     reporterK.init( h , re_convolution_kernel / h  );
@@ -848,12 +850,12 @@ compareShapeEstimators( const std::string & filename,
                     iend = range->end();
 
                     char full_filename[360];
-                    sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_gaussian.dat" );
+                    sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_principal.dat" );
                     std::ofstream file( full_filename );
                     file << "# h = " << h << std::endl;
                     file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
                     file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
-                    std::ostream_iterator< double > out_it_monge_gaussian( file, "\n" );
+                    std::ostream_iterator< CurvatureInformations > out_it_monge_gaussian( file, "\n" );
                     reporterK.eval(ibegin, iend , out_it_monge_gaussian);
                     double TMongeGaussCurv = c.stopClock();
                     file << "# time = " << TMongeGaussCurv << std::endl;
