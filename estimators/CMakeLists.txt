@@ -4,7 +4,7 @@ SET(DGTAL_TOOLS_SRC
   3dLocalEstimators
   2dLocalEstimators_0memory
   3dLocalEstimators_0memory
-  3dLocalEstimators_0memory_old
+ # 3dLocalEstimators_0memory_old
   lengthEstimators
   vol2normalField
   curvatureBC
