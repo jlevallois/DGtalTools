@@ -180,8 +180,8 @@ compareShapeEstimators( const std::string & filename,
     typedef typename KSpace::Surfel Surfel;
 
     bool withNoise = ( noiseLevel <= 0.0 ) ? false : true;
-    if( withNoise )
-        noiseLevel *= h;
+    //if( withNoise )
+    //    noiseLevel *= h;
 
     ASSERT (( noiseLevel < 1.0 ));
     // Digitizer

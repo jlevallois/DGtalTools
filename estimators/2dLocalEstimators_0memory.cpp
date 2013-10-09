@@ -82,6 +82,10 @@
 
 #include "DGtal/kernel/BasicPointFunctors.h"
 
+
+#include "DGtal/io/colormaps/GrayscaleColorMap.h"
+#include "DGtal/io/writers/PPMWriter.h"
+
 using namespace DGtal;
 
 
@@ -276,10 +280,11 @@ computeLocalEstimations( const std::string & filename,
     typedef GaussDigitizer< Space, Shape > DigitalShape;
 
 
-    ASSERT (( noiseLevel < 1.0 ));
     bool withNoise = ( noiseLevel <= 0.0 ) ? false : true;
     if( withNoise )
-        noiseLevel *= h;
+        noiseLevel = std::pow(noiseLevel, h);
+
+    ASSERT (( noiseLevel < 1.0 ));
 
     // Digitizer
     DigitalShape* dshape = new DigitalShape();
@@ -318,7 +323,7 @@ computeLocalEstimations( const std::string & filename,
             unsigned int tries = 0;
             while( surf.size() < 2 * minsize || tries > 150 )
             {
-                delete boundary;
+                //delete boundary;
                 bel = Surfaces< KSpace >::findABel( K, *noisifiedObject, 10000 );
                 boundary = new Boundary( K, *noisifiedObject, SurfelAdjacency< KSpace::dimension >( true ), bel );
                 surf = MyDigitalSurface( *boundary );
@@ -345,6 +350,7 @@ computeLocalEstimations( const std::string & filename,
             // True
             if (options.at(0) != '0')
             {
+                trace.beginBlock("true");
                 memset(&full_filename[0], 0, sizeof(full_filename));
                 sprintf( full_filename, "%s%s", filename.c_str(), "_True_curvature.dat" );
                 file.open( full_filename );
@@ -371,13 +377,28 @@ computeLocalEstimations( const std::string & filename,
                 file << "# time = " << TTrueCurv << std::endl;
 
                 file.close();
-                delete range;
+                ////delete range;
+                trace.endBlock();
             }
 
             //Integral Invariants
 
             if (options.at(1) != '0')
             {
+                trace.beginBlock("export ppm");
+                typedef ImageContainerBySTLVector< Z2i::Domain, unsigned char > Image;
+                Image img( dshape->getDomain() );
+                MyPointFunctor pf( noisifiedObject, dshape->getDomain(), 255, 0 );
+                imageFromFunctor( img, pf );
+
+                typedef GrayscaleColorMap<unsigned char> Gray;
+                memset(&full_filename[0], 0, sizeof(full_filename));
+                sprintf( full_filename, "%s%s", filename.c_str(), "_export.ppm" );
+
+                PPMWriter<Image, Gray>::exportPPM( full_filename, img, Gray(0,255) );
+                trace.endBlock();
+
+                trace.beginBlock("II");
                 Clock c;
                 double re_convolution_kernel = radius_kernel * std::pow( h, alpha );
 
@@ -418,14 +439,15 @@ computeLocalEstimations( const std::string & filename,
 
                 file.close();
 
-                delete range;
-                delete pointFunctor;
-                delete functor;
-                delete IIMeanCurvatureEstimator;
+                /*//delete range;
+                //delete IIMeanCurvatureEstimator;
+                //delete pointFunctor;
+                //delete functor;*/
+                trace.endBlock();
             }
 
-            //delete boundary;
-            //delete noisifiedObject;
+            ////delete boundary;
+            ////delete noisifiedObject;
         }
         else
         {
@@ -482,13 +504,26 @@ computeLocalEstimations( const std::string & filename,
                 file << "# time = " << TTrueCurv << std::endl;
 
                 file.close();
-                delete range;
+                //delete range;
             }
 
             //Integral Invariants
 
             if (options.at(1) != '0')
             {
+                trace.beginBlock("export ppm");
+                typedef ImageContainerBySTLVector< Z2i::Domain, unsigned char > Image;
+                Image img( dshape->getDomain() );
+                MyPointFunctor pf( dshape, dshape->getDomain(), 255, 0 );
+                imageFromFunctor( img, pf );
+
+                typedef GrayscaleColorMap<unsigned char> Gray;
+                memset(&full_filename[0], 0, sizeof(full_filename));
+                sprintf( full_filename, "%s%s", filename.c_str(), "_export.ppm" );
+
+                PPMWriter<Image, Gray>::exportPPM( full_filename, img, Gray(0,255) );
+                trace.endBlock();
+
                 Clock c;
                 double re_convolution_kernel = radius_kernel * std::pow( h, alpha );
 
@@ -526,10 +561,10 @@ computeLocalEstimations( const std::string & filename,
                 file << "# time = " << TIICurv << std::endl;
                 file.close();
 
-                delete range;
-                delete pointFunctor;
-                delete functor;
-                delete IIMeanCurvatureEstimator;
+                //delete range;
+                //delete pointFunctor;
+                //delete functor;
+                //delete IIMeanCurvatureEstimator;
             }
         }
 
@@ -637,7 +672,7 @@ int main( int argc, char** argv )
 
         Ball2D<Space> * ball = new Ball2D<Space>( center, radius );
         computeLocalEstimations<Space>( filename, ball, h, options, radius_kernel, alpha, lambda, noiseLevel );
-        delete ball;
+        //delete ball;
     }
     else if (id ==1)
     {
@@ -673,7 +708,7 @@ int main( int argc, char** argv )
 
         Flower2D<Space> * flower = new Flower2D<Space>( center, radius, varsmallradius, k, phi );
         computeLocalEstimations<Space>( filename, flower, h, options, radius_kernel, alpha, lambda, noiseLevel );
-        delete flower;
+        //delete flower;
     }
     else if (id ==4)
     {
@@ -687,7 +722,7 @@ int main( int argc, char** argv )
 
         NGon2D<Space> * object = new NGon2D<Space>( center, radius, k, phi );
         computeLocalEstimations<Space>( filename, object, h, options, radius_kernel, alpha, lambda, noiseLevel );
-        delete object;
+        //delete object;
     }
     else if (id ==5)
     {
@@ -703,7 +738,7 @@ int main( int argc, char** argv )
 
         AccFlower2D<Space> * accflower = new AccFlower2D<Space>( center, radius, varsmallradius, k, phi );
         computeLocalEstimations<Space>( filename, accflower, h, options, radius_kernel, alpha, lambda, noiseLevel );
-        delete accflower;
+        //delete accflower;
     }
     else if (id ==6)
     {
@@ -717,6 +752,6 @@ int main( int argc, char** argv )
 
         Ellipse2D<Space> * ellipse = new Ellipse2D<Space>( center, a1, a2, phi );
         computeLocalEstimations<Space>( filename, ellipse, h, options, radius_kernel, alpha, lambda, noiseLevel );
-        delete ellipse;
+        //delete ellipse;
     }
 }

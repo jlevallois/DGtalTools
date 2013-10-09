@@ -151,8 +151,8 @@ compareShapeEstimators( const std::string & filename,
 
     ASSERT (( noiseLevel < 1.0 ));
     bool withNoise = ( noiseLevel <= 0.0 ) ? false : true;
-    if( withNoise )
-        noiseLevel *= h;
+    //if( withNoise )
+    //    noiseLevel *= h;
 
     // Digitizer
     DigitalShape* dshape = new DigitalShape();

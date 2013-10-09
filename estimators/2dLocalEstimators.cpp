@@ -329,10 +329,11 @@ computeLocalEstimations( const std::string & filename,
     typedef GaussDigitizer<Space,Shape> Digitizer;
     typedef KanungoNoise< Digitizer, Z2i::Domain > KanungoPredicate;
 
-    ASSERT (( noiseLevel < 1.0 ));
     bool withNoise = ( noiseLevel <= 0.0 ) ? false : true;
     if( withNoise )
-        noiseLevel *= h;
+        noiseLevel = std::pow(noiseLevel, h);
+
+    ASSERT (( noiseLevel < 1.0 ));
 
     bool tangent = ( properties.at( 0 ) != '0' ) ? true : false;
     bool curvature = ( properties.at( 1 ) != '0' ) ? true : false;
