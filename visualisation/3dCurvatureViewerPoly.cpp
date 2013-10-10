@@ -71,7 +71,7 @@ using namespace DGtal;
 void usage( int argc, char** argv )
 {
     trace.info() << "Usage: " << argv[ 0 ]
-          << " <shape> <minAABB> <maxAABB> <h> <re> <\"mean\" || \"gaussian\" || \"princurv\">"<< std::endl;
+          << " <shape> <minAABB> <maxAABB> <h> <re> <\"mean\" || \"gaussian\" || \"princurv{1,2}\">"<< std::endl;
     trace.info() << "\t - <filename.vol> file you want to show the curvature information."<< std::endl;
     trace.info() << "\t - <re> Euclidean radius of the kernel."<< std::endl;
     trace.info() << "\t - <\"mean\" || \"gaussian\"> show mean or Gaussian curvature on shape."<< std::endl;
@@ -90,7 +90,7 @@ int main( int argc, char** argv )
     double re_convolution_kernel = atof(argv[5]);
 
     std::string mode = argv[ 6 ];
-    if ( mode != "gaussian" && mode != "mean" && mode != "princurv" )
+    if ( mode != "gaussian" && mode != "mean" && mode != "princurv1" && mode != "princurv2")
     {
         usage( argc, argv );
         return 0;
@@ -126,6 +126,7 @@ int main( int argc, char** argv )
 
     typedef Z3i::KSpace KSpace;
     typedef typename KSpace::SCell SCell;
+    typedef typename KSpace::Cell Cell;
     typedef Z3i::KSpace::Surfel Surfel;
     typedef GaussDigitizer< Z3i::Space, ImplicitShape > DigitalShape;
     typedef LightImplicitDigitalSurface< KSpace, DigitalShape > Boundary;
@@ -223,8 +224,9 @@ int main( int argc, char** argv )
         for ( unsigned int i = 0; i < results.size(); ++i )
         {
 //            std::cout << results[ i ] << std::endl;
+            Cell unsignedSurfel = K.uCell( K.sKCoords(*abegin2) );
             viewer << CustomColors3D( Color::Black, cmap_grad( results[ i ] ))
-                   << *abegin2;
+                   << unsignedSurfel;
             ++abegin2;
         }
 
@@ -251,26 +253,24 @@ int main( int argc, char** argv )
         trace.beginBlock("viewer");
 
         // Drawing results
-        SCellToMidPoint< Z3i::KSpace > midpoint( K );
         typedef  Matrix3x3::RowVector RowVector;
         typedef  Matrix3x3::ColumnVector ColumnVector;
         for ( unsigned int i = 0; i < results.size(); ++i )
         {
             CurvInformation current = results[ i ];
-            Z3i::Space::RealPoint center = midpoint( *abegin2 );
 
-
+            Cell unsignedSurfel = K.uCell( K.sKCoords(*abegin2) );
             viewer << CustomColors3D( DGtal::Color(255,255,255,255),
                                       DGtal::Color(255,255,255,255))
-                   << *abegin2;
+                   << unsignedSurfel;
 
             ColumnVector normal = current.vectors.column(0).getNormalized(); // don't show the normal
             ColumnVector curv1 = current.vectors.column(1).getNormalized();
             ColumnVector curv2 = current.vectors.column(2).getNormalized();
 
-            center[0] -= 0.4;// * normal;
-            center[1] -= 0.4;
-            center[2] -= 0.4;
+            SCellToMidPoint< KSpace > embedder( K );
+            double eps = 0.01;
+            RealPoint center = embedder( *abegin2 ) + eps*embedder( *abegin2 );
 
 //            viewer.addLine ( center[0] - 0.5 * normal[ 0],
 //                             center[1] - 0.5 * normal[1],
@@ -281,21 +281,26 @@ int main( int argc, char** argv )
 //                             DGtal::Color ( 0,0,0 ), 5.0 ); // don't show the normal
 
 
-            viewer.addLine ( center[0] -  0.5 * curv1[0],
-                             center[1] -  0.5 * curv1[1],
-                             center[2] -  0.5 * curv1[2],
-                             center[0] +  0.5 * curv1[0],
-                             center[1] +  0.5 * curv1[1],
-                             center[2] +  0.5 * curv1[2],
-                             DGtal::Color ( 20,200,200 ), 5.0 );
-
-            viewer.addLine ( center[0] -  0.5 * curv2[0],
-                             center[1] -  0.5 * curv2[1],
-                             center[2] -  0.5 * curv2[2],
-                             center[0] +  0.5 * curv2[0],
-                             center[1] +  0.5 * curv2[1],
-                             center[2] +  0.5 * curv2[2],
-                             DGtal::Color ( 200,20,20 ), 5.0 );
+            if( mode == "princurv1" )
+            {
+                viewer.addLine ( center[0] -  0.5 * curv1[0],
+                                 center[1] -  0.5 * curv1[1],
+                                 center[2] -  0.5 * curv1[2],
+                                 center[0] +  0.5 * curv1[0],
+                                 center[1] +  0.5 * curv1[1],
+                                 center[2] +  0.5 * curv1[2],
+                                 DGtal::Color ( 20,20,200 ), 5.0 );
+            }
+            else
+            {
+                viewer.addLine ( center[0] -  0.5 * curv2[0],
+                                 center[1] -  0.5 * curv2[1],
+                                 center[2] -  0.5 * curv2[2],
+                                 center[0] +  0.5 * curv2[0],
+                                 center[1] +  0.5 * curv2[1],
+                                 center[2] +  0.5 * curv2[2],
+                                 DGtal::Color ( 200,20,20 ), 5.0 );
+            }
 
             ++abegin2;
         }
