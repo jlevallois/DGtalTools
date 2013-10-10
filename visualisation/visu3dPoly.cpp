@@ -159,7 +159,7 @@ int main( int argc, char** argv )
     Viewer3D viewer;
 
     viewer.show();
-    viewer << SetMode3D( dshape->getDomain().className(), "BoundingBox" ) << dshape->getDomain();
+    //viewer << SetMode3D( dshape->getDomain().className(), "BoundingBox" ) << dshape->getDomain();
 
     for( ; ibegin != iend; ++ibegin )
     {

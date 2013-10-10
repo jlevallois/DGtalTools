@@ -281,8 +281,8 @@ computeLocalEstimations( const std::string & filename,
 
 
     bool withNoise = ( noiseLevel <= 0.0 ) ? false : true;
-    if( withNoise )
-        noiseLevel = std::pow(noiseLevel, h);
+    /*if( withNoise )
+        noiseLevel = std::pow(noiseLevel, h);*/
 
     ASSERT (( noiseLevel < 1.0 ));
 

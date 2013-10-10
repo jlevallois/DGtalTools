@@ -55,8 +55,8 @@
 
 // Integral Invariant includes
 #include "DGtal/geometry/surfaces/FunctorOnCells.h"
-#include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator.h"
-#include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator.h"
+#include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator_0memory.h"
+#include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator_0memory.h"
 
 // Drawing
 #include "DGtal/io/viewers/Viewer3D.h"
@@ -155,7 +155,7 @@ int main( int argc, char** argv )
 
         if ( mode == "mean" )
         {
-            typedef IntegralInvariantMeanCurvatureEstimator< Z3i::KSpace, MyCellFunctor > MyIIMeanEstimator;
+            typedef IntegralInvariantMeanCurvatureEstimator_0memory< Z3i::KSpace, MyCellFunctor > MyIIMeanEstimator;
 
             MyIIMeanEstimator estimator ( KSpaceShape, functor );
             estimator.init( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
@@ -163,7 +163,7 @@ int main( int argc, char** argv )
         }
         else if ( mode == "gaussian" )
         {
-            typedef IntegralInvariantGaussianCurvatureEstimator< Z3i::KSpace, MyCellFunctor > MyIIGaussianEstimator;
+            typedef IntegralInvariantGaussianCurvatureEstimator_0memory< Z3i::KSpace, MyCellFunctor > MyIIGaussianEstimator;
 
             MyIIGaussianEstimator estimator ( KSpaceShape, functor );
             estimator.init( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
@@ -204,16 +204,16 @@ int main( int argc, char** argv )
         typedef double Quantity;
         typedef EigenValues3D< Quantity >::Matrix33 Matrix3x3;
         typedef EigenValues3D< Quantity >::Vector3 Vector3;
-        typedef CurvatureInformation< Quantity, Matrix3x3, Vector3 > CurvInformation;
+        typedef CurvatureInformations CurvInformation;
 
         std::vector< CurvInformation > results;
         back_insert_iterator< std::vector< CurvInformation > > resultsIterator( results ); // output iterator for results of Integral Invariante curvature computation
 
-        typedef IntegralInvariantGaussianCurvatureEstimator< Z3i::KSpace, MyCellFunctor > MyIIGaussianEstimator;
+        typedef IntegralInvariantGaussianCurvatureEstimator_0memory< Z3i::KSpace, MyCellFunctor > MyIIGaussianEstimator;
 
         MyIIGaussianEstimator estimator ( KSpaceShape, functor );
-        estimator.init( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
-//        estimator.evalComplete ( abegin, aend, resultsIterator ); // Computation
+        estimator.init ( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
+        estimator.evalPrincipalCurvatures ( abegin, aend, resultsIterator ); // Computation
 
         // Drawing results
         SCellToMidPoint< Z3i::KSpace > midpoint( KSpaceShape );
@@ -229,9 +229,9 @@ int main( int argc, char** argv )
                                       DGtal::Color(255,255,255,255))
                    << *abegin2;
 
-            ColumnVector normal = current.eigenVectors.column(0).getNormalized(); // don't show the normal
-            ColumnVector curv1 = current.eigenVectors.column(1).getNormalized();
-            ColumnVector curv2 = current.eigenVectors.column(2).getNormalized();
+            ColumnVector normal = current.vectors.column(0).getNormalized(); // don't show the normal
+            ColumnVector curv1 = current.vectors.column(1).getNormalized();
+            ColumnVector curv2 = current.vectors.column(2).getNormalized();
 
             center[0] -= 0.4;// * normal;
             center[1] -= 0.4;

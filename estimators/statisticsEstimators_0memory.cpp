@@ -159,12 +159,12 @@ int ComputeStatistics_0memory ( const std::string & inputdata1,
 
         if( elems1.size() <= idColumnData1 )
         {
-            std::cerr << "Can't found " << idColumnData1 << " column on file1. Is the file/column exist ?" << std::endl;
+            std::cerr << "Can't found " << idColumnData1 << " column on file1 (" << inputdata1 << "). Is the file/column exist ?" << std::endl;
             continue;
         }
         if( elems2.size() <= idColumnData2 )
         {
-            std::cerr << "Can't found " << idColumnData2 << " column on file2. Is the file/column exist ?" << std::endl;
+            std::cerr << "Can't found " << idColumnData2 << " column on file2 (" << inputdata2 << "). Is the file/column exist ?" << std::endl;
             continue;
         }
 
@@ -189,7 +189,7 @@ int ComputeStatistics_0memory ( const std::string & inputdata1,
 
     if( h == - std::numeric_limits<double>::max())
     {
-        std::cerr << "Can't found h value on file1. Is the file exist ?" << std::endl;
+        std::cerr << "Can't found h value on file1 (" << inputdata1 << "). Is the file exist ?" << std::endl;
         return 0;
     }
 

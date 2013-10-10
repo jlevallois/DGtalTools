@@ -41,10 +41,9 @@
 #include "DGtal/base/Common.h"
 
 // Shape constructors
-#include "DGtal/io/readers/VolReader.h"
-#include "DGtal/images/ImageSelector.h"
-#include "DGtal/images/imagesSetsUtils/SetFromImage.h"
-#include "DGtal/images/imagesSetsUtils/SimpleThresholdForegroundPredicate.h"
+#include "DGtal/math/MPolynomial.h"
+#include "DGtal/io/readers/MPolynomialReader.h"
+#include "DGtal/shapes/implicit/ImplicitPolynomial3Shape.h"
 #include "DGtal/topology/SurfelAdjacency.h"
 #include "DGtal/topology/helpers/Surfaces.h"
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
@@ -55,8 +54,8 @@
 
 // Integral Invariant includes
 #include "DGtal/geometry/surfaces/FunctorOnCells.h"
-#include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator.h"
-#include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator.h"
+#include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator_0memory.h"
+#include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator_0memory.h"
 
 // Drawing
 #include "DGtal/io/viewers/Viewer3D.h"
@@ -72,7 +71,7 @@ using namespace DGtal;
 void usage( int argc, char** argv )
 {
     trace.info() << "Usage: " << argv[ 0 ]
-		  << " <fileName.vol> <re> <\"mean\" || \"gaussian\" || \"princurv\">"<< std::endl;
+          << " <shape> <minAABB> <maxAABB> <h> <re> <\"mean\" || \"gaussian\" || \"princurv\">"<< std::endl;
     trace.info() << "\t - <filename.vol> file you want to show the curvature information."<< std::endl;
     trace.info() << "\t - <re> Euclidean radius of the kernel."<< std::endl;
     trace.info() << "\t - <\"mean\" || \"gaussian\"> show mean or Gaussian curvature on shape."<< std::endl;
@@ -81,72 +80,98 @@ void usage( int argc, char** argv )
 
 int main( int argc, char** argv )
 {
-    if ( argc != 4 )
+    if ( argc != 7 )
     {
         usage( argc, argv );
         return 0;
     }
 
-    double h = 1.0;
-    double re_convolution_kernel = atof(argv[2]);
+    double h = atof(argv[4]);
+    double re_convolution_kernel = atof(argv[5]);
 
-    std::string mode = argv[ 3 ];
+    std::string mode = argv[ 6 ];
     if ( mode != "gaussian" && mode != "mean" && mode != "princurv" )
     {
         usage( argc, argv );
         return 0;
     }
 
-    // Construction of the shape from vol file
-    typedef ImageSelector< Z3i::Domain, bool>::Type Image;
-    typedef SimpleThresholdForegroundPredicate< Image > ImagePredicate;
-    typedef Z3i::KSpace::Surfel Surfel;
-    typedef LightImplicitDigitalSurface< Z3i::KSpace, ImagePredicate > MyLightImplicitDigitalSurface;
-    typedef DigitalSurface< MyLightImplicitDigitalSurface > MyDigitalSurface;
 
-    std::string filename = argv[1];
-    Image image = VolReader<Image>::importVol( filename );
-    ImagePredicate predicate = ImagePredicate( image, 0 );
 
-    Z3i::Domain domain = image.domain();
+    trace.beginBlock("shape building");
+    std::string poly_str = argv[1];
 
-    Z3i::KSpace KSpaceShape;
+    typedef Z3i::Space::RealPoint RealPoint;
+    RealPoint border_min( atof(argv[2]), atof(argv[2]), atof(argv[2]) );
+    RealPoint border_max( atof(argv[3]), atof(argv[3]), atof(argv[3]) );
 
-    bool space_ok = KSpaceShape.init( domain.lowerBound(), domain.upperBound(), true );
-    if (!space_ok)
+
+    typedef Z3i::Space::RealPoint::Coordinate Ring;
+    typedef MPolynomial< 3, Ring > Polynomial3;
+    typedef MPolynomialReader<3, Ring> Polynomial3Reader;
+    typedef ImplicitPolynomial3Shape<Z3i::Space> ImplicitShape;
+
+    Polynomial3 poly;
+    Polynomial3Reader reader;
+    std::string::const_iterator iter = reader.read( poly, poly_str.begin(), poly_str.end() );
+    if ( iter != poly_str.end() )
     {
-      trace.error() << "Error in the Khalimsky space construction."<<std::endl;
-      return 2;
+        std::cerr << "ERROR: I read only <"
+                  << poly_str.substr( 0, iter - poly_str.begin() )
+                  << ">, and I built P=" << poly << std::endl;
+        return 1;
     }
 
-    SurfelAdjacency< Z3i::KSpace::dimension > SAdj( true );
-    Surfel bel = Surfaces< Z3i::KSpace >::findABel( KSpaceShape, predicate, 100000 );
-    MyLightImplicitDigitalSurface LightImplDigSurf( KSpaceShape, predicate, SAdj, bel );
-    MyDigitalSurface digSurf( LightImplDigSurf );
+    ImplicitShape* shape = new ImplicitShape( poly );
+
+    typedef Z3i::KSpace KSpace;
+    typedef typename KSpace::SCell SCell;
+    typedef Z3i::KSpace::Surfel Surfel;
+    typedef GaussDigitizer< Z3i::Space, ImplicitShape > DigitalShape;
+    typedef LightImplicitDigitalSurface< KSpace, DigitalShape > Boundary;
+    typedef DigitalSurface< Boundary > MyDigitalSurface;
+
+    DigitalShape* dshape = new DigitalShape();
+    dshape->attach( *shape );
+    dshape->init( border_min, border_max, h );
+
+    KSpace K;
+    if ( ! K.init( dshape->getLowerBound(), dshape->getUpperBound(), true ) )
+    {
+        std::cerr << "[3dLocalEstimators_0memory] error in creating KSpace." << std::endl;
+        return false;
+    }
+
+    SCell bel = Surfaces<KSpace>::findABel ( K, *dshape, 10000 );
+    Boundary boundary( K, *dshape, SurfelAdjacency< KSpace::dimension >( true ), bel );
+    MyDigitalSurface surf ( boundary );
+
 
     typedef DepthFirstVisitor<MyDigitalSurface> Visitor;
     typedef GraphVisitorRange< Visitor > VisitorRange;
     typedef VisitorRange::ConstIterator SurfelConstIterator;
-    VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
+    VisitorRange range( new Visitor( surf, *surf.begin() ) );
     SurfelConstIterator abegin = range.begin();
     SurfelConstIterator aend = range.end();
 
-    typedef ImageToConstantFunctor< Image, ImagePredicate > MyPointFunctor;
-    MyPointFunctor pointFunctor( &image, &predicate, 1 );
-
     // Integral Invariant stuff
+    typedef PointFunctorFromPointPredicateAndDomain< DigitalShape, Z3i::Domain, unsigned int > MyPointFunctor;
+    typedef FunctorOnCells< MyPointFunctor, KSpace > MySpelFunctor;
+    MyPointFunctor * pointFunctor = new MyPointFunctor( dshape, dshape->getDomain(), 1, 0 );
+    MySpelFunctor * functor = new MySpelFunctor( *pointFunctor, K );
 
-    typedef FunctorOnCells< MyPointFunctor, Z3i::KSpace > MyCellFunctor;
-    MyCellFunctor functor ( pointFunctor, KSpaceShape ); // Creation of a functor on Cells, returning true if the cell is inside the shape
+    trace.endBlock();
+
 
     QApplication application( argc, argv );
     Viewer3D viewer;
     viewer.show();
 //    viewer << SetMode3D(image.domain().className(), "BoundingBox") << image.domain();
 
-    VisitorRange range2( new Visitor( digSurf, *digSurf.begin() ) );
+    VisitorRange range2( new Visitor( surf, *surf.begin() ) );
     SurfelConstIterator abegin2 = range2.begin();
 
+    trace.beginBlock("curvature computation");
     if( mode == "mean" || mode == "gaussian" )
     {
         typedef double Quantity;
@@ -155,20 +180,24 @@ int main( int argc, char** argv )
 
         if ( mode == "mean" )
         {
-            typedef IntegralInvariantMeanCurvatureEstimator< Z3i::KSpace, MyCellFunctor > MyIIMeanEstimator;
+            typedef IntegralInvariantMeanCurvatureEstimator_0memory< Z3i::KSpace, MySpelFunctor > MyIIMeanEstimator;
 
-            MyIIMeanEstimator estimator ( KSpaceShape, functor );
+            MyIIMeanEstimator estimator ( K, *functor );
             estimator.init( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
             estimator.eval ( abegin, aend, resultsIterator ); // Computation
         }
         else if ( mode == "gaussian" )
         {
-            typedef IntegralInvariantGaussianCurvatureEstimator< Z3i::KSpace, MyCellFunctor > MyIIGaussianEstimator;
+            typedef IntegralInvariantGaussianCurvatureEstimator_0memory< Z3i::KSpace, MySpelFunctor > MyIIGaussianEstimator;
 
-            MyIIGaussianEstimator estimator ( KSpaceShape, functor );
+            MyIIGaussianEstimator estimator ( K, *functor );
             estimator.init( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
             estimator.eval ( abegin, aend, resultsIterator ); // Computation
         }
+
+        trace.endBlock();
+
+        trace.beginBlock("viewer");
 
         // Drawing results
         Quantity min = numeric_limits < Quantity >::max();
@@ -198,25 +227,31 @@ int main( int argc, char** argv )
                    << *abegin2;
             ++abegin2;
         }
+
+        trace.endBlock();
     }
     else
     {
         typedef double Quantity;
         typedef EigenValues3D< Quantity >::Matrix33 Matrix3x3;
         typedef EigenValues3D< Quantity >::Vector3 Vector3;
-        typedef CurvatureInformation< Quantity, Matrix3x3, Vector3 > CurvInformation;
+        typedef CurvatureInformations CurvInformation;
 
         std::vector< CurvInformation > results;
         back_insert_iterator< std::vector< CurvInformation > > resultsIterator( results ); // output iterator for results of Integral Invariante curvature computation
 
-        typedef IntegralInvariantGaussianCurvatureEstimator< Z3i::KSpace, MyCellFunctor > MyIIGaussianEstimator;
+        typedef IntegralInvariantGaussianCurvatureEstimator_0memory< Z3i::KSpace, MySpelFunctor > MyIIGaussianEstimator;
 
-        MyIIGaussianEstimator estimator ( KSpaceShape, functor );
-        estimator.init( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
-        estimator.evalComplete ( abegin, aend, resultsIterator ); // Computation
+        MyIIGaussianEstimator estimator ( K, *functor );
+        estimator.init ( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
+        estimator.evalPrincipalCurvatures ( abegin, aend, resultsIterator ); // Computation
+
+        trace.endBlock();
+
+        trace.beginBlock("viewer");
 
         // Drawing results
-        SCellToMidPoint< Z3i::KSpace > midpoint( KSpaceShape );
+        SCellToMidPoint< Z3i::KSpace > midpoint( K );
         typedef  Matrix3x3::RowVector RowVector;
         typedef  Matrix3x3::ColumnVector ColumnVector;
         for ( unsigned int i = 0; i < results.size(); ++i )
@@ -229,9 +264,9 @@ int main( int argc, char** argv )
                                       DGtal::Color(255,255,255,255))
                    << *abegin2;
 
-            ColumnVector normal = current.eigenVectors.column(0).getNormalized(); // don't show the normal
-            ColumnVector curv1 = current.eigenVectors.column(1).getNormalized();
-            ColumnVector curv2 = current.eigenVectors.column(2).getNormalized();
+            ColumnVector normal = current.vectors.column(0).getNormalized(); // don't show the normal
+            ColumnVector curv1 = current.vectors.column(1).getNormalized();
+            ColumnVector curv2 = current.vectors.column(2).getNormalized();
 
             center[0] -= 0.4;// * normal;
             center[1] -= 0.4;
@@ -264,6 +299,7 @@ int main( int argc, char** argv )
 
             ++abegin2;
         }
+        trace.endBlock();
     }
 
     viewer << Viewer3D::updateDisplay;

@@ -18,7 +18,7 @@ if (  WITH_VISU3D_QGLVIEWER )
   SET(DGTAL_EXAMPLES_QGL_SRC
     3dVolViewer
     3dCurvatureViewer
-#    3dCurvatureViewerPoly
+    3dCurvatureViewerPoly
     3dCurveViewer
     meshViewer
     visu3dPoly

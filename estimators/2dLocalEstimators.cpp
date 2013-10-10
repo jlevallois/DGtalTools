@@ -330,8 +330,8 @@ computeLocalEstimations( const std::string & filename,
     typedef KanungoNoise< Digitizer, Z2i::Domain > KanungoPredicate;
 
     bool withNoise = ( noiseLevel <= 0.0 ) ? false : true;
-    if( withNoise )
-        noiseLevel = std::pow(noiseLevel, h);
+    /*if( withNoise )
+        noiseLevel = std::pow(noiseLevel, h);*/
 
     ASSERT (( noiseLevel < 1.0 ));
 
@@ -773,7 +773,7 @@ computeLocalEstimations( const std::string & filename,
                         c.startClock();
 
                         IICurvatureEstimator->init( h, re_convolution_kernel );
-                        IICurvatureEstimator->eval( ibegin, iend, out_it );
+                        IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
 
                         delete functor;
                         delete noisifiedFunctor;
@@ -810,11 +810,11 @@ computeLocalEstimations( const std::string & filename,
                         IICurvatureEstimator->init( h, re_convolution_kernel );
                         if( !optionsII.lambda_optimized )
                         {
-                            IICurvatureEstimator->eval( ibegin, iend, out_it );
+                            IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
                         }
                         else
                         {
-                            IICurvatureEstimator->eval( ibegin, iend, out_it, *aShape );
+                            IICurvatureEstimator->eval( points.begin(), points.end(), out_it, *aShape );
                         }
 
                         delete functor;
