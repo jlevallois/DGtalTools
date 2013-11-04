@@ -347,6 +347,8 @@ computeLocalEstimations( const std::string & filename,
 
     //Noise
 
+    Clock c;
+
     // Create cellular space
     KSpace K;
     bool ok = K.init( dig->getLowerBound(), dig->getUpperBound(), true );
@@ -504,6 +506,8 @@ computeLocalEstimations( const std::string & filename,
                 }
                 if( curvature )
                 {
+                    c.startClock();
+
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDSSl_curvature.dat" );
                     std::ofstream file( full_filename );
@@ -561,6 +565,9 @@ computeLocalEstimations( const std::string & filename,
                                 pointsRange2.c(), pointsRange2.c(),
                                 out_it2 );
 
+                    double time = c.stopClock();
+                    file << "# Time: " << time << std::endl;
+
                     file.close();
 
                 }
@@ -603,6 +610,8 @@ computeLocalEstimations( const std::string & filename,
 
                 if( curvature )
                 {
+                    c.startClock();
+
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_MDCA_curvature.dat" );
                     std::ofstream file( full_filename );
@@ -630,6 +639,9 @@ computeLocalEstimations( const std::string & filename,
                                 r.c(), r.c(),
                                 out_it );
 
+                    double time = c.stopClock();
+                    file << "# Time: " << time << std::endl;
+
                     file.close();
                 }
             }
@@ -639,6 +651,8 @@ computeLocalEstimations( const std::string & filename,
             {
                 if( tangent )
                 {
+                    c.startClock();
+
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_BC_tangeant.dat" );
                     std::ofstream file( full_filename );
@@ -665,18 +679,19 @@ computeLocalEstimations( const std::string & filename,
 
                     if( BCTangentEstimator.init( h, pointsRange.begin(), pointsRange.end(), true ))
                     {
-                        Clock c;
-                        c.startClock();
                         BCTangentEstimator.eval( pointsRange.begin(), pointsRange.end(), out_it );
-                        double time = c.stopClock();
-                        file << "# Time: " << time << std::endl;
                     }
+
+                    double time = c.stopClock();
+                    file << "# Time: " << time << std::endl;
 
                     file.close();
                 }
 
                 if( curvature )
                 {
+                    c.startClock();
+
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_BC_curvature.dat" );
                     std::ofstream file( full_filename );
@@ -703,12 +718,11 @@ computeLocalEstimations( const std::string & filename,
 
                     if( BCCurvatureEstimator.init( h, pointsRange.begin(), pointsRange.end(), true ))
                     {
-                        Clock c;
-                        c.startClock();
                         BCCurvatureEstimator.eval( pointsRange.begin(), pointsRange.end(), out_it );
-                        double time = c.stopClock();
-                        file << "# Time: " << time << std::endl;
                     }
+
+                    double time = c.stopClock();
+                    file << "# Time: " << time << std::endl;
 
                     file.close();
                 }
@@ -719,6 +733,8 @@ computeLocalEstimations( const std::string & filename,
             {
                 if( curvature )
                 {
+                    c.startClock();
+
                     char full_filename[360];
                     sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature.dat" );
                     std::ofstream file( full_filename );
@@ -741,9 +757,6 @@ computeLocalEstimations( const std::string & filename,
                     file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
                             re_convolution_kernel / h << std::endl;
 
-                    double time;
-                    Clock c;
-
                     std::ostream_iterator< double > out_it( file, "\n" );
 
                     if ( withNoise )
@@ -760,7 +773,7 @@ computeLocalEstimations( const std::string & filename,
                         typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
                         CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
 
-                        IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator_0memory< KSpace, CurvatureIIFct>( K, *functor );
+                        IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
 
                         typedef DepthFirstVisitor< DigSurface > Visitor;
                         typedef GraphVisitorRange< Visitor > VisitorRange;
@@ -770,16 +783,12 @@ computeLocalEstimations( const std::string & filename,
                         I ibegin = range.begin();
                         I iend = range.end();
 
-                        c.startClock();
-
                         IICurvatureEstimator->init( h, re_convolution_kernel );
                         IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
 
                         delete functor;
                         delete noisifiedFunctor;
                         delete IICurvatureEstimator;
-
-                        time = c.stopClock();
                     }
                     else
                     {
@@ -805,25 +814,24 @@ computeLocalEstimations( const std::string & filename,
                         I ibegin = range.begin();
                         I iend = range.end();
 
-                        c.startClock();
-
                         IICurvatureEstimator->init( h, re_convolution_kernel );
                         if( !optionsII.lambda_optimized )
                         {
-                            IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
+                            IICurvatureEstimator->eval( ibegin, iend, out_it );
                         }
                         else
                         {
-                            IICurvatureEstimator->eval( points.begin(), points.end(), out_it, *aShape );
+                            IICurvatureEstimator->eval( ibegin, iend, out_it, *aShape );
                         }
 
                         delete functor;
                         delete pointFunctor;
                         delete IICurvatureEstimator;
-                        time = c.stopClock();
                     }
 
+                    double time = c.stopClock();
                     file << "# Time: " << time << std::endl;
+
                     file.close();
                 }
             }

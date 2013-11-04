@@ -259,6 +259,11 @@ int main( int argc, char** argv )
         {
             CurvInformation current = results[ i ];
 
+//            typename KSpace::DirIterator DirIterator;
+//            DirIterator dite = K.sOrthDirs(*abegin2);
+            if( K.sOrthDir(*abegin2)  == 2 )
+            {
+
             Cell unsignedSurfel = K.uCell( K.sKCoords(*abegin2) );
             viewer << CustomColors3D( DGtal::Color(255,255,255,255),
                                       DGtal::Color(255,255,255,255))
@@ -300,6 +305,7 @@ int main( int argc, char** argv )
                                  center[1] +  0.5 * curv2[1],
                                  center[2] +  0.5 * curv2[2],
                                  DGtal::Color ( 200,20,20 ), 5.0 );
+            }
             }
 
             ++abegin2;

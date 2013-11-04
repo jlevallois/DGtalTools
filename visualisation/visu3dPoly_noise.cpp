@@ -55,7 +55,9 @@
 // Drawing
 #include "DGtal/io/viewers/Viewer3D.h"
 #include "DGtal/io/colormaps/GradientColorMap.h"
+#include "DGtal/io/colormaps/GrayscaleColorMap.h"
 #include <QtGui/QApplication>
+#include "DGtal/io/writers/VolWriter.h"
 
 using namespace std;
 using namespace DGtal;
@@ -170,6 +172,14 @@ int main( int argc, char** argv )
     }
 
     trace.endBlock();
+    typedef ImageContainerBySTLVector< Z3i::Domain, unsigned char > Image;
+    Image img( dshape->getDomain() );
+    typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Z3i::Domain, unsigned int > MyPointFunctor;
+    MyPointFunctor pf( noisifiedObject, dshape->getDomain(), 255, 0 );
+    imageFromFunctor( img, pf );
+
+    typedef GrayscaleColorMap<unsigned char> Gray;
+    VolWriter< Image >::exportVol( "RoundedCube_noise.vol", img);
 
     VisitorRange * range;
     VisitorConstIterator ibegin;
@@ -182,10 +192,22 @@ int main( int argc, char** argv )
     trace.beginBlock("viewer");
 
     QApplication application( argc, argv );
-    Viewer3D viewer;
+    Viewer3D viewer2;
 
+    viewer2.show();
+//    viewer2 << *noisifiedObject;
+
+    for( typename Z3i::Domain::ConstIterator it = dshape->getDomain().begin(), itend = dshape->getDomain().end(); it != itend; ++it)
+    {
+        if( noisifiedObject->operator ()( *it ))
+        {
+            viewer2 << *it;
+        }
+    }
+    viewer2 << Viewer3D::updateDisplay;
+    Viewer3D viewer;
     viewer.show();
-    viewer << SetMode3D( dshape->getDomain().className(), "BoundingBox" ) << dshape->getDomain();
+    //viewer << SetMode3D( dshape->getDomain().className(), "BoundingBox" ) << dshape->getDomain();
 
     for( ; ibegin != iend; ++ibegin )
     {
