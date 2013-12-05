@@ -121,6 +121,13 @@ void createList()
   shapesParam2.push_back("--axis2 [-a],");
   shapesParam3.push_back("--phi");
   shapesParam4.push_back("");
+
+  shapes2D.push_back("cublipse");
+  shapesDesc.push_back("Cublipse.");
+  shapesParam1.push_back("--axis1 [-A],");
+  shapesParam2.push_back("--axis2 [-a],");
+  shapesParam3.push_back("--phi");
+  shapesParam4.push_back("");
  
 
 }
@@ -501,7 +508,7 @@ int main( int argc, char** argv )
 		return 0;
 	      } 
 	    else
-	      //if (id ==6)
+        if (id ==6)
 	      {
 		if (!(vm.count("axis1"))) missingParam("--axis1");
 		if (!(vm.count("axis2"))) missingParam("--axis2");
@@ -522,4 +529,25 @@ int main( int argc, char** argv )
    
 		return 0;
 	      } 
+        else
+          {
+      if (!(vm.count("axis1"))) missingParam("--axis1");
+      if (!(vm.count("axis2"))) missingParam("--axis2");
+      if (!(vm.count("phi"))) missingParam("--phi");
+      double a1 = vm["axis1"].as<double>();
+      double a2 = vm["axis2"].as<double>();
+      double phi = vm["phi"].as<double>();
+
+      Cublipse2D<Z2i::Space> cubl(Z2i::Point(0,0), a1, a2,phi);
+      Z2i::Domain domain(cubl.getLowerBound(), cubl.getUpperBound());
+      Z2i::DigitalSet aSet(domain);
+
+      Shapes<Z2i::Domain>::euclideanShaper(aSet, cubl);
+      Exporter<Z2i::DigitalSet,Image>::save(aSet,outputName,outputFormat);
+
+      if (vm.count("signature"))
+        Exporter<Z2i::DigitalSet,Image>::exportSignature(cubl,aSet,domain);
+
+      return 0;
+          }
 }
