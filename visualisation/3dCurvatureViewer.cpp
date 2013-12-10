@@ -40,6 +40,11 @@
 #include <iostream>
 #include "DGtal/base/Common.h"
 #include <cstring>
+
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
+
 // Shape constructors
 #include "DGtal/io/readers/VolReader.h"
 #include "DGtal/images/ImageSelector.h"
@@ -74,47 +79,89 @@ const double AXIS_LINESIZE = 0.05;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void usage( int argc, char** argv )
+/**
+ * Missing parameter error message.
+ *
+ * @param param
+ */
+void missingParam( std::string param )
 {
-  trace.info() << "Usage: " << argv[ 0 ]
-               << " <fileName.vol> <re> <\"mean\" || \"gaussian\" || \"princurv{1,2}\">"<< std::endl;
-  trace.info() << "\t - <filename.vol> file you want to show the curvature information."<< std::endl;
-  trace.info() << "\t - <re> Euclidean radius of the kernel."<< std::endl;
-  trace.info() << "\t - <\"mean\" || \"gaussian\" || \"princurv{1,2}\"> show mean or Gaussian curvature on shape."<< std::endl;
-  trace.info() << "Example : "<< argv[ 0 ] << " Al.150.vol 7 \"princurv1" << std::endl;
+  trace.error() << " Parameter: " << param << " is required.";
+  trace.info() << std::endl;
 }
+
+namespace po = boost::program_options;
 
 int main( int argc, char** argv )
 {
-  if ( argc != 4 )
-  {
-    usage( argc, argv );
-    return 0;
-  }
+  // parse command line ----------------------------------------------
+  po::options_description general_opt("Allowed options are");
+  general_opt.add_options()
+    ("help,h", "display this message")
+    ("input-file,i", po::value< std::string >(), ".vol file")
+    ("radius,r",  po::value< double >(), "Kernel radius for IntegralInvariant" )
+    ("properties,p", po::value< std::string >()->default_value("mean"), "type of output : mean, gaussian, prindir1 or prindir2 (default mean)");
 
+  bool parseOK = true;
+  po::variables_map vm;
+  try 
+  {
+    po::store( po::parse_command_line( argc, argv, general_opt ), vm );
+  }
+  catch( const std::exception & ex )
+  {
+    parseOK = false;
+    trace.info() << "Error checking program options: " << ex.what() << std::endl;
+  }
+  po::notify( vm );
+  bool neededArgsGiven=true;
+  if (!(vm.count("input-file"))){ 
+    missingParam("--input-file");
+    neededArgsGiven=false;
+  }
+  if (!(vm.count("radius"))){ 
+    missingParam("--radius");
+    neededArgsGiven=false;
+  }  
   double h = 1.0;
-  double re_convolution_kernel = atof(argv[2]);
 
-  std::string mode = argv[ 3 ];
-  if (( mode.compare("gaussian") != 0 ) && ( mode.compare("mean") != 0 ) && ( mode.compare("princurv1") != 0 ) && ( mode.compare("princurv2") != 0 ))
+  bool wrongMode = false;
+  std::string mode = vm["properties"].as< std::string >();
+  if (( mode.compare("gaussian") != 0 ) && ( mode.compare("mean") != 0 ) && ( mode.compare("prindir1") != 0 ) && ( mode.compare("prindir2") != 0 ))
   {
-    usage( argc, argv );
-    return 0;
+    wrongMode = true;
   }
 
+  if(!neededArgsGiven ||  wrongMode || !parseOK || vm.count("help") || argc <= 1 )
+  {
+    trace.info()<< "Visualisation of 3d curvature from .vol file using curvature from Integral Invariant" <<std::endl
+                << general_opt << "\n"
+                << "Basic usage: "<<std::endl
+                << "\t3dCurvatureViewer -i <file.vol> --radius <radius> --properties <\"mean\">"<<std::endl
+                << std::endl
+                << "Below are the different available properties: " << std::endl
+                << "\t - \"mean\" for the mean curvature" << std::endl
+                << "\t - \"gaussian\" for the Gaussian curvature" << std::endl
+                << "\t - \"prindir1\" for the first principal curvature direction" << std::endl
+                << "\t - \"prindir2\" for the second principal curvature direction" << std::endl
+                << std::endl;
+    return 0;
+  }
+  double re_convolution_kernel = vm["radius"].as< double >();
+  
   // Construction of the shape from vol file
   typedef Z3i::Space::RealPoint RealPoint;
   typedef Z3i::Point Point;
   typedef ImageSelector< Z3i::Domain, bool>::Type Image;
   typedef SimpleThresholdForegroundPredicate< Image > ImagePredicate;
   typedef Z3i::KSpace KSpace;
-  typedef typename KSpace::SCell SCell;
-  typedef typename KSpace::Cell Cell;
-  typedef typename KSpace::Surfel Surfel;
+  typedef KSpace::SCell SCell;
+  typedef KSpace::Cell Cell;
+  typedef KSpace::Surfel Surfel;
   typedef LightImplicitDigitalSurface< Z3i::KSpace, ImagePredicate > MyLightImplicitDigitalSurface;
   typedef DigitalSurface< MyLightImplicitDigitalSurface > MyDigitalSurface;
 
-  std::string filename = argv[1];
+  std::string filename = vm["input-file"].as< std::string >();
   Image image = VolReader<Image>::importVol( filename );
   ImagePredicate predicate = ImagePredicate( image, 0 );
 
@@ -122,12 +169,14 @@ int main( int argc, char** argv )
 
   Z3i::KSpace K;
 
-  bool space_ok = K.init( domain.lowerBound(), domain.upperBound() + Point(1,1,1), true );
+  bool space_ok = K.init( domain.lowerBound(), domain.upperBound(), true );
   if (!space_ok)
   {
     trace.error() << "Error in the Khalimsky space construction."<<std::endl;
     return 2;
   }
+
+  CanonicSCellEmbedder< KSpace > embedder( K );
 
   SurfelAdjacency< Z3i::KSpace::dimension > SAdj( true );
   Surfel bel = Surfaces< Z3i::KSpace >::findABel( K, predicate, 100000 );
@@ -142,7 +191,7 @@ int main( int argc, char** argv )
   SurfelConstIterator aend = range.end();
 
   typedef ImageToConstantFunctor< Image, ImagePredicate > MyPointFunctor;
-  MyPointFunctor pointFunctor( &image, &predicate, 1 );
+  MyPointFunctor pointFunctor( image, predicate, 1 );
 
   // Integral Invariant stuff
 
@@ -214,7 +263,6 @@ int main( int argc, char** argv )
 
     for ( unsigned int i = 0; i < results.size(); ++i )
     {
-      //            std::cout << results[ i ] << std::endl;
       viewer << CustomColors3D( Color::Black, cmap_grad( results[ i ] ))
              << *abegin2;
       ++abegin2;
@@ -243,7 +291,6 @@ int main( int argc, char** argv )
     // Drawing results
     typedef  Matrix3x3::RowVector RowVector;
     typedef  Matrix3x3::ColumnVector ColumnVector;
-    CanonicSCellEmbedder< KSpace > embedder( K );
 
     for ( unsigned int i = 0; i < results.size(); ++i )
     {
@@ -277,7 +324,7 @@ int main( int argc, char** argv )
       //                             DGtal::Color ( 0,0,0 ), 5.0 ); // don't show the normal
 
 
-      if( ( mode.compare("princurv1") == 0 ) )
+      if( ( mode.compare("prindir1") == 0 ) )
       {
         viewer.setLineColor(AXIS_COLOR_BLUE);
         viewer.addLine (
