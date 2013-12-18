@@ -204,6 +204,7 @@ int Compute( const MyShape & shape,
 
       for ( uint i = 0; i < rsize; ++i )
       {
+        current_result = results[ i ];
         data[ i * re_size + step_re ] = current_result;
       }
 
