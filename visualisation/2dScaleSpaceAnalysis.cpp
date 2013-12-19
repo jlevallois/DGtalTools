@@ -163,10 +163,11 @@ int Compute( const MyShape & shape,
   const uint c_surf_size = surf_size;
 
   uint step_re;
+  Visitor * vis;
 
-  #pragma omp parallel shared(image,data,min,max,K,SAdj,shape,cfunctor,surf,dig,domain,pointFunctor)
+  #pragma omp parallel shared(image,data,min,max,K,cfunctor,surf)
   {
-    #pragma omp for schedule(dynamic,1) private (step_re) nowait
+    #pragma omp for schedule(dynamic,1) private(step_re,vis) nowait
     for ( step_re = 0; step_re < c_re_size; ++step_re )
     {
       Estimator estimator( K, cfunctor );
@@ -174,19 +175,35 @@ int Compute( const MyShape & shape,
       Clock c;
       c.startClock();
 
-      Z2i::SCell center( Z2i::Point( 0, 0 ), true);
-      Quantity tcenter = cfunctor( center );
-      trace.warning() << tcenter << std::endl;
+//      Z2i::SCell center( Z2i::Point( 0, 0 ), true);
+//      Quantity tcenter = cfunctor( center );
+//      trace.warning() << tcenter << std::endl;
 
       estimator.init( h, re_array[ step_re ] );
 
 //      results = vQuantity(surf_size, step_re); /// http://media.giphy.com/media/H8zg5nlGWWQ7K/giphy.gif
       vQuantity results;
       std::back_insert_iterator< vQuantity > resultIterator( results );
-      VisitorRange range( new Visitor( surf, *surf.begin() ) );
+      vis = ::new Visitor( surf, *surf.begin() );
+//      trace.info() << vis << std::endl;
+      VisitorRange range( vis );
+//      trace.info() << *range.begin() << std::endl;
+//      trace.info() << &cfunctor << std::endl;
       SurfelConstIterator abegin = range.begin();
       SurfelConstIterator aend = range.end();
-      estimator.eval( abegin, aend, resultIterator );
+//      trace.info() << &aend << std::endl;
+//      estimator.eval( abegin, aend, resultIterator );
+
+      uint cc = 0;
+      if( step_re % 2 == 0 )
+      {
+      while ( abegin != aend )
+      {
+        ++cc;
+        trace.info() << step_re << " " << cc << std::endl;
+        ++abegin;
+      }
+      }
 
       Quantity current_result = Quantity(0);
 
