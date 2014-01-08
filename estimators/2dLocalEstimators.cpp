@@ -63,6 +63,8 @@
 #include "DGtal/graph/GraphVisitorRange.h"
 #include "DGtal/geometry/volumes/KanungoNoise.h"
 
+#include "DGtal/math/Statistic.h"
+#include "DGtal/geometry/curves/ArithmeticalDSS.h"
 
 //Estimators
 #include "DGtal/geometry/curves/estimation/TrueLocalEstimatorOnPoints.h"
@@ -104,6 +106,7 @@ struct OptionsIntegralInvariant
   double radius; // <! Radius of the convolution kernel.
   RealPoint center; // <! Center of the shape.
   bool lambda_optimized;
+  double cste;
 };
 
 
@@ -238,6 +241,39 @@ void estimationError(int currentSize, int expectedSize)
     exit(1);
   }
 
+}
+
+template <typename KSpace, typename Iterator>
+void analyseLengthMS( Statistic<double> & statD, Statistic<double> & statE,
+                      Iterator itb, Iterator ite )
+{
+  typedef typename KSpace::Space Space;
+  typedef typename Space::Point Point;
+  typedef typename Space::Vector Vector;
+  typedef ArithmeticalDSSComputer< Iterator, int, 4 > SegmentComputer;
+  typedef SaturatedSegmentation< SegmentComputer > Decomposition;
+  typedef typename Decomposition::SegmentComputerIterator SegmentComputerIterator;
+  // Computes the tangential cover
+  SegmentComputer algo;
+  Decomposition theDecomposition( itb, ite, algo);
+  statD.clear();
+  statE.clear();
+  for ( SegmentComputerIterator scIt = theDecomposition.begin(), scItEnd = theDecomposition.end();
+        scIt != scItEnd; ++scIt )
+    {
+      const SegmentComputer & sc = *scIt;
+      int64_t l = 0;
+      for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
+        ++l;
+      statD.addValue( (double) l );
+      Vector v = *( sc.end() - 1 ) - *( sc.begin() );
+      statE.addValue( v.norm() );
+    }
+}
+
+double kappaGridStep( double length )
+{
+  return 5.0*5.0*5.0/(length*length*length);
 }
 
 /**
@@ -391,12 +427,29 @@ computeLocalEstimations( const std::string & filename,
     gridcurve.initFromSCellsVector( points );
 
     // Ranges
-    typedef typename GridCurve< KSpace >::MidPointsRange PointsRange;
-    PointsRange pointsRange = gridcurve.getMidPointsRange();
+    typedef typename GridCurve< KSpace >::MidPointsRange MidPointsRange;
+    MidPointsRange pointsRange = gridcurve.getMidPointsRange();
+    typedef typename GridCurve< KSpace >::PointsRange PointsRange;
+    PointsRange pointsRange2 = gridcurve.getPointsRange();
 
     // Estimations
     if (gridcurve.isClosed())
     {
+      Statistic<double> statMSL( true );
+      Statistic<double> statMSEL( true );
+      analyseLengthMS<KSpace>( statMSL, statMSEL, pointsRange2.c(), pointsRange2.c() );
+      statMSL.terminate();
+      Statistic<double> resolution( false );
+      for ( Statistic<double>::ConstIterator
+            it = statMSL.begin(), itE = statMSL.end(); it != itE; ++it )
+        resolution.addValue( 1.0 / kappaGridStep( *it ) );
+      Statistic<double> resolutionE( false );
+      for ( Statistic<double>::ConstIterator
+            it = statMSEL.begin(), itE = statMSEL.end(); it != itE; ++it )
+        resolutionE.addValue( 1.0 / kappaGridStep( *it ) );
+
+      trace.info() << "#Average " << statMSEL.mean() << std::endl;
+
       if (options.at(0) != '0')
       {
         if( tangent )
@@ -417,7 +470,7 @@ computeLocalEstimations( const std::string & filename,
           std::ostream_iterator< RealPoint > out_it( file, "\n" );
 
           typedef ParametricShapeTangentFunctor< Shape > TangentFunctor;
-          typedef typename PointsRange::ConstCirculator C;
+          typedef typename MidPointsRange::ConstCirculator C;
           TrueLocalEstimatorOnPoints< C, Shape, TangentFunctor >
               trueTangentEstimator;
           trueTangentEstimator.attach( aShape );
@@ -447,7 +500,7 @@ computeLocalEstimations( const std::string & filename,
           std::ostream_iterator< double > out_it( file, "\n" );
 
           typedef ParametricShapeCurvatureFunctor< Shape > CurvatureFunctor;
-          typedef typename PointsRange::ConstCirculator C;
+          typedef typename MidPointsRange::ConstCirculator C;
           TrueLocalEstimatorOnPoints< C, Shape, CurvatureFunctor >
               trueCurvatureEstimator;
           trueCurvatureEstimator.attach( aShape );
@@ -656,7 +709,7 @@ computeLocalEstimations( const std::string & filename,
             file << "# noise level (current) = " << noiseLevel << std::endl;
           }
 
-          typedef typename PointsRange::ConstIterator I;
+          typedef typename MidPointsRange::ConstIterator I;
           typedef BinomialConvolver<I, double> MyBinomialConvolver;
           file << "# mask size = " <<
                   MyBinomialConvolver::suggestedSize( h, pointsRange.begin(), pointsRange.end() ) << std::endl;
@@ -693,7 +746,7 @@ computeLocalEstimations( const std::string & filename,
             file << "# noise level (current) = " << noiseLevel << std::endl;
           }
 
-          typedef typename PointsRange::ConstIterator I;
+          typedef typename MidPointsRange::ConstIterator I;
           typedef BinomialConvolver<I, double> MyBinomialConvolver;
           file << "# mask size = " <<
                   MyBinomialConvolver::suggestedSize( h, pointsRange.begin(), pointsRange.end() ) << std::endl;
@@ -740,7 +793,11 @@ computeLocalEstimations( const std::string & filename,
             optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
             file << "# Estimated radius: " << optionsII.radius << std::endl;
           }
-          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
+
+          double k = optionsII.cste;
+          double mean = statMSEL.mean();
+          double re_convolution_kernel = (k * (mean * mean)) * h;
+//          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
           file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
                   re_convolution_kernel / h << std::endl;
 
@@ -863,6 +920,7 @@ int main( int argc, char** argv )
       ("center_x,x",   po::value<double>()->default_value(0.0), "x-coordinate of the shape center (double)" )
       ("center_y,y",   po::value<double>()->default_value(0.0), "y-coordinate of the shape center (double)" )
       ("gridstep,g",  po::value<double>()->default_value(1.0), "Grid step for the digitization" )
+      ("cste",  po::value<double>()->default_value(0.1), "Level of noise to perturb the shape" )
       ("noise,n",  po::value<double>()->default_value(0.0), "Level of noise to perturb the shape" )
       ("properties",  po::value<std::string>()->default_value("11"), "the i-th property is disabled iff there is a 0 at position i" )
       ("estimators,e",  po::value<std::string>()->default_value("10000"), "the i-th estimator is disabled iff there is a 0 at position i" )
@@ -958,6 +1016,7 @@ int main( int argc, char** argv )
   optII.alpha = vm["alpha"].as<double>();
   optII.lambda_optimized = vm["lambda"].as< bool >();
   optII.center = center;
+  optII.cste = vm["cste"].as<double>();
 
   double noiseLevel = vm["noise"].as<double>();
 
