@@ -79,6 +79,21 @@ std::vector<std::string> shapesParam2;
 std::vector<std::string> shapesParam3;
 std::vector<std::string> shapesParam4;
 
+/**
+ * Build a Digital Surface from a Digital object and a bel. All is stored in Implicit, so it light in memory.
+ */
+template< typename KSpace, typename Digitizer, typename Surfel >
+DigitalSurface< LightImplicitDigitalSurface< Z2i::KSpace, Digitizer > >
+getDigitalSurface( KSpace & K, Digitizer & dig, Surfel & bel )
+{
+  typedef LightImplicitDigitalSurface< Z2i::KSpace, Digitizer > LightDigitalSurface;
+  typedef DigitalSurface< LightDigitalSurface > MyDigitalSurface;
+  SurfelAdjacency< Z2i::KSpace::dimension > SAdj( true );
+  LightDigitalSurface ldigsurf( K, dig, SAdj, bel );
+  MyDigitalSurface surf( ldigsurf );
+
+  return surf;
+}
 
 
 template< typename MyShape >
@@ -109,14 +124,9 @@ int Compute( const MyShape & shape,
     return 0;
   }
 
-  typedef LightImplicitDigitalSurface< Z2i::KSpace, Digitizer > LightDigitalSurface;
-  typedef DigitalSurface< LightDigitalSurface > MyDigitalSurface;
-
-  SurfelAdjacency< Z2i::KSpace::dimension > SAdj( true );
   Surfel bel = Surfaces< Z2i::KSpace >::findABel( K, dig, 100000 );
-  LightDigitalSurface ldigsurf( K, dig, SAdj, bel );
-  MyDigitalSurface surf( ldigsurf );
 
+  typedef DigitalSurface< LightImplicitDigitalSurface< Z2i::KSpace, Digitizer > > MyDigitalSurface;
   typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Z2i::Domain, unsigned int > MyPointFunctor;
   typedef FunctorOnCells< MyPointFunctor, Z2i::KSpace > MyCellFunctor;
   typedef IntegralInvariantMeanCurvatureEstimator< Z2i::KSpace, MyCellFunctor > Estimator;
@@ -140,6 +150,7 @@ int Compute( const MyShape & shape,
 
   /// count surface
   {
+    MyDigitalSurface surf = getDigitalSurface( K, dig, bel );
     VisitorRange range( new Visitor( surf, *surf.begin() ) );
     SurfelConstIterator abegin = range.begin();
     SurfelConstIterator aend = range.end();
@@ -155,105 +166,63 @@ int Compute( const MyShape & shape,
     Z2i::Domain domain_image( aa, bb );
     image = new Image( domain_image );
 
-    data_size = image->size();// surf_size * re_size;
+    data_size = image->size();
     data.resize( data_size );
   }
 
   const uint c_data_size = data_size;
   const uint c_surf_size = surf_size;
 
-  uint step_re;
-  Visitor * vis;
-
-  #pragma omp parallel shared(image,data,min,max,K,cfunctor,surf)
+#ifdef WITH_OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+  for (unsigned int step_re = 0; step_re < c_re_size; ++step_re )
   {
-    #pragma omp for schedule(dynamic,1) private(step_re,vis) nowait
-    for ( step_re = 0; step_re < c_re_size; ++step_re )
+    Estimator estimator( K, cfunctor );
+
+    Clock c;
+    c.startClock();
+
+    estimator.init( h, re_array[ step_re ] );
+
+    vQuantity results;
+    std::back_insert_iterator< vQuantity > resultIterator( results );
+    MyDigitalSurface surf = getDigitalSurface( K, dig, bel );
+    VisitorRange range( new Visitor( surf, *surf.begin() ) );
+    SurfelConstIterator abegin = range.begin();
+    SurfelConstIterator aend = range.end();
+    estimator.eval( abegin, aend, resultIterator );
+
+    Quantity current_result;
+
+    if( options.at( 0 ) != '0' ) // export as image
     {
-      Estimator estimator( K, cfunctor );
-
-      Clock c;
-      c.startClock();
-
-//      Z2i::SCell center( Z2i::Point( 0, 0 ), true);
-//      Quantity tcenter = cfunctor( center );
-//      trace.warning() << tcenter << std::endl;
-
-      estimator.init( h, re_array[ step_re ] );
-
-//      results = vQuantity(surf_size, step_re); /// http://media.giphy.com/media/H8zg5nlGWWQ7K/giphy.gif
-      vQuantity results;
-      std::back_insert_iterator< vQuantity > resultIterator( results );
-      vis = ::new Visitor( surf, *surf.begin() );
-//      trace.info() << vis << std::endl;
-      VisitorRange range( vis );
-//      trace.info() << *range.begin() << std::endl;
-//      trace.info() << &cfunctor << std::endl;
-      SurfelConstIterator abegin = range.begin();
-      SurfelConstIterator aend = range.end();
-//      trace.info() << &aend << std::endl;
-//      estimator.eval( abegin, aend, resultIterator );
-
-      uint cc = 0;
-      if( step_re % 2 == 0 )
+      for ( uint ii = 0; ii < c_surf_size; ++ii )
       {
-      while ( abegin != aend )
-      {
-        ++cc;
-        trace.info() << step_re << " " << cc << std::endl;
-        ++abegin;
-      }
-      }
-
-      Quantity current_result = Quantity(0);
-
-//      if( options.at( 0 ) != '0' ) // export as image
-//      {
-//        if ( step_re == 0 ) // compute image domain
-//        {
-//          Z2i::Point aa( 0, 0 );
-//          Z2i::Point bb( rsize - 1, re_size - 1 );
-//          Z2i::Domain domain_image( aa, bb );
-//          image = new Image( domain_image );
-//        }
-
-        for ( uint ii = 0; ii < c_surf_size; ++ii )
+        current_result = results[ ii ];
+        if ( current_result < min )
         {
-          current_result = results[ ii ];
-          if ( current_result < min )
-          {
-            min = current_result;
-          }
-          else if ( current_result > max )
-          {
-            max = current_result;
-          }
-
-          uint current_pos = step_re * c_surf_size + ii;
-          if( current_pos < c_data_size )
-          {
-            (*image)[ step_re * c_surf_size + ii ] = current_result;
-          }
-          else
-          {
-            (*image)[current_pos] = 0;
-            trace.error() << "current_pos: " << current_pos << " c_data_size:" << c_data_size << std::endl;
-          }
+          min = current_result;
+        }
+        else if ( current_result > max )
+        {
+          max = current_result;
         }
 
-//        typedef GradientColorMap< Quantity > Gradient;
-//        Gradient cmap_grad( min, max );
-//        cmap_grad.addColor( Color( 50, 50, 255 ) );
-//        cmap_grad.addColor( Color( 255, 0, 0 ) );
-//        cmap_grad.addColor( Color( 255, 255, 10 ) );
+        uint current_pos = step_re * c_surf_size + ii;
+        if( current_pos < c_data_size )
+        {
+          (*image)[ step_re * c_surf_size + ii ] = current_result;
+        }
+        else
+        {
+          (*image)[current_pos] = 0;
+          trace.error() << "current_pos: " << current_pos << " c_data_size:" << c_data_size << std::endl;
+        }
+      }
+    }
 
-//        std::stringstream sstm;
-//        sstm << name << ".ppm";
-//        std::string exportname = sstm.str();
-//        PPMWriter<Image, Gradient >::exportPPM( exportname, *image, cmap_grad ); // Erase previous image with old + new iteration values (the computation on full iteration take long time, so we can see result before ending)
-//      }
-
-      /*
+    /*
       if( options.at( 1 ) != '0' ) // export as data file
       {
 //        if ( step_re == 0 )
@@ -307,13 +276,12 @@ int Compute( const MyShape & shape,
       }
       */
 
-//      if(((( step_re + 1 ) / re_size ) * 100 ) % 5 )
-//      {
-//        trace.progressBar( step_re + 1, re_size );
-//      }
-      double time = c.stopClock();
-      trace.info() << "-- Done in " << time << " msec. --" << std::endl;
+    if(((( step_re + 1 ) / c_re_size ) * 100 ) % 5 )
+    {
+      trace.progressBar( step_re + 1, c_re_size );
     }
+    double time = c.stopClock();
+    trace.info() << "-- Done in " << time << " msec for " << step_re + 1 << "/" << c_re_size << ". --" << std::endl;
   }
 
   typedef GradientColorMap< Quantity > Gradient;
@@ -326,12 +294,11 @@ int Compute( const MyShape & shape,
   std::stringstream sstm;
   sstm << name << ".ppm";
   std::string exportname = sstm.str();
-  PPMWriter<Image, Gradient >::exportPPM( exportname, *image, cmap_grad ); // Erase previous image with old + new iteration values (the computation on full iteration take long time, so we can see result before ending)
-
+  PPMWriter< Image, Gradient >::exportPPM( exportname, *image, cmap_grad );
 
   delete image;
 
-  return 1;//image;
+  return 1;
 }
 
 /**
@@ -478,7 +445,7 @@ int main ( int argc, char** argv )
 
       ("re_min,re_min",  po::value<double>()->default_value(1.0), "min Euclidean radius of the convolution kernel" )
       ("re_max,re_max",  po::value<double>()->default_value(7.0), "max Euclidean radius of the convolution kernel" )
-      ("re_step,re_step",  po::value<double>()->default_value(0.01), "step of the increase of the Euclidean radius of the convolution kernel" )
+      ("re_step,re_step",  po::value<double>()->default_value(0.05), "step of the increase of the Euclidean radius of the convolution kernel" )
       ("gridstep_min,g_min",  po::value<double>()->default_value(0.05), "min Grid step for the digitization" )
       ("gridstep_max,g_max",  po::value<double>()->default_value(0.05), "max Grid step for the digitization" )
       ("gridstep_step,g_step",  po::value<double>()->default_value(0.01), "step of the increase of the Grid step for the digitization" )
