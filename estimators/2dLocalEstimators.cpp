@@ -244,6 +244,80 @@ void estimationError(int currentSize, int expectedSize)
 }
 
 template <typename KSpace, typename Iterator>
+void analyseAllLengthMS( std::vector< Statistic<double> > & statD, std::vector< Statistic<double> > & statE,
+                      Iterator itb, Iterator ite )
+{
+  typedef typename KSpace::Space Space;
+  typedef typename Space::Point Point;
+  typedef typename Space::Vector Vector;
+  typedef ArithmeticalDSSComputer< Iterator, int, 4 > SegmentComputer;
+  typedef SaturatedSegmentation< SegmentComputer > Decomposition;
+  typedef typename Decomposition::SegmentComputerIterator SegmentComputerIterator;
+  // Computes the tangential cover
+  SegmentComputer algo;
+  Decomposition theDecomposition( itb, ite, algo);
+
+  typedef std::map< Point, std::vector< SegmentComputer& > > Pmap;
+  Pmap map;
+  for( Iterator itc = itb; itc != ite; ++itc )
+  {
+    map.insert( std::pair<Point, std::vector< SegmentComputer& >>( *itc, std::vector< SegmentComputer& >() ) );
+  }
+
+
+  for ( SegmentComputerIterator scIt = theDecomposition.begin(), scItEnd = theDecomposition.end();
+        scIt != scItEnd; ++scIt )
+  {
+    const SegmentComputer & sc = *scIt;
+    for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
+    {
+      typename Pmap::iterator mloc = map.find( *ptIt );
+      if( mloc != Pmap::end() )
+      {
+        mloc->second().push_back(&sc);
+      }
+    }
+  }
+
+  /*for( typename Pmap::iterator mloc = map.begin(); mloc != map.end(); ++mloc )
+  {
+    for( Dimension ii = 0; ii < mloc->second().size(); ++ii )
+    {
+      const SegmentComputer & sc = *scIt;
+      int64_t l = 0;
+      for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
+        ++l;
+      statD.addValue( (double) l );
+      Vector v = *( sc.end() - 1 ) - *( sc.begin() );
+      statE.addValue( v.norm() );
+    }
+  }*/
+
+  Dimension ii = 0;
+  for( Iterator itc = itb; itc != ite; ++itc )
+  {
+    statD[ii].clear();
+    statE[ii].clear();
+    typename Pmap::iterator mloc = map.find( *itc );
+    ASSERT(( mloc != Pmap::end ));
+
+    /////////////
+
+    ++ii;
+  }
+
+
+    /*const SegmentComputer & sc = *scIt;
+    int64_t l = 0;
+    for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
+      ++l;
+    statD.addValue( (double) l );
+    Vector v = *( sc.end() - 1 ) - *( sc.begin() );
+    statE.addValue( v.norm() );
+  }*/
+}
+
+template <typename KSpace, typename Iterator>
 void analyseLengthMS( Statistic<double> & statD, Statistic<double> & statE,
                       Iterator itb, Iterator ite )
 {
