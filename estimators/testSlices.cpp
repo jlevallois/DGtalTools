@@ -95,6 +95,38 @@ namespace po = boost::program_options;
 
 int main( int argc, char** argv )
 {
+  std::vector< double > v_test;
+  v_test.push_back(1.5);
+  v_test.push_back(2.5);
+  v_test.push_back(3.5);
+  v_test.push_back(4.5);
+  v_test.push_back(5.5);
+
+  typedef SCellTo2DSCell< std::vector< double > > Embedder;
+  Embedder TEST(v_test);
+  typedef Embedder::ConstIterator ConstIterator;
+  typedef Embedder::Iterator Iterator;
+  ConstIterator itb = TEST.begin();
+  ConstIterator ite = TEST.end();
+
+  std::cout << "itb=" << *v_test.begin() << std::endl;
+  std::cout << "itb=" << *itb << std::endl;
+  std::cout << "ite=" << *ite << std::endl;
+
+  ConstIterator itc = itb;
+  for( ;
+       itc != ite;
+       ++itc )
+  {
+    std::cout << "itc="<< *itc << std::endl;
+  }
+
+  std::cout << "_itc=" << *itc << std::endl;
+  ++itc;
+  std::cout << "_itc=" << *itc << std::endl;
+
+  return 0;
+
   // parse command line ----------------------------------------------
   po::options_description general_opt("Allowed options are");
   general_opt.add_options()
