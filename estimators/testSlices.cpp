@@ -109,7 +109,7 @@ int main( int argc, char** argv )
   ConstIterator itb = TEST.begin();
   ConstIterator ite = TEST.end();
 
-  std::cout << "itb=" << *v_test.begin() << std::endl;
+  std::cout << "itrealb=" << *v_test.begin() << std::endl;
   std::cout << "itb=" << *itb << std::endl;
   std::cout << "ite=" << *ite << std::endl;
 
