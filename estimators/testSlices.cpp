@@ -65,6 +65,7 @@
 
 // Drawing
 #include "DGtal/io/viewers/Viewer3D.h"
+#include "DGtal/io/boards/Board2D.h"
 #include "DGtal/io/colormaps/GradientColorMap.h"
 #include "DGtal/topology/DigitalSurface2DSlice.h"
 #include <QtGui/QApplication>
@@ -95,14 +96,23 @@ namespace po = boost::program_options;
 
 int main( int argc, char** argv )
 {
-  std::vector< double > v_test;
-  v_test.push_back(1.5);
-  v_test.push_back(2.5);
-  v_test.push_back(3.5);
-  v_test.push_back(4.5);
-  v_test.push_back(5.5);
+  /*typedef Z3i::Point Point;
+  std::vector< Point > v_test;
+  v_test.push_back( Point( 1,1,1 ) );
+  v_test.push_back( Point( 3,1,1 ) );
+  v_test.push_back( Point( 3,3,1 ) );
+  v_test.push_back( Point( 3,6,1 ) );
+  v_test.push_back( Point( 3,1,1 ) );
 
-  typedef SCellTo2DSCell< std::vector< double > > Embedder;
+  Projector< SpaceND<2, int> > proj;
+  //proj.init( v_test.begin(), v_test.end() );
+  proj.initRemoveOneDim( 1 );
+  Z2i::Point result = proj( v_test[3] );
+  std::cout << "Annnnd the resulting point iiiiiiiis : " << result << std::endl;
+
+  return 0;
+
+  typedef SCellTo2DSCell< std::vector< Point > > Embedder;
   Embedder TEST(v_test);
   typedef Embedder::ConstIterator ConstIterator;
   typedef Embedder::Iterator Iterator;
@@ -125,7 +135,7 @@ int main( int argc, char** argv )
   ++itc;
   std::cout << "_itc=" << *itc << std::endl;
 
-  return 0;
+  return 0;*/
 
   // parse command line ----------------------------------------------
   po::options_description general_opt("Allowed options are");
@@ -229,37 +239,6 @@ int main( int argc, char** argv )
 
   trace.beginBlock("curvature computation");
   {
-    /*typedef double Quantity;
-    std::vector< Quantity > results;
-    back_insert_iterator< std::vector< Quantity > > resultsIterator( results ); // output iterator for results of Integral Invariante curvature computation
-
-    typedef IntegralInvariantMeanCurvatureEstimator< Z3i::KSpace, MyCellFunctor > MyIIMeanEstimator;
-
-    MyIIMeanEstimator estimator ( K, functor );
-    estimator.init( h, re_convolution_kernel ); // Initialisation for a given Euclidean radius of the convolution kernel
-    estimator.eval ( abegin, aend, resultsIterator ); // Computation
-*/
-    // Drawing results
-    /*Quantity min = numeric_limits < Quantity >::max();
-    Quantity max = numeric_limits < Quantity >::min();
-    for ( unsigned int i = 0; i < results.size(); ++i )
-    {
-      if ( results[ i ] < min )
-      {
-        min = results[ i ];
-      }
-      else if ( results[ i ] > max )
-      {
-        max = results[ i ];
-      }
-    }
-
-    typedef GradientColorMap< Quantity > Gradient;
-    Gradient cmap_grad( min, max );
-    cmap_grad.addColor( Color( 50, 50, 255 ) );
-    cmap_grad.addColor( Color( 255, 0, 0 ) );
-    cmap_grad.addColor( Color( 255, 255, 10 ) );*/
-
     typedef typename MyLightImplicitDigitalSurface::Tracker Tracker;
     typedef DigitalSurface2DSlice< Tracker > MySlice;
 
@@ -283,21 +262,88 @@ int main( int argc, char** argv )
     MySlice slicex( ptrTracker, 0 ); // slice containing x-axis
     MySlice slicey( ptrTracker, 1 ); // slice containing y-axis
     MySlice slicez( ptrTracker, 2 ); // slice containing z-axis
-    for( typename MySlice::ConstIterator itb = slicex.begin(); itb != slicex.end(); ++itb )
+
+    typedef typename MySlice::ConstIterator ConstIterator3D;
+    typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
+    typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D;
+
+    //////////////////// X
+    ConstIterator3D a = slicex.begin();
+    ConstIterator3D b = ++(slicex.begin());
+    Dimension dim = 0;
+    while( a->myCoordinates[dim] != b->myCoordinates[dim] )
+    {
+      ++dim;
+    }
+
+    Functor projectx;
+    projectx.initRemoveOneDim( dim );
+    ConstIterator2D xbegin( slicex.begin(), projectx );
+    ConstIterator2D xend( slicex.end(), projectx );
+
+    //////////////////// Y
+    a = slicey.begin();
+    b = ++(slicey.begin());
+    dim = 0;
+    while( a->myCoordinates[dim] != b->myCoordinates[dim] )
+    {
+      ++dim;
+    }
+
+    Functor projecty;
+    projecty.initRemoveOneDim( dim );
+    ConstIterator2D ybegin( slicey.begin(), projecty );
+    ConstIterator2D yend( slicey.end(), projecty );
+
+    //////////////////// Z
+    a = slicez.begin();
+    b = ++(slicez.begin());
+    dim = 0;
+    while( a->myCoordinates[dim] != b->myCoordinates[dim] )
+    {
+      ++dim;
+    }
+
+    Functor projectz;
+    projectz.initRemoveOneDim( dim );
+    ConstIterator2D zbegin( slicez.begin(), projectz );
+    ConstIterator2D zend( slicez.end(), projectz );
+
+    Board2D boardx;
+    Board2D boardy;
+    Board2D boardz;
+
+    for( ConstIterator3D itb = slicex.begin(); itb != slicex.end(); ++itb )
     {
       viewer << CustomColors3D( Color::Green, Color::Green )
              << *itb;
     }
-    for( typename MySlice::ConstIterator itb = slicey.begin(); itb != slicey.end(); ++itb )
+    for( ConstIterator2D itb = xbegin; itb != xend; ++itb )
+    {
+      boardx << *itb;
+    }
+    for( ConstIterator3D itb = slicey.begin(); itb != slicey.end(); ++itb )
     {
       viewer << CustomColors3D( Color::Red, Color::Red )
              << *itb;
     }
-    for( typename MySlice::ConstIterator itb = slicez.begin(); itb != slicez.end(); ++itb )
+    for( ConstIterator2D itb = ybegin; itb != yend; ++itb )
+    {
+      boardy << *itb;
+    }
+    for( ConstIterator3D itb = slicez.begin(); itb != slicez.end(); ++itb )
     {
       viewer << CustomColors3D( Color::Blue, Color::Blue )
              << *itb;
     }
+    for( ConstIterator2D itb = zbegin; itb != zend; ++itb )
+    {
+      boardz << *itb;
+    }
+
+    boardx.saveSVG ( "x.svg" );
+    boardy.saveSVG ( "y.svg" );
+    boardz.saveSVG ( "z.svg" );
 
 /*    viewer << CustomColors3D( Color::Red, Color::Red )
          << oneSCell*/;

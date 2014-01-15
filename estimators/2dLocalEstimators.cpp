@@ -850,7 +850,7 @@ computeLocalEstimations( const std::string & filename,
           c.startClock();
 
           char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature.dat" );
+          sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_mean.dat" );
           std::ofstream file( full_filename );
 
           file << "# h = " << h << std::endl;
@@ -934,6 +934,112 @@ computeLocalEstimations( const std::string & filename,
 
             IICurvatureEstimator->init( h, re_convolution_kernel );
             IICurvatureEstimator->eval( ibegin, iend, out_it );
+
+            delete functor;
+            delete pointFunctor;
+            delete IICurvatureEstimator;
+          }
+
+          double time = c.stopClock();
+          file << "# Time: " << time << std::endl;
+
+          file.close();
+        }
+
+        if( curvature )
+        {
+          c.startClock();
+
+          char full_filename[360];
+          sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_min.dat" );
+          std::ofstream file( full_filename );
+
+          file << "# h = " << h << std::endl;
+          file << "# Integral Invariant curvature estimation" << std::endl;
+          file << "# range size = " << pointsRange.size() << std::endl;
+          if ( withNoise )
+          {
+            file << "# noise level (init) = " << noiseLevel/h << std::endl;
+            file << "# noise level (current) = " << noiseLevel << std::endl;
+          }
+
+          if( optionsII.radius <= 0.0 )
+          {
+            optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
+            file << "# Estimated radius: " << optionsII.radius << std::endl;
+          }
+
+          double k = optionsII.cste;
+
+//          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
+          /*file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
+                  re_convolution_kernel / h << std::endl;*/
+
+          std::ostream_iterator< double > out_it( file, "\n" );
+
+          if ( withNoise )
+          {
+            /*typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > LightImplicitDigSurface;
+            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
+
+            LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
+            DigSurface surf( LightImplDigSurf );
+
+            typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
+            KanungoFunctor * noisifiedFunctor = new KanungoFunctor( noisifiedObject, domain, 1, 0 );
+
+            typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
+            CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
+
+            IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
+
+            typedef DepthFirstVisitor< DigSurface > Visitor;
+            typedef GraphVisitorRange< Visitor > VisitorRange;
+            typedef typename VisitorRange::ConstIterator I;
+
+            VisitorRange range( new Visitor( surf, *surf.begin() ) );
+            I ibegin = range.begin();
+            I iend = range.end();
+
+            IICurvatureEstimator->init( h, re_convolution_kernel );
+            IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
+
+            delete functor;
+            delete noisifiedFunctor;
+            delete IICurvatureEstimator;*/
+          }
+          else
+          {
+            typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
+            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
+
+            LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
+            DigSurface surf( LightImplDigSurf );
+
+            typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
+            MyPointFunctor * pointFunctor = new MyPointFunctor( dig, domain, 1, 0 );
+
+            typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
+            CurvatureIIFct * functor = new CurvatureIIFct( *pointFunctor, K );
+
+            IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
+
+            typedef DepthFirstVisitor< DigSurface > Visitor;
+            typedef GraphVisitorRange< Visitor > VisitorRange;
+            typedef typename VisitorRange::ConstIterator I;
+
+            VisitorRange range( new Visitor( surf, *surf.begin() ) );
+            I ibegin = range.begin();
+            I iend = range.end();
+
+            for(; ibegin != iend; ++ibegin)
+            {
+              double mean = statMSEL.mean();
+              double re_convolution_kernel = (k * (mean * mean)) * h;
+              IICurvatureEstimator->light_init( h, re_convolution_kernel );
+              out_it = IICurvatureEstimator->eval( ibegin );
+              ++out_it;
+            }
 
             delete functor;
             delete pointFunctor;
