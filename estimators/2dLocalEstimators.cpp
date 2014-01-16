@@ -244,7 +244,7 @@ void estimationError(int currentSize, int expectedSize)
 }
 
 template <typename KSpace, typename Iterator>
-void analyseAllLengthMS( std::vector< Statistic<double> > & statD, std::vector< Statistic<double> > & statE,
+void analyseAllLengthMS( /*std::vector< Statistic<double> > & statD,*/ std::vector< Statistic<double> > & statE,
                          Iterator itb, Iterator ite )
 {
   typedef typename KSpace::Space Space;
@@ -253,15 +253,17 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statD, std::vector< 
   typedef ArithmeticalDSSComputer< Iterator, int, 4 > SegmentComputer;
   typedef SaturatedSegmentation< SegmentComputer > Decomposition;
   typedef typename Decomposition::SegmentComputerIterator SegmentComputerIterator;
+  typedef std::vector< SegmentComputerIterator > VectorOfSegmentComputerIterator;
+  typedef std::map< Point, std::vector< SegmentComputerIterator > > Pmap;
+
   // Computes the tangential cover
   SegmentComputer algo;
   Decomposition theDecomposition( itb, ite, algo);
 
-  typedef std::map< Point, std::vector< SegmentComputer& > > Pmap;
   Pmap map;
   for( Iterator itc = itb; itc != ite; ++itc )
     {
-      map.insert( std::pair<Point, std::vector< SegmentComputer& >>( *itc, std::vector< SegmentComputer& >() ) );
+      map.insert( std::pair< Point, VectorOfSegmentComputerIterator >( *itc, VectorOfSegmentComputerIterator() ) );
     }
 
 
@@ -274,62 +276,39 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statD, std::vector< 
           typename Pmap::iterator mloc = map.find( *ptIt );
           if( mloc != map.end() )
             {
-              mloc->second().push_back(sc);
+              mloc->second.push_back( scIt );
             }
         }
     }
 
-  /*for( typename Pmap::iterator mloc = map.begin(); mloc != map.end(); ++mloc )
-  {
-    for( Dimension ii = 0; ii < mloc->second().size(); ++ii )
-    {
-      const SegmentComputer & sc = *scIt;
-      int64_t l = 0;
-      for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
-        ++l;
-      statD.addValue( (double) l );
-      Vector v = *( sc.end() - 1 ) - *( sc.begin() );
-      statE.addValue( v.norm() );
-    }
-  }*/
-
   Dimension ii = 0;
   for( Iterator itc = itb; itc != ite; ++itc )
     {
-      statD[ii].clear();
+      //statD[ii].clear();
       statE[ii].clear();
       typename Pmap::iterator mloc = map.find( *itc );
       ASSERT(( mloc != map.end() ));
 
       /////////////
-      for( typename std::vector< SegmentComputer& >::iterator scIt = mloc->second().begin(), scItEnd = mloc->second().end(); scIt != scItEnd; ++scIt )
+      for( typename VectorOfSegmentComputerIterator::iterator scIt = mloc->second.begin(), scItEnd = mloc->second.end(); scIt != scItEnd; ++scIt )
         {
-          const SegmentComputer & sc = *scIt;
-          int64_t l = 0;
+          const SegmentComputer & sc = *(*scIt);
+          /*int64_t l = 0;
           for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
             ++l;
-          statD[ii].addValue( (double) l );
+          statD[ii].addValue( (double) l );*/
           Vector v = *( sc.end() - 1 ) - *( sc.begin() );
           statE[ii].addValue( v.norm() );
+          //std::cout << "l=" << l << " v=" << v.norm() << std::endl;
         }
       /////////////
 
       ++ii;
     }
-
-
-  /*const SegmentComputer & sc = *scIt;
-    int64_t l = 0;
-    for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
-      ++l;
-    statD.addValue( (double) l );
-    Vector v = *( sc.end() - 1 ) - *( sc.begin() );
-    statE.addValue( v.norm() );
-  }*/
 }
 
 template <typename KSpace, typename Iterator>
-void analyseLengthMS( Statistic<double> & statD, Statistic<double> & statE,
+void analyseLengthMS( /*Statistic<double> & statD,*/ Statistic<double> & statE,
                       Iterator itb, Iterator ite )
 {
   typedef typename KSpace::Space Space;
@@ -341,16 +320,16 @@ void analyseLengthMS( Statistic<double> & statD, Statistic<double> & statE,
   // Computes the tangential cover
   SegmentComputer algo;
   Decomposition theDecomposition( itb, ite, algo);
-  statD.clear();
+  //statD.clear();
   statE.clear();
   for ( SegmentComputerIterator scIt = theDecomposition.begin(), scItEnd = theDecomposition.end();
         scIt != scItEnd; ++scIt )
     {
       const SegmentComputer & sc = *scIt;
-      int64_t l = 0;
+      /*int64_t l = 0;
       for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
         ++l;
-      statD.addValue( (double) l );
+      statD.addValue( (double) l );*/
       Vector v = *( sc.end() - 1 ) - *( sc.begin() );
       statE.addValue( v.norm() );
     }
@@ -521,39 +500,42 @@ computeLocalEstimations( const std::string & filename,
     if (gridcurve.isClosed())
       {
         //////////////////////////
-        Statistic<double> statMSL( true );
+        //Statistic<double> statMSL( true );
         Statistic<double> statMSEL( true );
-        analyseLengthMS<KSpace>( statMSL, statMSEL, pointsRange2.c(), pointsRange2.c() );
-        statMSL.terminate();
-        Statistic<double> resolution( false );
+        analyseLengthMS<KSpace>( /*statMSL,*/ statMSEL, pointsRange2.begin(), pointsRange2.end() );
+        //statMSL.terminate();
+        /*Statistic<double> resolution( false );
         for ( Statistic<double>::ConstIterator
               it = statMSL.begin(), itE = statMSL.end(); it != itE; ++it )
           resolution.addValue( 1.0 / kappaGridStep( *it ) );
         Statistic<double> resolutionE( false );
         for ( Statistic<double>::ConstIterator
               it = statMSEL.begin(), itE = statMSEL.end(); it != itE; ++it )
-          resolutionE.addValue( 1.0 / kappaGridStep( *it ) );
+          resolutionE.addValue( 1.0 / kappaGridStep( *it ) );*/
 
         trace.info() << "#Average " << statMSEL.mean() << std::endl;
         //////////////////////////
 
         //////////////////////////
         const Dimension pr2size = (pointsRange2.size());
-        std::vector< Statistic< double > > v_statMSL(pr2size);
+        //std::vector< Statistic< double > > v_statMSL(pr2size);
         std::vector< Statistic< double > > v_statMSEL(pr2size);
         for(Dimension ii = 0; ii < pr2size; ++ii )
           {
-            v_statMSL[ii] = Statistic<double>(true);
+            //v_statMSL[ii] = Statistic<double>(true);
             v_statMSEL[ii] = Statistic<double>(true);
           }
 
-        analyseAllLengthMS<KSpace>( v_statMSL, v_statMSEL, pointsRange2.c(), pointsRange2.c() );
+        analyseAllLengthMS<KSpace>( /*v_statMSL,*/ v_statMSEL, pointsRange2.begin(), pointsRange2.end() );
 
-        for(Dimension ii = 0; ii < pr2size; ++ii )
+        /*for(Dimension ii = 0; ii < pr2size; ++ii )
           {
             v_statMSL[ii].terminate();
             v_statMSEL[ii] = Statistic<double>(true);
-          }
+          }*/
+
+        trace.info() << "done" << std::endl;
+        return 1;
         //////////////////////////
 
         if (options.at(0) != '0')
