@@ -64,11 +64,14 @@
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator.h"
 
 // Drawing
-#include "DGtal/io/viewers/Viewer3D.h"
 #include "DGtal/io/boards/Board2D.h"
 #include "DGtal/io/colormaps/GradientColorMap.h"
 #include "DGtal/topology/DigitalSurface2DSlice.h"
+
+#ifdef WITH_VISU3D_QGLVIEWER
 #include <QtGui/QApplication>
+#include "DGtal/io/viewers/Viewer3D.h"
+#endif
 
 using namespace std;
 using namespace DGtal;
@@ -96,6 +99,7 @@ namespace po = boost::program_options;
 
 int main( int argc, char** argv )
 {
+
   /*typedef Z3i::Point Point;
   std::vector< Point > v_test;
   v_test.push_back( Point( 1,1,1 ) );
@@ -228,11 +232,13 @@ int main( int argc, char** argv )
   typedef FunctorOnCells< MyPointFunctor, Z3i::KSpace > MyCellFunctor;
   MyCellFunctor functor ( pointFunctor, K ); // Creation of a functor on Cells, returning true if the cell is inside the shape
 
+#ifdef WITH_VISU3D_QGLVIEWER
   QApplication application( argc, argv );
   typedef Viewer3D<Z3i::Space, Z3i::KSpace> Viewer;
   Viewer viewer( K );
   viewer.show();
   //    viewer << SetMode3D(image.domain().className(), "BoundingBox") << image.domain();
+#endif
 
   VisitorRange range2( new Visitor( digSurf, *digSurf.begin() ) );
   SurfelConstIterator abegin2 = range2.begin();
@@ -313,29 +319,35 @@ int main( int argc, char** argv )
     Board2D boardy;
     Board2D boardz;
 
+#ifdef WITH_VISU3D_QGLVIEWER
     for( ConstIterator3D itb = slicex.begin(); itb != slicex.end(); ++itb )
     {
       viewer << CustomColors3D( Color::Green, Color::Green )
              << *itb;
     }
+#endif
     for( ConstIterator2D itb = xbegin; itb != xend; ++itb )
     {
       boardx << *itb;
     }
+#ifdef WITH_VISU3D_QGLVIEWER
     for( ConstIterator3D itb = slicey.begin(); itb != slicey.end(); ++itb )
     {
       viewer << CustomColors3D( Color::Red, Color::Red )
              << *itb;
     }
+#endif
     for( ConstIterator2D itb = ybegin; itb != yend; ++itb )
     {
       boardy << *itb;
     }
+#ifdef WITH_VISU3D_QGLVIEWER
     for( ConstIterator3D itb = slicez.begin(); itb != slicez.end(); ++itb )
     {
       viewer << CustomColors3D( Color::Blue, Color::Blue )
              << *itb;
     }
+#endif
     for( ConstIterator2D itb = zbegin; itb != zend; ++itb )
     {
       boardz << *itb;
@@ -350,8 +362,12 @@ int main( int argc, char** argv )
 
   }
 
+#ifdef WITH_VISU3D_QGLVIEWER
   viewer << Viewer3D<>::updateDisplay;
   return application.exec();
+#else
+  return 0;
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
