@@ -245,10 +245,10 @@ int main( int argc, char** argv )
 
   trace.beginBlock("curvature computation");
   {
-    typedef typename MyLightImplicitDigitalSurface::Tracker Tracker;
+    typedef MyLightImplicitDigitalSurface::Tracker Tracker;
     typedef DigitalSurface2DSlice< Tracker > MySlice;
 
-    typename Tracker::Surfel oneSCell;
+    Tracker::Surfel oneSCell;
     Dimension ii = 0;
     while( abegin2 != aend )//for ( unsigned int i = 0; i < results.size(); ++i )
     {
@@ -269,7 +269,7 @@ int main( int argc, char** argv )
     MySlice slicey( ptrTracker, 1 ); // slice containing y-axis
     MySlice slicez( ptrTracker, 2 ); // slice containing z-axis
 
-    typedef typename MySlice::ConstIterator ConstIterator3D;
+    typedef MySlice::ConstIterator ConstIterator3D;
     typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
     typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D;
 

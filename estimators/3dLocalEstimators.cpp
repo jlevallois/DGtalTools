@@ -595,7 +595,7 @@ compareShapeEstimators( const std::string & filename,
             VisitorConstIterator iend;
 
             unsigned int cntIn = 0;
-            for( ConstIterator it = dshape->getDomain().begin(), ite = dshape->getDomain().end(); it != ite; ++it )
+            for( DigitalShape::Domain::ConstIterator it = dshape->getDomain().begin(), ite = dshape->getDomain().end(); it != ite; ++it )
             {
                 if( (*dshape)(*it))
                 {
