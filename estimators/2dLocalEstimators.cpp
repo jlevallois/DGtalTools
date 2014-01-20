@@ -107,6 +107,7 @@ struct OptionsIntegralInvariant
   RealPoint center; // <! Center of the shape.
   bool lambda_optimized;
   double cste;
+  std::string testsII;
 };
 
 
@@ -244,7 +245,7 @@ void estimationError(int currentSize, int expectedSize)
 }
 
 template <typename KSpace, typename Iterator>
-void analyseAllLengthMS( /*std::vector< Statistic<double> > & statD,*/ std::vector< Statistic<double> > & statE,
+void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
                          Iterator itb, Iterator ite )
 {
   typedef typename KSpace::Space Space;
@@ -518,21 +519,13 @@ computeLocalEstimations( const std::string & filename,
 
       //////////////////////////
       const Dimension pr2size = (pointsRange2.size());
-      //std::vector< Statistic< double > > v_statMSL(pr2size);
       std::vector< Statistic< double > > v_statMSEL(pr2size);
       for(Dimension ii = 0; ii < pr2size; ++ii )
       {
-        //v_statMSL[ii] = Statistic<double>(true);
         v_statMSEL[ii] = Statistic<double>(true);
       }
 
-      analyseAllLengthMS<KSpace>( /*v_statMSL,*/ v_statMSEL, pointsRange2.begin(), pointsRange2.end() );
-
-      /*for(Dimension ii = 0; ii < pr2size; ++ii )
-          {
-            v_statMSL[ii].terminate();
-            v_statMSEL[ii] = Statistic<double>(true);
-          }*/
+      analyseAllLengthMS<KSpace>( v_statMSEL, pointsRange2.begin(), pointsRange2.end() );
 
       trace.info() << "done" << std::endl;
       //return 1;
@@ -861,602 +854,490 @@ computeLocalEstimations( const std::string & filename,
       {
         if( curvature )
         {
-          c.startClock();
-
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_mean.dat" );
-          std::ofstream file( full_filename );
-
-          file << "# h = " << h << std::endl;
-          file << "# Integral Invariant curvature estimation" << std::endl;
-          file << "# range size = " << pointsRange.size() << std::endl;
-          if ( withNoise )
+          /////// global mean
+          if( optionsII.testsII.at(0) != '0' )
           {
-            file << "# noise level (init) = " << noiseLevel/h << std::endl;
-            file << "# noise level (current) = " << noiseLevel << std::endl;
-          }
+            c.startClock();
 
-          if( optionsII.radius <= 0.0 )
-          {
-            optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-            file << "# Estimated radius: " << optionsII.radius << std::endl;
-          }
+            char full_filename[360];
+            sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_mean.dat" );
+            std::ofstream file( full_filename );
 
-          double k = optionsII.cste;
-          double mean = statMSEL.mean();
-          double re_convolution_kernel = (k * (mean * mean)) * h;
-          //          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
-          file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
-                  re_convolution_kernel / h << std::endl;
-
-          std::ostream_iterator< double > out_it( file, "\n" );
-
-          if ( withNoise )
-          {
-            typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > LightImplicitDigSurface;
-            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-
-            LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
-            DigSurface surf( LightImplDigSurf );
-
-            typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
-            KanungoFunctor * noisifiedFunctor = new KanungoFunctor( noisifiedObject, domain, 1, 0 );
-
-            typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
-            CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
-
-            IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
-
-            typedef DepthFirstVisitor< DigSurface > Visitor;
-            typedef GraphVisitorRange< Visitor > VisitorRange;
-            typedef typename VisitorRange::ConstIterator I;
-
-            VisitorRange range( new Visitor( surf, *surf.begin() ) );
-            I ibegin = range.begin();
-            I iend = range.end();
-
-            IICurvatureEstimator->init( h, re_convolution_kernel );
-            IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
-
-            delete functor;
-            delete noisifiedFunctor;
-            delete IICurvatureEstimator;
-          }
-          else
-          {
-            typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
-            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-
-            LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
-            DigSurface surf( LightImplDigSurf );
-
-            typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
-            MyPointFunctor * pointFunctor = new MyPointFunctor( dig, domain, 1, 0 );
-
-            typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-            CurvatureIIFct * functor = new CurvatureIIFct( *pointFunctor, K );
-
-            IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
-
-            typedef DepthFirstVisitor< DigSurface > Visitor;
-            typedef GraphVisitorRange< Visitor > VisitorRange;
-            typedef typename VisitorRange::ConstIterator I;
-
-            VisitorRange range( new Visitor( surf, *surf.begin() ) );
-            I ibegin = range.begin();
-            I iend = range.end();
-
-            IICurvatureEstimator->init( h, re_convolution_kernel );
-            IICurvatureEstimator->eval( ibegin, iend, out_it );
-
-            delete functor;
-            delete pointFunctor;
-            delete IICurvatureEstimator;
-          }
-
-          double time = c.stopClock();
-          file << "# Time: " << time << std::endl;
-
-          file.close();
-        }
-
-        /////// local mean
-        if( curvature )
-        {
-          c.startClock();
-
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_local_mean.dat" );
-          std::ofstream file( full_filename );
-
-          file << "# h = " << h << std::endl;
-          file << "# Integral Invariant curvature estimation" << std::endl;
-          file << "# range size = " << pointsRange.size() << std::endl;
-          if ( withNoise )
-          {
-            file << "# noise level (init) = " << noiseLevel/h << std::endl;
-            file << "# noise level (current) = " << noiseLevel << std::endl;
-          }
-
-          if( optionsII.radius <= 0.0 )
-          {
-            optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-            file << "# Estimated radius: " << optionsII.radius << std::endl;
-          }
-
-          double k = optionsII.cste;
-
-          //          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
-          /*file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
-                  re_convolution_kernel / h << std::endl;*/
-
-          ///////////
-          char full_filename2[360];
-          sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_mean_re.dat" );
-          std::ofstream file2( full_filename2 );
-          ///////////
-
-          if ( withNoise )
-          {
-            /*typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > LightImplicitDigSurface;
-            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-
-            LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
-            DigSurface surf( LightImplDigSurf );
-
-            typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
-            KanungoFunctor * noisifiedFunctor = new KanungoFunctor( noisifiedObject, domain, 1, 0 );
-
-            typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
-            CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
-
-            IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
-
-            typedef DepthFirstVisitor< DigSurface > Visitor;
-            typedef GraphVisitorRange< Visitor > VisitorRange;
-            typedef typename VisitorRange::ConstIterator I;
-
-            VisitorRange range( new Visitor( surf, *surf.begin() ) );
-            I ibegin = range.begin();
-            I iend = range.end();
-
-            IICurvatureEstimator->init( h, re_convolution_kernel );
-            IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
-
-            delete functor;
-            delete noisifiedFunctor;
-            delete IICurvatureEstimator;*/
-          }
-          else
-          {
-            typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
-            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-            typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
-            typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-            typedef IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct > Estimator;
-            typedef DepthFirstVisitor< DigSurface > Visitor;
-            typedef GraphVisitorRange< Visitor > VisitorRange;
-            typedef typename VisitorRange::ConstIterator ConstIterator;
-
-            LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
-            DigSurface surf( LightImplDigSurf );
-
-            MyPointFunctor pointFunctor( dig, domain, 1, 0 );
-            CurvatureIIFct functor( pointFunctor, K );
-
-            VisitorRange range( new Visitor( surf, *surf.begin() ) );
-            ConstIterator ibegin = range.begin();
-            ConstIterator iend = range.end();
-
-            std::vector< SCell > contour;
-
-            for( ; ibegin != iend; ++ibegin )
+            file << "# h = " << h << std::endl;
+            file << "# Integral Invariant curvature estimation" << std::endl;
+            file << "# range size = " << pointsRange.size() << std::endl;
+            if ( withNoise )
             {
-              contour.push_back( *ibegin );
+              file << "# noise level (init) = " << noiseLevel/h << std::endl;
+              file << "# noise level (current) = " << noiseLevel << std::endl;
             }
 
-            if( contour.size() != pr2size )
+            if( optionsII.radius <= 0.0 )
             {
-              trace.error() << "PUTAIN on n'a pas la meme taille " << contour.size() << " " << pr2size << std::endl;
-              return 0;
+              optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
+              file << "# Estimated radius: " << optionsII.radius << std::endl;
             }
 
-            std::vector< double > resultat( contour.size() );
-            std::vector< double > re( contour.size() );
+            double k = optionsII.cste;
+            double mean = statMSEL.mean();
+            double re_convolution_kernel = (k * (mean * mean)) * h;
+            //          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
+            file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
+                    re_convolution_kernel / h << std::endl;
 
-            trace.info() << "step A." << std::endl;
+            std::ostream_iterator< double > out_it( file, "\n" );
 
-#ifdef WITH_OPENMP
-#pragma omp parallel for schedule(dynamic)
-#endif
-            for( unsigned int ii = 0; ii < pr2size; ++ii )
+            if ( withNoise )
             {
-              double mean = v_statMSEL[ pr2size - 1 - ii ].mean();
-              re[ii] = (k * (mean * mean)) * h;
+              typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > LightImplicitDigSurface;
+              typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
+
+              LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
+              DigSurface surf( LightImplDigSurf );
+
+              typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
+              KanungoFunctor * noisifiedFunctor = new KanungoFunctor( noisifiedObject, domain, 1, 0 );
+
+              typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
+              CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
+
+              IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
+
+              typedef DepthFirstVisitor< DigSurface > Visitor;
+              typedef GraphVisitorRange< Visitor > VisitorRange;
+              typedef typename VisitorRange::ConstIterator I;
+
+              VisitorRange range( new Visitor( surf, *surf.begin() ) );
+              I ibegin = range.begin();
+              I iend = range.end();
+
+              IICurvatureEstimator->init( h, re_convolution_kernel );
+              IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
+
+              delete functor;
+              delete noisifiedFunctor;
+              delete IICurvatureEstimator;
+            }
+            else
+            {
+              typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
+              typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
+
+              LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
+              DigSurface surf( LightImplDigSurf );
+
+              typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
+              MyPointFunctor * pointFunctor = new MyPointFunctor( dig, domain, 1, 0 );
+
+              typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
+              CurvatureIIFct * functor = new CurvatureIIFct( *pointFunctor, K );
+
+              IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
+
+              typedef DepthFirstVisitor< DigSurface > Visitor;
+              typedef GraphVisitorRange< Visitor > VisitorRange;
+              typedef typename VisitorRange::ConstIterator I;
+
+              VisitorRange range( new Visitor( surf, *surf.begin() ) );
+              I ibegin = range.begin();
+              I iend = range.end();
+
+              IICurvatureEstimator->init( h, re_convolution_kernel );
+              IICurvatureEstimator->eval( ibegin, iend, out_it );
+
+              delete functor;
+              delete pointFunctor;
+              delete IICurvatureEstimator;
             }
 
-            trace.info() << "step B.1" << std::endl;
+            double time = c.stopClock();
+            file << "# Time: " << time << std::endl;
 
-            ///WAIT
+            file.close();
+          }
 
-            trace.info() << "step B.2" << std::endl;
+          /////// global max
+          if( optionsII.testsII.at(1) != '0' )
+          {
+            c.startClock();
 
-#ifdef WITH_OPENMP
-#pragma omp parallel for schedule(dynamic)
-#endif
-            for( unsigned int ii = 0; ii < pr2size; ++ii )
+            char full_filename[360];
+            sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_mean.dat" );
+            std::ofstream file( full_filename );
+
+            file << "# h = " << h << std::endl;
+            file << "# Integral Invariant curvature estimation" << std::endl;
+            file << "# range size = " << pointsRange.size() << std::endl;
+            if ( withNoise )
             {
-              //trace.info() << ii << " " << re[ii] << std::endl;
-              Estimator intinv( K, functor );
-              intinv.init( h, re[ii] );
-              resultat[ii] = intinv.eval( contour.begin() + ii );
+              file << "# noise level (init) = " << noiseLevel/h << std::endl;
+              file << "# noise level (current) = " << noiseLevel << std::endl;
             }
 
-            trace.info() << "step C.1" << std::endl;
-
-            /// WAIT
-
-            trace.info() << "step C.2" << std::endl;
-
-            for( unsigned int ii = 0; ii < pr2size; ++ii )
+            if( optionsII.radius <= 0.0 )
             {
-              file << resultat[ii] << std::endl;
-              file2 << re[ii] << std::endl;
+              optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
+              file << "# Estimated radius: " << optionsII.radius << std::endl;
             }
 
-            trace.info() << "step D." << std::endl;
+            double k = optionsII.cste;
+            double max = statMSEL.max();
+            double re_convolution_kernel = (k * (max * max)) * h;
+            //          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
+            file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
+                    re_convolution_kernel / h << std::endl;
 
+            std::ostream_iterator< double > out_it( file, "\n" );
 
-
-            /*IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
-
-
-            trace.info() << "begin" << std::endl;
-            Dimension ii = pr2size - 1;
-            double last_re = -1.0;
-
-            for(; ibegin != iend; ++ibegin)
+            if ( withNoise )
             {
-              double mean = v_statMSEL[ii].mean();
-              //                        trace.info() << "mean " << mean << std::endl;
-              double re_convolution_kernel = (k * (mean * mean)) * h;
-              //                        trace.info() << "radius " << re_convolution_kernel << std::endl;
-              if( last_re != re_convolution_kernel )
+              typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > LightImplicitDigSurface;
+              typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
+
+              LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
+              DigSurface surf( LightImplDigSurf );
+
+              typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
+              KanungoFunctor * noisifiedFunctor = new KanungoFunctor( noisifiedObject, domain, 1, 0 );
+
+              typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
+              CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
+
+              IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
+
+              typedef DepthFirstVisitor< DigSurface > Visitor;
+              typedef GraphVisitorRange< Visitor > VisitorRange;
+              typedef typename VisitorRange::ConstIterator I;
+
+              VisitorRange range( new Visitor( surf, *surf.begin() ) );
+              I ibegin = range.begin();
+              I iend = range.end();
+
+              IICurvatureEstimator->init( h, re_convolution_kernel );
+              IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
+
+              delete functor;
+              delete noisifiedFunctor;
+              delete IICurvatureEstimator;
+            }
+            else
+            {
+              typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
+              typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
+
+              LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
+              DigSurface surf( LightImplDigSurf );
+
+              typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
+              MyPointFunctor * pointFunctor = new MyPointFunctor( dig, domain, 1, 0 );
+
+              typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
+              CurvatureIIFct * functor = new CurvatureIIFct( *pointFunctor, K );
+
+              IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
+
+              typedef DepthFirstVisitor< DigSurface > Visitor;
+              typedef GraphVisitorRange< Visitor > VisitorRange;
+              typedef typename VisitorRange::ConstIterator I;
+
+              VisitorRange range( new Visitor( surf, *surf.begin() ) );
+              I ibegin = range.begin();
+              I iend = range.end();
+
+              IICurvatureEstimator->init( h, re_convolution_kernel );
+              IICurvatureEstimator->eval( ibegin, iend, out_it );
+
+              delete functor;
+              delete pointFunctor;
+              delete IICurvatureEstimator;
+            }
+
+            double time = c.stopClock();
+            file << "# Time: " << time << std::endl;
+
+            file.close();
+          }
+
+          /////// local mean
+          if( optionsII.testsII.at(2) != '0' )
+          {
+            c.startClock();
+
+            char full_filename[360];
+            sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_local_mean.dat" );
+            std::ofstream file( full_filename );
+
+            file << "# h = " << h << std::endl;
+            file << "# Integral Invariant curvature estimation" << std::endl;
+            file << "# range size = " << pointsRange.size() << std::endl;
+            if ( withNoise )
+            {
+              file << "# noise level (init) = " << noiseLevel/h << std::endl;
+              file << "# noise level (current) = " << noiseLevel << std::endl;
+            }
+
+            if( optionsII.radius <= 0.0 )
+            {
+              optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
+              file << "# Estimated radius: " << optionsII.radius << std::endl;
+            }
+
+            double k = optionsII.cste;
+
+            ///////////
+            char full_filename2[360];
+            sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_mean_re.dat" );
+            std::ofstream file2( full_filename2 );
+
+            char full_filename3[360];
+            sprintf( full_filename3, "%s%s", filename.c_str(), "_II_curvature_local_stats.dat" );
+            std::ofstream file3( full_filename3 );
+            ///////////
+
+            if ( withNoise )
+            {
+              trace.error() << "not yet" << std::endl;
+            }
+            else
+            {
+              typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
+              typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
+              typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
+              typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
+              typedef IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct > Estimator;
+              typedef DepthFirstVisitor< DigSurface > Visitor;
+              typedef GraphVisitorRange< Visitor > VisitorRange;
+              typedef typename VisitorRange::ConstIterator ConstIterator;
+
+              LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
+              DigSurface surf( LightImplDigSurf );
+
+              MyPointFunctor pointFunctor( dig, domain, 1, 0 );
+              CurvatureIIFct functor( pointFunctor, K );
+
+              VisitorRange range( new Visitor( surf, *surf.begin() ) );
+              ConstIterator ibegin = range.begin();
+              ConstIterator iend = range.end();
+
+              std::vector< SCell > contour;
+
+              for( ; ibegin != iend; ++ibegin )
               {
-                IICurvatureEstimator->init( h, re_convolution_kernel );
-                last_re = re_convolution_kernel;
+                contour.push_back( *ibegin );
               }
-              double value = IICurvatureEstimator->eval( ibegin );
-              file << value;
-              //                        trace.info() << "curvature " << value << std::endl;
-              file2 << re_convolution_kernel;
-              --ii;
-            }
 
-            trace.info() << "end" << std::endl;
+              if( contour.size() != pr2size )
+              {
+                trace.error() << "PUTAIN on n'a pas la meme taille " << contour.size() << " " << pr2size << std::endl;
+                return 0;
+              }
 
-            delete functor;
-            delete pointFunctor;
-            delete IICurvatureEstimator;*/
-          }
+              std::vector< double > resultat( contour.size() );
+              std::vector< double > re( contour.size() );
 
-          double time = c.stopClock();
-          file << "# Time: " << time << std::endl;
+              trace.info() << "step A." << std::endl;
 
-          file.close();
-          file2.close();
-        }
+              for( Dimension ii = 0; ii < pr2size; ++ii )
+              {
+                Dimension current_pos = pr2size - 1 - ii;
+                double mean = v_statMSEL[ current_pos ].mean();
+                re[ii] = (k * (mean * mean)) * h;
+                for( Statistic<double>::ConstIterator itb = v_statMSEL[current_pos].begin(), ite = v_statMSEL[current_pos].end(); itb != ite; ++itb )
+                {
+                  file3 << *itb << " ";
+                }
+                file3 << std::endl;
+              }
 
-        /////// local max
-        if( curvature )
-        {
-          c.startClock();
+              trace.info() << "step B.1" << std::endl;
 
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_local_max.dat" );
-          std::ofstream file( full_filename );
+              ///WAIT
 
-          file << "# h = " << h << std::endl;
-          file << "# Integral Invariant curvature estimation" << std::endl;
-          file << "# range size = " << pointsRange.size() << std::endl;
-          if ( withNoise )
-          {
-            file << "# noise level (init) = " << noiseLevel/h << std::endl;
-            file << "# noise level (current) = " << noiseLevel << std::endl;
-          }
-
-          if( optionsII.radius <= 0.0 )
-          {
-            optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-            file << "# Estimated radius: " << optionsII.radius << std::endl;
-          }
-
-          double k = optionsII.cste;
-
-          //          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
-          /*file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
-                  re_convolution_kernel / h << std::endl;*/
-
-          ///////////
-          char full_filename2[360];
-          sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_max_re.dat" );
-          std::ofstream file2( full_filename2 );
-          ///////////
-
-          if ( withNoise )
-          {
-            /*typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > LightImplicitDigSurface;
-            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-
-            LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
-            DigSurface surf( LightImplDigSurf );
-
-            typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
-            KanungoFunctor * noisifiedFunctor = new KanungoFunctor( noisifiedObject, domain, 1, 0 );
-
-            typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
-            CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
-
-            IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
-
-            typedef DepthFirstVisitor< DigSurface > Visitor;
-            typedef GraphVisitorRange< Visitor > VisitorRange;
-            typedef typename VisitorRange::ConstIterator I;
-
-            VisitorRange range( new Visitor( surf, *surf.begin() ) );
-            I ibegin = range.begin();
-            I iend = range.end();
-
-            IICurvatureEstimator->init( h, re_convolution_kernel );
-            IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
-
-            delete functor;
-            delete noisifiedFunctor;
-            delete IICurvatureEstimator;*/
-          }
-          else
-          {
-            typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
-            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-            typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
-            typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-            typedef IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct > Estimator;
-            typedef DepthFirstVisitor< DigSurface > Visitor;
-            typedef GraphVisitorRange< Visitor > VisitorRange;
-            typedef typename VisitorRange::ConstIterator ConstIterator;
-
-            LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
-            DigSurface surf( LightImplDigSurf );
-
-            MyPointFunctor pointFunctor( dig, domain, 1, 0 );
-            CurvatureIIFct functor( pointFunctor, K );
-
-            VisitorRange range( new Visitor( surf, *surf.begin() ) );
-            ConstIterator ibegin = range.begin();
-            ConstIterator iend = range.end();
-
-            std::vector< SCell > contour;
-
-            for( ; ibegin != iend; ++ibegin )
-            {
-              contour.push_back( *ibegin );
-            }
-
-            if( contour.size() != pr2size )
-            {
-              trace.error() << "PUTAIN on n'a pas la meme taille " << contour.size() << " " << pr2size << std::endl;
-              return 0;
-            }
-
-            std::vector< double > resultat( contour.size() );
-            std::vector< double > re( contour.size() );
-
-            trace.info() << "step A." << std::endl;
+              trace.info() << "step B.2" << std::endl;
 
 #ifdef WITH_OPENMP
 #pragma omp parallel for schedule(dynamic)
-#endif
-            for( unsigned int ii = 0; ii < pr2size; ++ii )
-            {
-              double max = v_statMSEL[ pr2size - 1 - ii ].max();
-              re[ii] = (k * (max * max)) * h;
-            }
-
-            trace.info() << "step B.1" << std::endl;
-
-            ///WAIT
-
-            trace.info() << "step B.2" << std::endl;
-
-#ifdef WITH_OPENMP
-#pragma omp parallel for schedule(dynamic)
-#endif
-            for( unsigned int ii = 0; ii < pr2size; ++ii )
-            {
-              //trace.info() << ii << " " << re[ii] << std::endl;
+              for( unsigned int ii = 0; ii < pr2size; ++ii )
+              {
+                Estimator intinv( K, functor );
+                intinv.init( h, re[ii] );
+                resultat[ii] = intinv.eval( contour.begin() + ii );
+              }
+#else
               Estimator intinv( K, functor );
-              intinv.init( h, re[ii] );
-              resultat[ii] = intinv.eval( contour.begin() + ii );
+              double last_re = -1.0;
+              for( unsigned int ii = 0; ii < pr2size; ++ii )
+              {
+                if( last_re != re[ii] )
+                {
+                  last_re = re[ii];
+                  intinv.init( h, last_re );
+                }
+                resultat[ii] = intinv.eval( contour.begin() + ii );
+              }
+#endif
+
+              trace.info() << "step C.1" << std::endl;
+
+              /// WAIT
+
+              trace.info() << "step C.2" << std::endl;
+
+              for( unsigned int ii = 0; ii < pr2size; ++ii )
+              {
+                file << resultat[ii] << std::endl;
+                file2 << re[ii] << std::endl;
+              }
+
+              trace.info() << "step D." << std::endl;
+
             }
 
-            trace.info() << "step C.1" << std::endl;
+            double time = c.stopClock();
+            file << "# Time: " << time << std::endl;
 
-            /// WAIT
+            file.close();
+            file2.close();
+            file3.close();
+          }
 
-            trace.info() << "step C.2" << std::endl;
+          /////// local max
+          if( optionsII.testsII.at(3) != '0' )
+          {
+            c.startClock();
 
-            for( unsigned int ii = 0; ii < pr2size; ++ii )
+            char full_filename[360];
+            sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_local_max.dat" );
+            std::ofstream file( full_filename );
+
+            file << "# h = " << h << std::endl;
+            file << "# Integral Invariant curvature estimation" << std::endl;
+            file << "# range size = " << pointsRange.size() << std::endl;
+            if ( withNoise )
             {
-              file << resultat[ii] << std::endl;
-              file2 << re[ii] << std::endl;
+              file << "# noise level (init) = " << noiseLevel/h << std::endl;
+              file << "# noise level (current) = " << noiseLevel << std::endl;
             }
 
-            trace.info() << "step D." << std::endl;
-
-          }
-
-          double time = c.stopClock();
-          file << "# Time: " << time << std::endl;
-
-          file.close();
-          file2.close();
-        }
-
-        /////// local min
-        if( curvature )
-        {
-          c.startClock();
-
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_local_min.dat" );
-          std::ofstream file( full_filename );
-
-          file << "# h = " << h << std::endl;
-          file << "# Integral Invariant curvature estimation" << std::endl;
-          file << "# range size = " << pointsRange.size() << std::endl;
-          if ( withNoise )
-          {
-            file << "# noise level (init) = " << noiseLevel/h << std::endl;
-            file << "# noise level (current) = " << noiseLevel << std::endl;
-          }
-
-          if( optionsII.radius <= 0.0 )
-          {
-            optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-            file << "# Estimated radius: " << optionsII.radius << std::endl;
-          }
-
-          double k = optionsII.cste;
-
-          //          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
-          /*file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
-                  re_convolution_kernel / h << std::endl;*/
-
-          ///////////
-          char full_filename2[360];
-          sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_min_re.dat" );
-          std::ofstream file2( full_filename2 );
-          ///////////
-
-          if ( withNoise )
-          {
-            /*typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > LightImplicitDigSurface;
-            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-
-            LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
-            DigSurface surf( LightImplDigSurf );
-
-            typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
-            KanungoFunctor * noisifiedFunctor = new KanungoFunctor( noisifiedObject, domain, 1, 0 );
-
-            typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
-            CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
-
-            IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
-
-            typedef DepthFirstVisitor< DigSurface > Visitor;
-            typedef GraphVisitorRange< Visitor > VisitorRange;
-            typedef typename VisitorRange::ConstIterator I;
-
-            VisitorRange range( new Visitor( surf, *surf.begin() ) );
-            I ibegin = range.begin();
-            I iend = range.end();
-
-            IICurvatureEstimator->init( h, re_convolution_kernel );
-            IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
-
-            delete functor;
-            delete noisifiedFunctor;
-            delete IICurvatureEstimator;*/
-          }
-          else
-          {
-            typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
-            typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-            typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
-            typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-            typedef IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct > Estimator;
-            typedef DepthFirstVisitor< DigSurface > Visitor;
-            typedef GraphVisitorRange< Visitor > VisitorRange;
-            typedef typename VisitorRange::ConstIterator ConstIterator;
-
-            LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
-            DigSurface surf( LightImplDigSurf );
-
-            MyPointFunctor pointFunctor( dig, domain, 1, 0 );
-            CurvatureIIFct functor( pointFunctor, K );
-
-            VisitorRange range( new Visitor( surf, *surf.begin() ) );
-            ConstIterator ibegin = range.begin();
-            ConstIterator iend = range.end();
-
-            std::vector< SCell > contour;
-
-            for( ; ibegin != iend; ++ibegin )
+            if( optionsII.radius <= 0.0 )
             {
-              contour.push_back( *ibegin );
+              optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
+              file << "# Estimated radius: " << optionsII.radius << std::endl;
             }
 
-            if( contour.size() != pr2size )
+            double k = optionsII.cste;
+
+            ///////////
+            char full_filename2[360];
+            sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_max_re.dat" );
+            std::ofstream file2( full_filename2 );
+            ///////////
+
+            if ( withNoise )
             {
-              trace.error() << "PUTAIN on n'a pas la meme taille " << contour.size() << " " << pr2size << std::endl;
-              return 0;
+              trace.error() << "not yet" << std::endl;
             }
+            else
+            {
+              typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
+              typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
+              typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
+              typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
+              typedef IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct > Estimator;
+              typedef DepthFirstVisitor< DigSurface > Visitor;
+              typedef GraphVisitorRange< Visitor > VisitorRange;
+              typedef typename VisitorRange::ConstIterator ConstIterator;
 
-            std::vector< double > resultat( contour.size() );
-            std::vector< double > re( contour.size() );
+              LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
+              DigSurface surf( LightImplDigSurf );
 
-            trace.info() << "step A." << std::endl;
+              MyPointFunctor pointFunctor( dig, domain, 1, 0 );
+              CurvatureIIFct functor( pointFunctor, K );
+
+              VisitorRange range( new Visitor( surf, *surf.begin() ) );
+              ConstIterator ibegin = range.begin();
+              ConstIterator iend = range.end();
+
+              std::vector< SCell > contour;
+
+              for( ; ibegin != iend; ++ibegin )
+              {
+                contour.push_back( *ibegin );
+              }
+
+              if( contour.size() != pr2size )
+              {
+                trace.error() << "PUTAIN on n'a pas la meme taille " << contour.size() << " " << pr2size << std::endl;
+                return 0;
+              }
+
+              std::vector< double > resultat( contour.size() );
+              std::vector< double > re( contour.size() );
+
+              trace.info() << "step A." << std::endl;
 
 #ifdef WITH_OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
-            for( unsigned int ii = 0; ii < pr2size; ++ii )
-            {
-              double min = v_statMSEL[ pr2size - 1 - ii ].min();
-              re[ii] = (k * (min * min)) * h;
-            }
+              for( unsigned int ii = 0; ii < pr2size; ++ii )
+              {
+                double max = v_statMSEL[ pr2size - 1 - ii ].max();
+                re[ii] = (k * (max * max)) * h;
+              }
 
-            trace.info() << "step B.1" << std::endl;
+              trace.info() << "step B.1" << std::endl;
 
-            ///WAIT
+              ///WAIT
 
-            trace.info() << "step B.2" << std::endl;
+              trace.info() << "step B.2" << std::endl;
 
 #ifdef WITH_OPENMP
 #pragma omp parallel for schedule(dynamic)
-#endif
-            for( unsigned int ii = 0; ii < pr2size; ++ii )
-            {
-              //trace.info() << ii << " " << re[ii] << std::endl;
+
+              for( unsigned int ii = 0; ii < pr2size; ++ii )
+              {
+                Estimator intinv( K, functor );
+                intinv.init( h, re[ii] );
+                resultat[ii] = intinv.eval( contour.begin() + ii );
+              }
+#else
               Estimator intinv( K, functor );
-              intinv.init( h, re[ii] );
-              resultat[ii] = intinv.eval( contour.begin() + ii );
+              double last_re = -1.0;
+              for( unsigned int ii = 0; ii < pr2size; ++ii )
+              {
+                if( last_re != re[ii] )
+                {
+                  last_re = re[ii];
+                  intinv.init( h, last_re );
+                }
+                resultat[ii] = intinv.eval( contour.begin() + ii );
+              }
+#endif
+
+              trace.info() << "step C.1" << std::endl;
+
+              /// WAIT
+
+              trace.info() << "step C.2" << std::endl;
+
+              for( unsigned int ii = 0; ii < pr2size; ++ii )
+              {
+                file << resultat[ii] << std::endl;
+                file2 << re[ii] << std::endl;
+              }
+
+              trace.info() << "step D." << std::endl;
+
             }
 
-            trace.info() << "step C.1" << std::endl;
+            double time = c.stopClock();
+            file << "# Time: " << time << std::endl;
 
-            /// WAIT
-
-            trace.info() << "step C.2" << std::endl;
-
-            for( unsigned int ii = 0; ii < pr2size; ++ii )
-            {
-              file << resultat[ii] << std::endl;
-              file2 << re[ii] << std::endl;
-            }
-
-            trace.info() << "step D." << std::endl;
-
+            file.close();
+            file2.close();
           }
 
-          double time = c.stopClock();
-          file << "# Time: " << time << std::endl;
-
-          file.close();
-          file2.close();
         }
-
       }
 
       //delete noisifiedObject;
@@ -1493,7 +1374,7 @@ int main( int argc, char** argv )
       ("output,o", po::value<std::string>(), "Output")
       ("shape,s", po::value<std::string>(), "Shape name")
       ("radius,R",  po::value<double>(), "Radius of the shape" )
-      ("kernelradius,K",  po::value<double>()->default_value(0.0), "Radius of the convolution kernel (Integral invariants estimators)" )
+      //("kernelradius,K",  po::value<double>()->default_value(0.0), "Radius of the convolution kernel (Integral invariants estimators)" )
       ("alpha",  po::value<double>()->default_value(1.0/3.0), "Alpha parameter for Integral Invariant computation" )
       ("axis1,A",  po::value<double>(), "Half big axis of the shape (ellipse)" )
       ("axis2,a",  po::value<double>(), "Half small axis of the shape (ellipse)" )
@@ -1506,10 +1387,11 @@ int main( int argc, char** argv )
       ("center_x,x",   po::value<double>()->default_value(0.0), "x-coordinate of the shape center (double)" )
       ("center_y,y",   po::value<double>()->default_value(0.0), "y-coordinate of the shape center (double)" )
       ("gridstep,g",  po::value<double>()->default_value(1.0), "Grid step for the digitization" )
-      ("cste",  po::value<double>()->default_value(0.1), "Level of noise to perturb the shape" )
+      ("cste",  po::value<double>()->default_value(0.1), "Constante for II estimator" )
       ("noise,n",  po::value<double>()->default_value(0.0), "Level of noise to perturb the shape" )
       ("properties",  po::value<std::string>()->default_value("11"), "the i-th property is disabled iff there is a 0 at position i" )
       ("estimators,e",  po::value<std::string>()->default_value("10000"), "the i-th estimator is disabled iff there is a 0 at position i" )
+      ("testsII,t",  po::value<std::string>()->default_value("1111"), "the i-th test for II estimator is disabled iff there is a 0 at position i" )
       ("lambda,l",  po::value< bool >()->default_value( false ), "Use the shape to get a better approximation of the surface (optional)" );
 
 
@@ -1543,6 +1425,12 @@ int main( int argc, char** argv )
                 << "\t - Tangeant" << std::endl
                 << "\t - Curvature" << std::endl
                 << std::endl
+                << "Below are the different tests available for Integral Invariant estimators: " << std::endl
+                << "\t - Global mean maximal segment based radius" << std::endl
+                << "\t - Global max maximal segment based radius" << std::endl
+                << "\t - Local mean maximal segment based radius" << std::endl
+                << "\t - Local max maximal segment based radius" << std::endl
+                << std::endl
                 << general_opt << std::endl;
     return 0;
   }
@@ -1563,7 +1451,7 @@ int main( int argc, char** argv )
   std::string shapeName = vm["shape"].as<std::string>();
   std::string filename = vm["output"].as<std::string>();
 
-  int nb = 4; //number of available methods
+  int nb = 5; //number of available methods
   std::string options = vm["estimators"].as< std::string >();
   if (options.size() < nb)
   {
@@ -1585,6 +1473,7 @@ int main( int argc, char** argv )
     exit(1);
   }
 
+
   //We check that the shape is known
   unsigned int id = checkAndReturnIndex(shapeName);
 
@@ -1598,11 +1487,22 @@ int main( int argc, char** argv )
   double h = vm["gridstep"].as<double>();
 
   struct OptionsIntegralInvariant< RealPoint > optII;
-  optII.radius = vm["kernelradius"].as<double>();
+  //optII.radius = vm["kernelradius"].as<double>();
   optII.alpha = vm["alpha"].as<double>();
   optII.lambda_optimized = vm["lambda"].as< bool >();
   optII.center = center;
   optII.cste = vm["cste"].as<double>();
+
+  nb = 4; //number of available tests for II
+  optII.testsII = vm["testsII"].as<std::string>();
+  if (optII.testsII.size() < nb)
+  {
+    trace.error() << " At least " << nb
+                  << " characters are required "
+                  << " with option --testsII.";
+    trace.info() << std::endl;
+    exit(1);
+  }
 
   double noiseLevel = vm["noise"].as<double>();
 
