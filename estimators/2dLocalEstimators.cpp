@@ -860,7 +860,7 @@ computeLocalEstimations( const std::string & filename,
             c.startClock();
 
             char full_filename[360];
-            sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_mean.dat" );
+            sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_global_mean.dat" );
             std::ofstream file( full_filename );
 
             file << "# h = " << h << std::endl;
@@ -962,7 +962,7 @@ computeLocalEstimations( const std::string & filename,
             c.startClock();
 
             char full_filename[360];
-            sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_mean.dat" );
+            sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_global_max.dat" );
             std::ofstream file( full_filename );
 
             file << "# h = " << h << std::endl;
