@@ -45,6 +45,8 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include "DGtal/math/Statistic.h"
+
 // Shape constructors
 #include "DGtal/io/readers/VolReader.h"
 #include "DGtal/images/ImageSelector.h"
@@ -191,7 +193,7 @@ int main( int argc, char** argv )
   typedef Z3i::KSpace KSpace;
   typedef KSpace::SCell SCell;
   typedef KSpace::Cell Cell;
-  typedef KSpace::Surfel Surfel;
+  typedef KSpace::Surfel KSurfel;
   typedef LightImplicitDigitalSurface< Z3i::KSpace, ImagePredicate > MyLightImplicitDigitalSurface;
   typedef DigitalSurface< MyLightImplicitDigitalSurface > MyDigitalSurface;
 
@@ -213,23 +215,17 @@ int main( int argc, char** argv )
   CanonicSCellEmbedder< KSpace > embedder( K );
 
   SurfelAdjacency< Z3i::KSpace::dimension > SAdj( true );
-  Surfel bel = Surfaces< Z3i::KSpace >::findABel( K, predicate, 100000 );
+  KSurfel bel = Surfaces< Z3i::KSpace >::findABel( K, predicate, 100000 );
   MyLightImplicitDigitalSurface LightImplDigSurf( K, predicate, SAdj, bel );
   MyDigitalSurface digSurf( LightImplDigSurf );
 
   typedef DepthFirstVisitor<MyDigitalSurface> Visitor;
   typedef GraphVisitorRange< Visitor > VisitorRange;
   typedef VisitorRange::ConstIterator SurfelConstIterator;
-  VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
-  SurfelConstIterator abegin = range.begin();
-  SurfelConstIterator aend = range.end();
-
   typedef ImageToConstantFunctor< Image, ImagePredicate > MyPointFunctor;
-  MyPointFunctor pointFunctor( image, predicate, 1 );
-
-  // Integral Invariant stuff
-
   typedef FunctorOnCells< MyPointFunctor, Z3i::KSpace > MyCellFunctor;
+
+  MyPointFunctor pointFunctor( image, predicate, 1 );
   MyCellFunctor functor ( pointFunctor, K ); // Creation of a functor on Cells, returning true if the cell is inside the shape
 
 #ifdef WITH_VISU3D_QGLVIEWER
@@ -240,25 +236,31 @@ int main( int argc, char** argv )
   //    viewer << SetMode3D(image.domain().className(), "BoundingBox") << image.domain();
 #endif
 
-  VisitorRange range2( new Visitor( digSurf, *digSurf.begin() ) );
-  SurfelConstIterator abegin2 = range2.begin();
 
   trace.beginBlock("curvature computation");
   {
     typedef MyLightImplicitDigitalSurface::Tracker Tracker;
     typedef DigitalSurface2DSlice< Tracker > MySlice;
+    typedef Tracker::Surfel Surfel;
 
-    Tracker::Surfel oneSCell;
+    VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
+    SurfelConstIterator abegin = range.begin();
+    SurfelConstIterator aend = range.end();
+
+//    ImageContainerBySTLMap< Z3i::Domain, std::pair< Statistic< double >, Statistic< double > > > mapStats(  );
+    std::map< Surfel, std::pair< Statistic< double >, Statistic< double > > > mapStat;
+
+    Surfel oneSCell;
     Dimension ii = 0;
-    while( abegin2 != aend )//for ( unsigned int i = 0; i < results.size(); ++i )
+    while( abegin != aend )//for ( unsigned int i = 0; i < results.size(); ++i )
     {
       if( ii == 15 )
       {
-        oneSCell = *abegin2;
+        oneSCell = *abegin;
       }
       //viewer << CustomColors3D( Color::White, Color::White )
       //       << *abegin2;
-      ++abegin2;
+      ++abegin;
       ++ii;
     }
 
