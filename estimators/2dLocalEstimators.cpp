@@ -255,7 +255,7 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
   typedef SaturatedSegmentation< SegmentComputer > Decomposition;
   typedef typename Decomposition::SegmentComputerIterator SegmentComputerIterator;
   typedef std::vector< SegmentComputerIterator > VectorOfSegmentComputerIterator;
-  typedef std::map< Point, std::vector< SegmentComputerIterator > > Pmap;
+  typedef std::map< Point, VectorOfSegmentComputerIterator > Pmap;
 
   // Computes the tangential cover
   SegmentComputer algo;
