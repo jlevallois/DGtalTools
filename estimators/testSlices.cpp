@@ -89,7 +89,7 @@ const double AXIS_LINESIZE = 0.05;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-template <typename KSpace, typename Iterator>
+template< typename KSpace, typename Iterator >
 void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
                          Iterator itb, Iterator ite )
 {
@@ -151,6 +151,193 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
 
     ++ii;
   }
+}
+
+template< typename ImplicitDigitalSurface, typename Surfel = ImplicitDigitalSurface::Tracker::Surfel >
+void computeSegments( const std::vector< Surfel > & surfels,
+                      std::map< Surfel*, std::pair< Statistic< double >, Statistic< double > > > & segments,
+                      const Z3i::KSpace & K,
+                      const ImplicitDigitalSurface & impDigitalSurface )
+{
+  typedef ImplicitDigitalSurface::Tracker Tracker;
+  typedef DigitalSurface2DSlice< Tracker > MySlice;
+  typedef std::pair< Statistic< double >, Statistic< double > > PairOfStatistics;
+  typedef std::map< Surfel*, PairOfStatistics > SurfelMap;
+  typedef std::map< Surfel*, bool > MarqueMap;
+
+  const Dimension surfels_size = surfels.size();
+
+  for( Dimension dim = 0; dim < 3; ++dim )
+  {
+    MarqueMap marque;
+    for( Dimension ii = 0; ii < surfels_size; ++ii )
+    {
+      marque[ &surfels[ ii ] ] = false;
+    }
+
+    for( Dimension ii = 0; ii < surfels_size; ++ii )
+    {
+      Surfel currentSurfel = surfels[ ii ];
+      if( marque[ &surfels[ ii ] ] == true )
+      {
+        continue;
+      }
+      else if( K.sOrthDir( currentSurfel ) == dim )
+      {
+        continue;
+      }
+      else
+      {
+        Tracker ptrTracker( impDigitalSurface, currentSurfel );
+        Dimension otherdim = 0;
+        {
+          bool dims[3] = { false, false, false };
+          dims[dim] = true;
+          dims[K.sOrthDir( currentSurfel )] = true;
+
+          while( dims[otherdim] == true )
+          {
+            ++otherdim;
+          }
+        }
+
+//          unsigned int bitAll = 7;
+        /*unsigned int bitSuppr = std::pow(2, dim) + std::pow(2, K.sOrthDir( currentSurfel ));
+        unsigned int bitResu = 7 ^ bitSuppr;
+
+        bitResu >> (sizeof(unsigned int) * CHAR_BIT - 1);
+
+        unsigned int aaa = 0;
+        unsigned int bbb = 1;
+        unsigned int ccc = 2;
+        unsigned int ddd = 4;
+
+        aaa = aaa >> (sizeof(unsigned int) * CHAR_BIT - 1);
+        bbb = bbb >> (sizeof(unsigned int) * CHAR_BIT - 1);
+        ccc = ccc >> (sizeof(unsigned int) * CHAR_BIT - 1);
+        ddd = ddd >> (sizeof(unsigned int) * CHAR_BIT - 1);
+
+        std::cout << aaa << " " << bbb << " " << ccc << " " << ddd << std::endl;*/
+
+//          std::cout << "dim: " << dim << " --- orth: " << K.sOrthDir( currentSurfel ) << " --- result " << otherdim << std::endl;
+
+        //dimSlice
+        MySlice slice( &ptrTracker, otherdim );
+
+        typedef MySlice::ConstIterator ConstIterator3D;
+        typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
+        typedef SCellToPoint< Functor::KSpace > Functor2;
+        typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D;
+        typedef ConstIteratorAdapter< ConstIterator2D, Functor2, Functor2::Output > ConstIterator2DP;
+
+        ConstIterator3D a = slice.begin();
+        ConstIterator3D b = ++(slice.begin());
+        Dimension dimm = 0;
+        while( a->myCoordinates[dimm] != b->myCoordinates[dimm] )
+        {
+          ++dimm;
+        }
+
+        Functor projector;
+        projector.initRemoveOneDim( dimm );
+        ConstIterator2D xbegin( slice.begin(), projector );
+        ConstIterator2D xend( slice.end(), projector );
+
+        Functor::KSpace k2d;
+        Functor2 pointFunctor( k2d );
+
+        ConstIterator2DP pbegin( xbegin, pointFunctor );
+        ConstIterator2DP pend( xend, pointFunctor );
+
+        const Dimension pr2size = slice.size();
+        std::vector< Statistic< double > > v_statMSEL(pr2size);
+        for(Dimension ii = 0; ii < pr2size; ++ii )
+        {
+          v_statMSEL[ii] = Statistic<double>(true);
+        }
+
+        analyseAllLengthMS<Functor::KSpace, ConstIterator2DP>( v_statMSEL, pbegin, pend );
+
+        for(Dimension ii = 0; ii < pr2size; ++ii )
+        {
+          v_statMSEL[ii].terminate();
+        }
+
+        Dimension iii = 0;
+        for(ConstIterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
+        {
+          Surfel other = *sit;
+          if( marque[ other ] == false )
+          {
+            marque[ other ] = true;
+            PairOfStatistics otherpair = mapStat[ other ];
+            if( otherpair.first.samples() == 0 )
+            {
+              otherpair.first = v_statMSEL[ iii ];
+              mapStat[ other ] = otherpair;
+            }
+            else if ( otherpair.second.samples() == 0 )
+            {
+              otherpair.second = v_statMSEL[ iii ];
+              mapStat[ other ] = otherpair;
+            }
+            else
+            {
+              trace.error() << "ALREADY FILLED" << std::endl;
+            }
+          }
+          ++iii;
+        }
+      }
+    }
+  }
+
+}
+
+template< typename Quantity, typename Functor, typename Surfel = Functor::Cell >
+void computeCurvature( const Z3i::KSpace & K,
+                      const Functor & functor,
+                      const std::vector< Surfel > & surfels,
+                      const std::vector< double > & radius,
+                      std::vector< Quantity > & curvatures )
+{
+  typedef IntegralInvariantGaussianCurvatureEstimator< Z3i::KSpace, Functor > GaussEstimator;
+
+  const Dimension surfels_size = surfels.size();
+
+  ASSERT(( radius.size() == surfels_size ));
+  ASSERT(( curvatures.size() == surfels_size ));
+
+#ifdef WITH_OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+  for( Dimension ii = 0; ii < surfels_size; ++ii )
+  {
+    double re = radius[ ii ];
+    re = ( re < 10.0 )? 10.0 : re;
+
+    GaussEstimator estimator ( K, functor );
+    estimator.init( 1.0, radius[ ii ]);
+    curvatures[ ii ] = estimator.eval( surfels[ ii ] );
+  }
+}
+
+template< typename Quantity >
+int viewCurvature( std::vector<Quantity> & curvatures, Z3i::KSpace & K, int argc, char** argv )
+{
+#ifdef WITH_VISU3D_QGLVIEWER
+  QApplication application( argc, argv );
+  typedef Viewer3D< Z3i::Space, Z3i::KSpace > Viewer;
+  Viewer viewer( K );
+  viewer.show();
+  //    viewer << SetMode3D(image.domain().className(), "BoundingBox") << image.domain();
+
+  viewer << Viewer3D<>::updateDisplay;
+  return application.exec();
+#else
+  trace.error() << "OpenGL isn't activate in CMake" << std::endl;
+  return -1;
+#endif
 }
 
 /**
@@ -573,15 +760,6 @@ int main( int argc, char** argv )
   MyPointFunctor pointFunctor( image, predicate, 1 );
   MyCellFunctor functor ( pointFunctor, K ); // Creation of a functor on Cells, returning true if the cell is inside the shape
 
-#ifdef WITH_VISU3D_QGLVIEWER
-  QApplication application( argc, argv );
-  typedef Viewer3D<Z3i::Space, Z3i::KSpace> Viewer;
-  Viewer viewer( K );
-  viewer.show();
-  //    viewer << SetMode3D(image.domain().className(), "BoundingBox") << image.domain();
-#endif
-
-
   trace.beginBlock("curvature computation");
   {
     typedef MyLightImplicitDigitalSurface::Tracker Tracker;
@@ -698,6 +876,11 @@ int main( int argc, char** argv )
 
           analyseAllLengthMS<Functor::KSpace, ConstIterator2DP>( v_statMSEL, pbegin, pend );
 
+          for(Dimension ii = 0; ii < pr2size; ++ii )
+          {
+            v_statMSEL[ii].terminate();
+          }
+
           Dimension iii = 0;
           for(ConstIterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
           {
@@ -746,13 +929,31 @@ int main( int argc, char** argv )
       Statistic<double> stata = mapStat[ *abegin ].first;
       Statistic<double> statb = mapStat[ *abegin ].second;
 
-      double mean = std::max( stata.mean(), statb.mean() );
-      double re = (k * (mean * mean)) * 1.0;
-      std::cout << "radius: " << re << std::endl;
-      /*estimator.init ( h, re ); // Initialisation for a given Euclidean radius of the convolution kernel
+      double median;
+      if( stata.max() > statb.max() )
+      {
+        median = stata.median();
+      }
+      else
+      {
+        median = statb.median();
+      }
+//      double mean = std::max( stata.mean(), statb.mean() );
+      double re = (k * (median * median)) * 1.0;
+      std::cout << re << std::endl;
+      if( re < 10.0 )
+      {
+        re = 10.0;
+//        trace.error() << stata.samples() << " ----- " << statb.samples() << " ----- " << stata.median() << " ----- " << statb.median() << std::endl;
+      }
+      if( lastre != re )
+      {
+        estimator.init ( h, re ); // Initialisation for a given Euclidean radius of the convolution kernel
+      }
+
       Quantity result = estimator.eval ( abegin );
       results.push_back( result ); // Computation
-      trace.info() << "curvature: " << result << std::endl;*/
+      /*trace.info() << "curvature: " << result << std::endl;*/
       ++abegin;
     }
 
@@ -855,8 +1056,7 @@ int main( int argc, char** argv )
   }
 
 #ifdef WITH_VISU3D_QGLVIEWER
-  /*viewer << Viewer3D<>::updateDisplay;
-  return application.exec();*/
+  return viewCurvature( resultats, K, argc, argv );
 #else
   return 0;
 #endif
