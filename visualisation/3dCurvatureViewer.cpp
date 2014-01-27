@@ -65,6 +65,7 @@
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator.h"
 
 // Drawing
+#include "DGtal/io/boards/Board3D.h"
 #include "DGtal/io/viewers/Viewer3D.h"
 #include "DGtal/io/colormaps/GradientColorMap.h"
 #include <QtGui/QApplication>
@@ -264,9 +265,12 @@ int main( int argc, char** argv )
   MyCellFunctor functor ( pointFunctor, K ); // Creation of a functor on Cells, returning true if the cell is inside the shape
 
   QApplication application( argc, argv );
-  typedef Viewer3D<Z3i::Space, Z3i::KSpace> Viewer;
+  /*typedef Viewer3D<Z3i::Space, Z3i::KSpace> Viewer;
   Viewer viewer( K );
-  viewer.show();
+  viewer.show();*/
+  typedef Board3D< Z3i::Space, Z3i::KSpace> Board3D;
+  Board3D viewer( K );
+
   //    viewer << SetMode3D(image.domain().className(), "BoundingBox") << image.domain();
 
   VisitorRange range2( new Visitor( digSurf, *digSurf.begin() ) );
@@ -449,7 +453,8 @@ int main( int argc, char** argv )
     trace.endBlock();
   }
 
-  viewer << Viewer3D<>::updateDisplay;
+  /*viewer << Viewer3D<>::updateDisplay;*/
+  viewer.saveOBJ("/media/kha/7aa7fb31-a0b0-492d-8070-a05b66c1771a/snow.obj");
   return application.exec();
 }
 
