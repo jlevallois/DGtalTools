@@ -47,6 +47,7 @@
 
 // Shape constructors
 #include "DGtal/io/readers/VolReader.h"
+#include "DGtal/io/readers/RawReader.h"
 #include "DGtal/images/ImageSelector.h"
 #include "DGtal/images/imagesSetsUtils/SetFromImage.h"
 #include "DGtal/images/imagesSetsUtils/SimpleThresholdForegroundPredicate.h"
@@ -74,6 +75,7 @@ using namespace DGtal;
 const Color  AXIS_COLOR_RED( 200, 20, 20, 255 );
 const Color  AXIS_COLOR_GREEN( 20, 200, 20, 255 );
 const Color  AXIS_COLOR_BLUE( 20, 20, 200, 255 );
+const Color  AXIS_COLOR_BLACK( 200, 200, 200, 255 );
 const double AXIS_LINESIZE = 0.05;
 
 
@@ -92,6 +94,51 @@ void missingParam( std::string param )
 
 namespace po = boost::program_options;
 
+enum FileExtension
+{
+  VOL,
+  RAW
+};
+
+template< typename Image >
+Image FileReader( std::string filename, FileExtension extension )
+{
+  switch( extension )
+  {
+  case FileExtension::VOL:
+    return VolReader<Image>::importVol( filename );
+    break;
+
+  case FileExtension::RAW:
+    return RawReader< Image >::importRaw8( filename, Z3i::Domain::Vector( 512, 512, 512) );
+    break;
+  }
+
+}
+
+template< typename KSpace, typename Domain, typename Surfel >//= KSpace::Surfel >
+bool CheckIfIsInBorder( const KSpace & k, const Domain & d, const Surfel & s, const unsigned int radius = 1 )
+{
+  typedef typename KSpace::Space::RealPoint MidPoint;
+  typedef typename Domain::Point Point;
+  typedef CanonicSCellEmbedder< KSpace > Embedder;
+
+  Embedder embedder( k );
+
+  MidPoint mp = embedder.embed( s );
+  Point min = d.lowerBound() + Point( radius, radius, radius );
+  Point max = d.upperBound() - Point( radius, radius, radius );
+  const Dimension dimension = 3;
+  for( Dimension ii = 0; ii < dimension; ++ii )
+  {
+    if( mp[ ii ] < min[ ii ] ||  mp[ ii ] > max [ ii ])
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 int main( int argc, char** argv )
 {
   // parse command line ----------------------------------------------
@@ -100,6 +147,7 @@ int main( int argc, char** argv )
     ("help,h", "display this message")
     ("input-file,i", po::value< std::string >(), ".vol file")
     ("radius,r",  po::value< double >(), "Kernel radius for IntegralInvariant" )
+    ("extension,e", po::value< std::string >()->default_value("vol"), "feiofjreio" )
     ("properties,p", po::value< std::string >()->default_value("mean"), "type of output : mean, gaussian, prindir1 or prindir2 (default mean)");
 
   bool parseOK = true;
@@ -124,6 +172,17 @@ int main( int argc, char** argv )
     neededArgsGiven=false;
   }  
   double h = 1.0;
+
+  FileExtension extension;
+  std::string ext = vm["extension"].as< std::string >();
+  if( ext == "raw" )
+  {
+    extension = FileExtension::RAW;
+  }
+  else if(ext == "vol" )
+  {
+    extension = FileExtension::VOL;
+  }
 
   bool wrongMode = false;
   std::string mode = vm["properties"].as< std::string >();
@@ -162,7 +221,13 @@ int main( int argc, char** argv )
   typedef DigitalSurface< MyLightImplicitDigitalSurface > MyDigitalSurface;
 
   std::string filename = vm["input-file"].as< std::string >();
-  Image image = VolReader<Image>::importVol( filename );
+  Image image = FileReader< Image >( filename, extension );
+  {
+    Z3i::DigitalSet set_temp( image.domain() );
+    SetFromImage< Z3i::DigitalSet >::append< Image >( set_temp, image, 0, 255 );
+
+    image = ImageFromSet< Image >::create< Z3i::DigitalSet >( set_temp, 255, true, set_temp.begin(), set_temp.end() );
+  }
   ImagePredicate predicate = ImagePredicate( image, 0 );
 
   Z3i::Domain domain = image.domain();
@@ -241,18 +306,29 @@ int main( int argc, char** argv )
     }
 
     // Drawing results
+    VisitorRange range3( new Visitor( digSurf, *digSurf.begin() ) );
+    SurfelConstIterator abegin3 = range3.begin();
     Quantity min = numeric_limits < Quantity >::max();
     Quantity max = numeric_limits < Quantity >::min();
-    for ( unsigned int i = 0; i < results.size(); ++i )
+    for ( unsigned int ii = 0; ii < results.size(); ++ii )
     {
-      if ( results[ i ] < min )
+      Surfel current = *abegin3;
+      if( CheckIfIsInBorder< KSpace, Z3i::Domain, Surfel >( K, domain, current, 1 ) )
       {
-        min = results[ i ];
+        results[ ii ] = numeric_limits < Quantity >::min();
       }
-      else if ( results[ i ] > max )
+      else
       {
-        max = results[ i ];
+        if ( results[ ii ] < min )
+        {
+          min = results[ ii ];
+        }
+        else if ( results[ ii ] > max )
+        {
+          max = results[ ii ];
+        }
       }
+      ++abegin3;
     }
 
     typedef GradientColorMap< Quantity > Gradient;
@@ -261,10 +337,21 @@ int main( int argc, char** argv )
     cmap_grad.addColor( Color( 255, 0, 0 ) );
     cmap_grad.addColor( Color( 255, 255, 10 ) );
 
-    for ( unsigned int i = 0; i < results.size(); ++i )
+    Cell currentCell;
+
+    for ( unsigned int ii = 0; ii < results.size(); ++ii )
     {
-      viewer << CustomColors3D( Color::Black, cmap_grad( results[ i ] ))
-             << *abegin2;
+      currentCell = Cell( K.sKCoords(*abegin2) );
+      if( results[ ii ] != numeric_limits < Quantity >::min() )
+      {
+        viewer << CustomColors3D( Color::Black, cmap_grad( results[ ii ] ))
+               << currentCell;
+      }
+      else
+      {
+        viewer << CustomColors3D( Color( 255, 255, 255, 120 ), Color( 255, 255, 255, 120 ) )
+               << currentCell;
+      }
       ++abegin2;
     }
   }
