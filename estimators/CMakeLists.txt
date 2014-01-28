@@ -7,6 +7,7 @@ SET(DGTAL_TOOLS_SRC
   tangentBC
   statisticsEstimators
   testSlices
+  testHistogram
 )
 
 if (  WITH_CGAL )

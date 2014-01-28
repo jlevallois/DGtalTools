@@ -77,7 +77,7 @@ const Color  AXIS_COLOR_RED( 200, 20, 20, 255 );
 const Color  AXIS_COLOR_GREEN( 20, 200, 20, 255 );
 const Color  AXIS_COLOR_BLUE( 20, 20, 200, 255 );
 const Color  AXIS_COLOR_BLACK( 200, 200, 200, 255 );
-const double AXIS_LINESIZE = 0.05;
+const double AXIS_LINESIZE = 0.15;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -265,11 +265,12 @@ int main( int argc, char** argv )
   MyCellFunctor functor ( pointFunctor, K ); // Creation of a functor on Cells, returning true if the cell is inside the shape
 
   QApplication application( argc, argv );
-  /*typedef Viewer3D<Z3i::Space, Z3i::KSpace> Viewer;
+  typedef Viewer3D<Z3i::Space, Z3i::KSpace> Viewer;
+  //typedef Board3D< Z3i::Space, Z3i::KSpace> Board3D;
   Viewer viewer( K );
-  viewer.show();*/
-  typedef Board3D< Z3i::Space, Z3i::KSpace> Board3D;
-  Board3D viewer( K );
+  viewer.show();
+
+  viewer << DGtal::SetMode3D(bel.className(), "Basic");
 
   //    viewer << SetMode3D(image.domain().className(), "BoundingBox") << image.domain();
 
@@ -353,7 +354,7 @@ int main( int argc, char** argv )
       }
       else
       {
-        viewer << CustomColors3D( Color( 255, 255, 255, 120 ), Color( 255, 255, 255, 120 ) )
+        viewer << CustomColors3D( Color( 170, 170, 170, 255 ), Color( 170, 170, 170, 255 ) )
                << currentCell;
       }
       ++abegin2;
@@ -394,58 +395,67 @@ int main( int argc, char** argv )
       }
 
       Cell unsignedSurfel = K.uCell( K.sKCoords(*abegin2) );
-      viewer << CustomColors3D( DGtal::Color(255,255,255,255),
-                                DGtal::Color(255,255,255,255))
-             << unsignedSurfel;
 
-
-      //ColumnVector normal = current.vectors.column(0).getNormalized(); // don't show the normal
-      ColumnVector curv1 = current.vectors.column(1).getNormalized();
-      ColumnVector curv2 = current.vectors.column(2).getNormalized();
-
-      double eps = 0.01;
-      RealPoint center = embedder( outer );// + eps*embedder( *abegin2 );
-
-      //            viewer.addLine ( center[0] - 0.5 * normal[ 0],
-      //                             center[1] - 0.5 * normal[1],
-      //                             center[2] - 0.5* normal[2],
-      //                             center[0] +  0.5 * normal[0],
-      //                             center[1] +  0.5 * normal[1],
-      //                             center[2] +  0.5 * normal[2],
-      //                             DGtal::Color ( 0,0,0 ), 5.0 ); // don't show the normal
-
-
-      if( ( mode.compare("prindir1") == 0 ) )
+      if( !CheckIfIsInBorder< KSpace, Z3i::Domain, Surfel >( K, domain, *abegin2, 1 ) )
       {
-        viewer.setLineColor(AXIS_COLOR_BLUE);
-        viewer.addLine (
-              RealPoint(
-                center[0] -  0.5 * curv1[0],
-            center[1] -  0.5 * curv1[1],
-            center[2] -  0.5 * curv1[2]
-            ),
-            RealPoint(
-              center[0] +  0.5 * curv1[0],
-            center[1] +  0.5 * curv1[1],
-            center[2] +  0.5 * curv1[2]
-            ),
-            AXIS_LINESIZE );
+        viewer << CustomColors3D( DGtal::Color(255,255,255,255),
+                                  DGtal::Color(255,255,255,255))
+               << unsignedSurfel;
+
+        //ColumnVector normal = current.vectors.column(0).getNormalized(); // don't show the normal
+        ColumnVector curv1 = current.vectors.column(1).getNormalized();
+        ColumnVector curv2 = current.vectors.column(2).getNormalized();
+
+        double eps = 0.01;
+        RealPoint center = embedder( outer );// + eps*embedder( *abegin2 );
+
+        //            viewer.addLine ( center[0] - 0.5 * normal[ 0],
+        //                             center[1] - 0.5 * normal[1],
+        //                             center[2] - 0.5* normal[2],
+        //                             center[0] +  0.5 * normal[0],
+        //                             center[1] +  0.5 * normal[1],
+        //                             center[2] +  0.5 * normal[2],
+        //                             DGtal::Color ( 0,0,0 ), 5.0 ); // don't show the normal
+
+
+        if( ( mode.compare("prindir1") == 0 ) )
+        {
+          viewer.setLineColor(AXIS_COLOR_BLUE);
+          viewer.addLine (
+                RealPoint(
+                  center[0] -  0.5 * curv1[0],
+                  center[1] -  0.5 * curv1[1],
+                  center[2] -  0.5 * curv1[2]
+                ),
+                RealPoint(
+                  center[0] +  0.5 * curv1[0],
+                  center[1] +  0.5 * curv1[1],
+                  center[2] +  0.5 * curv1[2]
+                ),
+                AXIS_LINESIZE );
+        }
+        else
+        {
+          viewer.setLineColor(AXIS_COLOR_RED);
+          viewer.addLine (
+                RealPoint(
+                  center[0] -  0.5 * curv2[0],
+                  center[1] -  0.5 * curv2[1],
+                  center[2] -  0.5 * curv2[2]
+                ),
+                RealPoint(
+                  center[0] +  0.5 * curv2[0],
+                  center[1] +  0.5 * curv2[1],
+                  center[2] +  0.5 * curv2[2]
+                ),
+                AXIS_LINESIZE );
+        }
       }
       else
       {
-        viewer.setLineColor(AXIS_COLOR_RED);
-        viewer.addLine (
-              RealPoint(
-                center[0] -  0.5 * curv2[0],
-            center[1] -  0.5 * curv2[1],
-            center[2] -  0.5 * curv2[2]
-            ),
-            RealPoint(
-              center[0] +  0.5 * curv2[0],
-            center[1] +  0.5 * curv2[1],
-            center[2] +  0.5 * curv2[2]
-            ),
-            AXIS_LINESIZE );
+        viewer << CustomColors3D( DGtal::Color(170,170,170,255),
+                                  DGtal::Color(170,170,170,255))
+               << unsignedSurfel;
       }
 
       ++abegin2;
@@ -453,8 +463,8 @@ int main( int argc, char** argv )
     trace.endBlock();
   }
 
-  /*viewer << Viewer3D<>::updateDisplay;*/
-  viewer.saveOBJ("/media/kha/7aa7fb31-a0b0-492d-8070-a05b66c1771a/snow.obj");
+  viewer << Viewer3D<>::updateDisplay;
+//  viewer.saveOBJ("/Volumes/Jeremy/snow.obj");
   return application.exec();
 }
 
