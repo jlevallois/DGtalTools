@@ -48,6 +48,8 @@
 #include "DGtal/base/Common.h"
 #include "DGtal/base/Clock.h"
 
+#include "DGtal/math/KMeans.h"
+
 //shapes
 #include "DGtal/shapes/ShapeFactory.h"
 #include "DGtal/shapes/Shapes.h"
@@ -397,6 +399,28 @@ unsigned int suggestedSizeIntegralInvariant( const double h,
 }
 
 
+struct Euclidean
+{
+  double distance(const double &a, const double &b) const
+  {
+    return (double)std::sqrt((b-a)*(b-a));
+  }
+
+  template< typename Point >
+  double distance(const Point &a, const Point &b) const
+  {
+    return (double)(b-a).norm();
+  }
+};
+
+void suggestedRadiusForIntegralInvariantEstimators( const std::vector< double > & radius,
+                                                    std::vector< Dimension > & registration,
+                                                    std::vector< double > & chosenRadius,
+                                                    const Dimension nbRadius )
+{
+  KMeans<double, Euclidean>( radius, nbRadius, Euclidean(), registration, chosenRadius);
+}
+
 /**
  * Estimation of tangents and curvature
  * from several different methods
@@ -525,7 +549,11 @@ computeLocalEstimations( const std::string & filename,
         v_statMSEL[ii] = Statistic<double>(true);
       }
 
+      trace.beginBlock("Analyse segments and Mapping segments <-> Surfels...");
+
       analyseAllLengthMS<KSpace>( v_statMSEL, pointsRange2.begin(), pointsRange2.end() );
+
+      trace.endBlock();
 
       trace.info() << "done" << std::endl;
       //return 1;
@@ -1194,6 +1222,10 @@ computeLocalEstimations( const std::string & filename,
             char full_filename3[360];
             sprintf( full_filename3, "%s%s", filename.c_str(), "_II_curvature_local_stats.dat" );
             std::ofstream file3( full_filename3 );
+
+            char full_filename4[360];
+            sprintf( full_filename4, "%s%s", filename.c_str(), "_II_curvature_local_mean_re_used.dat" );
+            std::ofstream file4( full_filename2 );
             ///////////
 
             if ( withNoise )
@@ -1221,6 +1253,8 @@ computeLocalEstimations( const std::string & filename,
               ConstIterator ibegin = range.begin();
               ConstIterator iend = range.end();
 
+              trace.beginBlock("Extracting all surfels...");
+
               std::vector< SCell > contour;
 
               for( ; ibegin != iend; ++ibegin )
@@ -1231,19 +1265,22 @@ computeLocalEstimations( const std::string & filename,
               if( contour.size() != pr2size )
               {
                 trace.error() << "ERROR! Not the same border size: " << contour.size() << " " << pr2size << std::endl;
+                trace.endBlock();
                 return 0;
               }
 
-              std::vector< double > resultat( contour.size() );
-              std::vector< double > re( contour.size() );
+              trace.endBlock();
 
-              trace.info() << "step A." << std::endl;
+              std::vector< double > v_curvatures( contour.size() );
+              std::vector< double > v_estimated_radius( contour.size() );
+
+              trace.beginBlock("Computation of radius...");
 
               for( Dimension ii = 0; ii < pr2size; ++ii )
               {
                 Dimension current_pos = pr2size - 1 - ii;
                 double mean = v_statMSEL[ current_pos ].mean();
-                re[ii] = (k * (mean * mean)) * h;
+                v_estimated_radius[ii] = (k * (mean * mean)) * h;
                 for( Statistic<double>::ConstIterator itb = v_statMSEL[current_pos].begin(), ite = v_statMSEL[current_pos].end(); itb != ite; ++itb )
                 {
                   file3 << *itb << " ";
@@ -1251,22 +1288,49 @@ computeLocalEstimations( const std::string & filename,
                 file3 << std::endl;
               }
 
-              trace.info() << "step B.1" << std::endl;
+              trace.endBlock();
+
+              trace.beginBlock("Sorting radius & pre-computing estimators...");
+
+              std::vector< double > v_radius;
+              std::vector< Dimension > v_registration;
+
+              const Dimension nbOfRadius = 10;
+
+              suggestedRadiusForIntegralInvariantEstimators( v_estimated_radius, v_registration, v_radius, nbOfRadius );
+
+              ASSERT(( v_radius.size() == nbOfRadius ));
+
+              std::vector< Estimator* > v_estimators( nbOfRadius );
+
+              for( Dimension ii = 0; ii < nbOfRadius; ++ii )
+              {
+                if(( v_radius[ii] / h ) < 10.0 ) /// 	ridiculously small radius check
+                {
+                  v_radius[ii] = 10.0 * h;
+                }
+                v_estimators[ii] = new Estimator( K, functor );
+                v_estimators[ii]->init( h, v_radius[ii] );
+              }
+
+              trace.endBlock();
 
               ///WAIT
 
-              trace.info() << "step B.2" << std::endl;
+              trace.info() << "Curvature computation..." << std::endl;
 
 #ifdef WITH_OPENMP
 #pragma omp parallel for schedule(dynamic)
               for( unsigned int ii = 0; ii < pr2size; ++ii )
               {
-                Estimator intinv( K, functor );
+                /*Estimator intinv( K, functor );
                 intinv.init( h, re[ii] );
-                resultat[ii] = intinv.eval( contour.begin() + ii );
+                Dimension position = 0;*/
+
+                v_curvatures[ii] = v_estimators[ v_radius[ v_registration[ ii ]]]->eval( contour.begin() + ii );
               }
 #else
-              Estimator intinv( K, functor );
+              /*Estimator intinv( K, functor );
               double last_re = -1.0;
               for( unsigned int ii = 0; ii < pr2size; ++ii )
               {
@@ -1275,23 +1339,37 @@ computeLocalEstimations( const std::string & filename,
                   last_re = re[ii];
                   intinv.init( h, last_re );
                 }
-                resultat[ii] = intinv.eval( contour.begin() + ii );
+                v_curvatures[ii] = intinv.eval( contour.begin() + ii );*/
+
+                v_curvatures[ii] = v_estimators[ v_radius[ v_registration[ ii ]]]->eval( contour.begin() + ii );
               }
 #endif
 
-              trace.info() << "step C.1" << std::endl;
+              trace.endBlock();
+
+//              trace.info() << "step C.1" << std::endl;
+//              trace.endBlock();
 
               /// WAIT
+              for( Dimension ii = 0; ii < nbOfRadius; ++ii )
+              {
+                delete v_estimators[ii];
+              }
 
-              trace.info() << "step C.2" << std::endl;
+              trace.info() << "Exporting results..." << std::endl;
 
               for( unsigned int ii = 0; ii < pr2size; ++ii )
               {
-                file << resultat[ii] << std::endl;
-                file2 << re[ii] << std::endl;
+                file << v_curvatures[ii] << std::endl;
+                file2 << v_estimated_radius[ii] << std::endl;
+                file4 << v_radius[ii] << std::endl;
               }
 
-              trace.info() << "step D." << std::endl;
+              trace.endBlock();
+
+//              trace.info() << "step D." << std::endl;
+
+//              trace.endBlock();
 
             }
 
@@ -1301,6 +1379,7 @@ computeLocalEstimations( const std::string & filename,
             file.close();
             file2.close();
             file3.close();
+            file4.close();
           }
 
           /////// local max

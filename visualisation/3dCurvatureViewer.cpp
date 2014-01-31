@@ -354,7 +354,7 @@ int main( int argc, char** argv )
       }
       else
       {
-        viewer << CustomColors3D( Color( 170, 170, 170, 255 ), Color( 170, 170, 170, 255 ) )
+        viewer << CustomColors3D( Color( 255, 255, 255, 120 ), Color( 255, 255, 255, 120 ) )
                << currentCell;
       }
       ++abegin2;
