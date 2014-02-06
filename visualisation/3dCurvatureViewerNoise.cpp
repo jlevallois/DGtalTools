@@ -47,6 +47,7 @@
 
 // Shape constructors
 #include "DGtal/io/readers/VolReader.h"
+#include "DGtal/io/readers/RawReader.h"
 #include "DGtal/images/ImageSelector.h"
 #include "DGtal/images/imagesSetsUtils/SetFromImage.h"
 #include "DGtal/images/imagesSetsUtils/SimpleThresholdForegroundPredicate.h"
@@ -81,6 +82,51 @@ const double AXIS_LINESIZE = 0.1;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+enum FileExtension
+{
+  VOL,
+  RAW
+};
+
+template< typename Image >
+Image FileReader( std::string filename, FileExtension extension )
+{
+  switch( extension )
+  {
+  case FileExtension::VOL:
+    return VolReader<Image>::importVol( filename );
+    break;
+
+  case FileExtension::RAW:
+    return RawReader< Image >::importRaw8( filename, Z3i::Domain::Vector( 512, 512, 512) );
+    break;
+  }
+
+}
+
+template< typename KSpace, typename Domain, typename Surfel >//= KSpace::Surfel >
+bool CheckIfIsInBorder( const KSpace & k, const Domain & d, const Surfel & s, const unsigned int radius = 1 )
+{
+  typedef typename KSpace::Space::RealPoint MidPoint;
+  typedef typename Domain::Point Point;
+  typedef CanonicSCellEmbedder< KSpace > Embedder;
+
+  Embedder embedder( k );
+
+  MidPoint mp = embedder.embed( s );
+  Point min = d.lowerBound() + Point( radius, radius, radius );
+  Point max = d.upperBound() - Point( radius, radius, radius );
+  const Dimension dimension = 3;
+  for( Dimension ii = 0; ii < dimension; ++ii )
+  {
+    if( mp[ ii ] < min[ ii ] ||  mp[ ii ] > max [ ii ])
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Missing parameter error message.
  *
@@ -103,6 +149,7 @@ int main( int argc, char** argv )
     ("input-file,i", po::value< std::string >(), ".vol file")
     ("radius,r",  po::value< double >(), "Kernel radius for IntegralInvariant" )
     ("noise,n",  po::value< double >()->default_value(0.1), "Level of Kanungo noise ]0;1[" )
+    ("extension,e", po::value< std::string >()->default_value("vol"), "feiofjreio" )
     ("properties,p", po::value< std::string >()->default_value("mean"), "type of output : mean, gaussian, prindir1 or prindir2 (default mean)");
 
   bool parseOK = true;
@@ -134,6 +181,16 @@ int main( int argc, char** argv )
   
   double h = 1.0;
  
+  FileExtension extension;
+  std::string ext = vm["extension"].as< std::string >();
+  if( ext == "raw" )
+  {
+    extension = FileExtension::RAW;
+  }
+  else if(ext == "vol" )
+  {
+    extension = FileExtension::VOL;
+  }
 
   bool somethingWrong = false;
   std::string mode = vm["properties"].as< std::string >();
@@ -181,7 +238,13 @@ int main( int argc, char** argv )
   typedef DigitalSurface< MyLightImplicitDigitalSurface > MyDigitalSurface;
 
   std::string filename = vm["input-file"].as< std::string >();
-  Image image = VolReader<Image>::importVol( filename );
+  Image image = FileReader< Image >( filename, extension );
+  {
+    Z3i::DigitalSet set_temp( image.domain() );
+    SetFromImage< Z3i::DigitalSet >::append< Image >( set_temp, image, 0, 255 );
+
+    image = ImageFromSet< Image >::create< Z3i::DigitalSet >( set_temp, 255, true, set_temp.begin(), set_temp.end() );
+  }
   ImagePredicate predicate = ImagePredicate( image, 0 );
 
   Z3i::Domain domain = image.domain();
