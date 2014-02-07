@@ -12,8 +12,7 @@ SET(DGTAL_TOOLS_SRC
 
 if (  WITH_CGAL )
   SET(CGAL_TESTS_SRC
-    3dLocalEstimators
-    old3dLocalEstimators )
+    3dLocalEstimators )
   FOREACH(FILE ${CGAL_TESTS_SRC})
     add_executable(${FILE} ${FILE})
     target_link_libraries (${FILE}  ${DGTAL_LIBRARIES} ${DGtalToolsLibDependencies})
