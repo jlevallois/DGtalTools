@@ -248,7 +248,7 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
   }
 }
 
-template< typename ImplicitDigitalSurface, typename Surfel = typename ImplicitDigitalSurface::Tracker::Surfel >
+template< typename ImplicitDigitalSurface, typename Surfel >
 void computeAllSegments( std::vector< Surfel > & surfels,
                          std::map< Surfel*, std::pair< Statistic< double >, Statistic< double > > > & segments,
                          const Z3i::KSpace & K,
@@ -395,7 +395,7 @@ void computeAllSegments( std::vector< Surfel > & surfels,
 }
 
 
-template< typename ImplicitDigitalSurface, typename Surfel = typename ImplicitDigitalSurface::Tracker::Surfel >
+template< typename ImplicitDigitalSurface, typename Surfel >
 void computeSegments( std::vector< Surfel > & surfels,
                       std::map< Surfel*, std::pair< Statistic< double >, Statistic< double > > > & segments,
                       const Z3i::KSpace & K,
@@ -641,7 +641,7 @@ void computeRadius( std::vector< Surfel > & surfels,
   }
 }
 
-template< typename Estimator, typename Quantity, typename Functor, typename Surfel = typename Functor::Cell >
+template< typename Estimator, typename Quantity, typename Functor, typename Surfel >
 void computeCurvatureWithLocalSegments( const Z3i::KSpace & K,
                                         const Functor & functor,
                                         const std::vector< Surfel > & surfels,
