@@ -1326,30 +1326,11 @@ computeLocalEstimations( const std::string & filename,
 
 #ifdef WITH_OPENMP
 #pragma omp parallel for schedule(dynamic)
-                        for( unsigned int ii = 0; ii < pr2size; ++ii )
-                          {
-                            /*Estimator intinv( K, functor );
-                intinv.init( h, re[ii] );
-                Dimension position = 0;*/
-
-//                            std::cout << "Checking estimator #" << v_registration[ii] << " of radius " << v_radius[v_registration[ii]] << " initialized ..." << std::endl;
-                            v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( contour.begin() + ii );
-                          }
-#else
-                        /*Estimator intinv( K, functor );
-              double last_re = -1.0;
-              for( unsigned int ii = 0; ii < pr2size; ++ii )
-              {
-                if( last_re != re[ii] )
-                {
-                  last_re = re[ii];
-                  intinv.init( h, last_re );
-                }
-                v_curvatures[ii] = intinv.eval( contour.begin() + ii );*/
-
-                        v_curvatures[ii] = v_estimators[ v_radius[ v_registration[ ii ]]]->eval( contour.begin() + ii );
-                      }
 #endif
+                        for( unsigned int ii = 0; ii < pr2size; ++ii )
+                        {
+                          v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( contour.begin() + ii );
+                        }
 
                     trace.endBlock();
 
