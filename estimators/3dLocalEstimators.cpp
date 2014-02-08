@@ -101,11 +101,11 @@ estimateTrueMeanCurvatureQuantity( const ConstIterator & it_begin,
   RealPoint currentRealPoint;
 
   for ( ConstIterator it = it_begin; it != it_end; ++it )
-  {
-    currentRealPoint = embedder( *it_begin ) * h;
-    output = aShape->meanCurvature( currentRealPoint );
-    ++output;
-  }
+    {
+      currentRealPoint = embedder( *it_begin ) * h;
+      output = aShape->meanCurvature( currentRealPoint );
+      ++output;
+    }
 }
 
 template < typename Shape, typename KSpace, typename ConstIterator, typename OutputIterator >
@@ -124,11 +124,11 @@ estimateTrueGaussianCurvatureQuantity( const ConstIterator & it_begin,
   RealPoint currentRealPoint;
 
   for ( ConstIterator it = it_begin; it != it_end; ++it )
-  {
-    currentRealPoint = embedder( *it_begin ) * h;
-    output = aShape->gaussianCurvature( currentRealPoint );
-    ++output;
-  }
+    {
+      currentRealPoint = embedder( *it_begin ) * h;
+      output = aShape->gaussianCurvature( currentRealPoint );
+      ++output;
+    }
 }
 
 template < typename Shape, typename KSpace, typename ConstIterator, typename OutputIterator >
@@ -147,16 +147,16 @@ estimateTruePrincipalCurvaturesQuantity( const ConstIterator & it_begin,
   RealPoint currentRealPoint;
 
   for ( ConstIterator it = it_begin; it != it_end; ++it )
-  {
-    currentRealPoint = embedder( *it_begin ) * h;
-    double k1, k2;
-    aShape->principalCurvatures( currentRealPoint, k1, k2 );
-    CurvatureInformations result;
-    result.k1 = k1;
-    result.k2 = k2;
-    output = result;
-    ++output;
-  }
+    {
+      currentRealPoint = embedder( *it_begin ) * h;
+      double k1, k2;
+      aShape->principalCurvatures( currentRealPoint, k1, k2 );
+      CurvatureInformations result;
+      result.k1 = k1;
+      result.k2 = k2;
+      output = result;
+      ++output;
+    }
 }
 
 /**
@@ -171,13 +171,13 @@ Dimension findSurfel( const std::vector< Surfel > & surfels,
   Dimension position = surfels_size;
 
   for( Dimension ii = 0; !found && ii < surfels_size; ++ii )
-  {
-    if( surfels[ii] == s )
     {
-      found = true;
-      position = ii;
+      if( surfels[ii] == s )
+        {
+          found = true;
+          position = ii;
+        }
     }
-  }
 
   return position;
 }
@@ -203,49 +203,49 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
 
   Pmap map;
   for( Iterator itc = itb; itc != ite; ++itc )
-  {
-    map.insert( std::pair< Point, VectorOfSegmentComputerIterator >( *itc, VectorOfSegmentComputerIterator() ) );
-  }
+    {
+      map.insert( std::pair< Point, VectorOfSegmentComputerIterator >( *itc, VectorOfSegmentComputerIterator() ) );
+    }
 
 
   for ( SegmentComputerIterator scIt = theDecomposition.begin(), scItEnd = theDecomposition.end();
         scIt != scItEnd; ++scIt )
-  {
-    const SegmentComputer & sc = *scIt;
-    for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
     {
-      typename Pmap::iterator mloc = map.find( *ptIt );
-      if( mloc != map.end() )
-      {
-        mloc->second.push_back( scIt );
-      }
+      const SegmentComputer & sc = *scIt;
+      for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
+        {
+          typename Pmap::iterator mloc = map.find( *ptIt );
+          if( mloc != map.end() )
+            {
+              mloc->second.push_back( scIt );
+            }
+        }
     }
-  }
 
   Dimension ii = 0;
   for( Iterator itc = itb; itc != ite; ++itc )
-  {
-    //statD[ii].clear();
-    statE[ii].clear();
-    typename Pmap::iterator mloc = map.find( *itc );
-    ASSERT(( mloc != map.end() ));
-
-    /////////////
-    for( typename VectorOfSegmentComputerIterator::iterator scIt = mloc->second.begin(), scItEnd = mloc->second.end(); scIt != scItEnd; ++scIt )
     {
-      const SegmentComputer & sc = *(*scIt);
-      /*int64_t l = 0;
+      //statD[ii].clear();
+      statE[ii].clear();
+      typename Pmap::iterator mloc = map.find( *itc );
+      ASSERT(( mloc != map.end() ));
+
+      /////////////
+      for( typename VectorOfSegmentComputerIterator::iterator scIt = mloc->second.begin(), scItEnd = mloc->second.end(); scIt != scItEnd; ++scIt )
+        {
+          const SegmentComputer & sc = *(*scIt);
+          /*int64_t l = 0;
           for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
             ++l;
           statD[ii].addValue( (double) l );*/
-      Vector v = *( sc.end() - 1 ) - *( sc.begin() );
-      statE[ii].addValue( v.norm() );
-      //          std::cout << " v=" << v.norm() << std::endl;
-    }
-    /////////////
+          Vector v = *( sc.end() - 1 ) - *( sc.begin() );
+          statE[ii].addValue( v.norm() );
+          //          std::cout << " v=" << v.norm() << std::endl;
+        }
+      /////////////
 
-    ++ii;
-  }
+      ++ii;
+    }
 }
 
 template< typename ImplicitDigitalSurface, typename Surfel >
@@ -263,41 +263,41 @@ void computeAllSegments( std::vector< Surfel > & surfels,
   const Dimension surfels_size = surfels.size();
 
   for( Dimension dim = 0; dim < 3; ++dim )
-  {
-    MarqueMap marque;
-    for( Dimension ii = 0; ii < surfels_size; ++ii )
     {
-      marque[ &surfels[ ii ] ] = false;
-    }
-
-    for( Dimension ii = 0; ii < surfels_size; ++ii )
-    {
-      Surfel currentSurfel = surfels[ ii ];
-      if( marque[ &surfels[ ii ] ] == true )
-      {
-        continue;
-      }
-      else if( K.sOrthDir( currentSurfel ) == dim )
-      {
-        continue;
-      }
-      else
-      {
-        Tracker ptrTracker( impDigitalSurface, currentSurfel );
-        Dimension otherdim = 0;
+      MarqueMap marque;
+      for( Dimension ii = 0; ii < surfels_size; ++ii )
         {
-          bool dims[3] = { false, false, false };
-          dims[dim] = true;
-          dims[K.sOrthDir( currentSurfel )] = true;
-
-          while( dims[otherdim] == true )
-          {
-            ++otherdim;
-          }
+          marque[ &surfels[ ii ] ] = false;
         }
 
-        //          unsigned int bitAll = 7;
-        /*unsigned int bitSuppr = std::pow(2, dim) + std::pow(2, K.sOrthDir( currentSurfel ));
+      for( Dimension ii = 0; ii < surfels_size; ++ii )
+        {
+          Surfel currentSurfel = surfels[ ii ];
+          if( marque[ &surfels[ ii ] ] == true )
+            {
+              continue;
+            }
+          else if( K.sOrthDir( currentSurfel ) == dim )
+            {
+              continue;
+            }
+          else
+            {
+              Tracker ptrTracker( impDigitalSurface, currentSurfel );
+              Dimension otherdim = 0;
+              {
+                bool dims[3] = { false, false, false };
+                dims[dim] = true;
+                dims[K.sOrthDir( currentSurfel )] = true;
+
+                while( dims[otherdim] == true )
+                  {
+                    ++otherdim;
+                  }
+              }
+
+              //          unsigned int bitAll = 7;
+              /*unsigned int bitSuppr = std::pow(2, dim) + std::pow(2, K.sOrthDir( currentSurfel ));
         unsigned int bitResu = 7 ^ bitSuppr;
 
         bitResu >> (sizeof(unsigned int) * CHAR_BIT - 1);
@@ -314,83 +314,83 @@ void computeAllSegments( std::vector< Surfel > & surfels,
 
         std::cout << aaa << " " << bbb << " " << ccc << " " << ddd << std::endl;*/
 
-        //          std::cout << "dim: " << dim << " --- orth: " << K.sOrthDir( currentSurfel ) << " --- result " << otherdim << std::endl;
+              //          std::cout << "dim: " << dim << " --- orth: " << K.sOrthDir( currentSurfel ) << " --- result " << otherdim << std::endl;
 
-        //dimSlice
-        MySlice slice( &ptrTracker, otherdim );
+              //dimSlice
+              MySlice slice( &ptrTracker, otherdim );
 
-        typedef typename MySlice::ConstIterator ConstIterator3D;
-        typedef typename MySlice::Iterator Iterator3D;
-        typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
-        typedef SCellToPoint< Functor::KSpace > Functor2;
-        typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D;
-        typedef ConstIteratorAdapter< ConstIterator2D, Functor2, Functor2::Output > ConstIterator2DP;
+              typedef typename MySlice::ConstIterator ConstIterator3D;
+              typedef typename MySlice::Iterator Iterator3D;
+              typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
+              typedef SCellToPoint< Functor::KSpace > Functor2;
+              typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D;
+              typedef ConstIteratorAdapter< ConstIterator2D, Functor2, Functor2::Output > ConstIterator2DP;
 
-        Iterator3D a = slice.begin();
-        Iterator3D b = ++(slice.begin());
-        Dimension dimm = 0;
-        while( a->myCoordinates[dimm] != b->myCoordinates[dimm] )
-        {
-          ++dimm;
-        }
+              Iterator3D a = slice.begin();
+              Iterator3D b = ++(slice.begin());
+              Dimension dimm = 0;
+              while( a->myCoordinates[dimm] != b->myCoordinates[dimm] )
+                {
+                  ++dimm;
+                }
 
-        Functor projector;
-        projector.initRemoveOneDim( dimm );
-        ConstIterator2D xbegin( slice.begin(), projector );
-        ConstIterator2D xend( slice.end(), projector );
+              Functor projector;
+              projector.initRemoveOneDim( dimm );
+              ConstIterator2D xbegin( slice.begin(), projector );
+              ConstIterator2D xend( slice.end(), projector );
 
-        Functor::KSpace k2d;
-        Functor2 pointFunctor( k2d );
+              Functor::KSpace k2d;
+              Functor2 pointFunctor( k2d );
 
-        ConstIterator2DP pbegin( xbegin, pointFunctor );
-        ConstIterator2DP pend( xend, pointFunctor );
+              ConstIterator2DP pbegin( xbegin, pointFunctor );
+              ConstIterator2DP pend( xend, pointFunctor );
 
-        const Dimension pr2size = slice.size();
-        std::vector< Statistic< double > > v_statMSEL(pr2size);
-        for( Dimension ii = 0; ii < pr2size; ++ii )
-        {
-          v_statMSEL[ii] = Statistic<double>(true);
-        }
+              const Dimension pr2size = slice.size();
+              std::vector< Statistic< double > > v_statMSEL(pr2size);
+              for( Dimension ii = 0; ii < pr2size; ++ii )
+                {
+                  v_statMSEL[ii] = Statistic<double>(true);
+                }
 
-        analyseAllLengthMS<Functor::KSpace, ConstIterator2DP>( v_statMSEL, pbegin, pend );
+              analyseAllLengthMS<Functor::KSpace, ConstIterator2DP>( v_statMSEL, pbegin, pend );
 
-        for(Dimension ii = 0; ii < pr2size; ++ii )
-        {
-          v_statMSEL[ii].terminate();
-        }
+              for(Dimension ii = 0; ii < pr2size; ++ii )
+                {
+                  v_statMSEL[ii].terminate();
+                }
 
-        Dimension iii = 0;
-        for( Iterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
-        {
-          Dimension surfel_pos = findSurfel( surfels, *sit );
-          ASSERT( surfel_pos != surfels_size );
-          if( marque[ &surfels[surfel_pos] ] == false )
-          {
-            marque[ &surfels[surfel_pos] ] = true;
-            ASSERT(( marque.size() == surfels_size ));
-            PairOfStatistics & otherpair = segments[ &surfels[surfel_pos] ];
-            ASSERT(( segments.size() == surfels_size ));
-            if( otherpair.first.samples() == 0 )
-            {
-              otherpair.first = v_statMSEL[ iii ];
-              //              segments[ (Surfel*)&(*sit) ] = otherpair;
+              Dimension iii = 0;
+              for( Iterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
+                {
+                  Dimension surfel_pos = findSurfel( surfels, *sit );
+                  ASSERT( surfel_pos != surfels_size );
+                  if( marque[ &surfels[surfel_pos] ] == false )
+                    {
+                      marque[ &surfels[surfel_pos] ] = true;
+                      ASSERT(( marque.size() == surfels_size ));
+                      PairOfStatistics & otherpair = segments[ &surfels[surfel_pos] ];
+                      ASSERT(( segments.size() == surfels_size ));
+                      if( otherpair.first.samples() == 0 )
+                        {
+                          otherpair.first = v_statMSEL[ iii ];
+                          //              segments[ (Surfel*)&(*sit) ] = otherpair;
+                        }
+                      else if ( otherpair.second.samples() == 0 )
+                        {
+                          otherpair.second = v_statMSEL[ iii ];
+                          //              segments[ (Surfel*)&(*sit) ] = otherpair;
+                        }
+                      else
+                        {
+                          FATAL_ERROR_MSG( false, "ALREADY FILLED" );
+                          trace.error() << "ALREADY FILLED" << std::endl;
+                        }
+                    }
+                  ++iii;
+                }
             }
-            else if ( otherpair.second.samples() == 0 )
-            {
-              otherpair.second = v_statMSEL[ iii ];
-              //              segments[ (Surfel*)&(*sit) ] = otherpair;
-            }
-            else
-            {
-              FATAL_ERROR_MSG( false, "ALREADY FILLED" );
-              trace.error() << "ALREADY FILLED" << std::endl;
-            }
-          }
-          ++iii;
         }
-      }
     }
-  }
 
 }
 
@@ -410,41 +410,41 @@ void computeSegments( std::vector< Surfel > & surfels,
   const Dimension surfels_size = surfels.size();
 
   for( Dimension dim = 0; dim < 3; ++dim )
-  {
-    MarqueMap marque;
-    for( Dimension ii = 0; ii < surfels_size; ++ii )
     {
-      marque[ &surfels[ ii ] ] = false;
-    }
-
-    for( Dimension ii = 0; ii < surfels_size; ++ii )
-    {
-      Surfel currentSurfel = surfels[ ii ];
-      if( marque[ &surfels[ ii ] ] == true )
-      {
-        continue;
-      }
-      else if( K.sOrthDir( currentSurfel ) == dim )
-      {
-        continue;
-      }
-      else
-      {
-        Tracker ptrTracker( impDigitalSurface, currentSurfel );
-        Dimension otherdim = 0;
+      MarqueMap marque;
+      for( Dimension ii = 0; ii < surfels_size; ++ii )
         {
-          bool dims[3] = { false, false, false };
-          dims[dim] = true;
-          dims[K.sOrthDir( currentSurfel )] = true;
-
-          while( dims[otherdim] == true )
-          {
-            ++otherdim;
-          }
+          marque[ &surfels[ ii ] ] = false;
         }
 
-        //          unsigned int bitAll = 7;
-        /*unsigned int bitSuppr = std::pow(2, dim) + std::pow(2, K.sOrthDir( currentSurfel ));
+      for( Dimension ii = 0; ii < surfels_size; ++ii )
+        {
+          Surfel currentSurfel = surfels[ ii ];
+          if( marque[ &surfels[ ii ] ] == true )
+            {
+              continue;
+            }
+          else if( K.sOrthDir( currentSurfel ) == dim )
+            {
+              continue;
+            }
+          else
+            {
+              Tracker ptrTracker( impDigitalSurface, currentSurfel );
+              Dimension otherdim = 0;
+              {
+                bool dims[3] = { false, false, false };
+                dims[dim] = true;
+                dims[K.sOrthDir( currentSurfel )] = true;
+
+                while( dims[otherdim] == true )
+                  {
+                    ++otherdim;
+                  }
+              }
+
+              //          unsigned int bitAll = 7;
+              /*unsigned int bitSuppr = std::pow(2, dim) + std::pow(2, K.sOrthDir( currentSurfel ));
         unsigned int bitResu = 7 ^ bitSuppr;
 
         bitResu >> (sizeof(unsigned int) * CHAR_BIT - 1);
@@ -461,83 +461,83 @@ void computeSegments( std::vector< Surfel > & surfels,
 
         std::cout << aaa << " " << bbb << " " << ccc << " " << ddd << std::endl;*/
 
-        //          std::cout << "dim: " << dim << " --- orth: " << K.sOrthDir( currentSurfel ) << " --- result " << otherdim << std::endl;
+              //          std::cout << "dim: " << dim << " --- orth: " << K.sOrthDir( currentSurfel ) << " --- result " << otherdim << std::endl;
 
-        //dimSlice
-        MySlice slice( &ptrTracker, otherdim );
+              //dimSlice
+              MySlice slice( &ptrTracker, otherdim );
 
-        typedef typename MySlice::ConstIterator ConstIterator3D;
-        typedef typename MySlice::Iterator Iterator3D;
-        typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
-        typedef SCellToPoint< Functor::KSpace > Functor2;
-        typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D;
-        typedef ConstIteratorAdapter< ConstIterator2D, Functor2, Functor2::Output > ConstIterator2DP;
+              typedef typename MySlice::ConstIterator ConstIterator3D;
+              typedef typename MySlice::Iterator Iterator3D;
+              typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
+              typedef SCellToPoint< Functor::KSpace > Functor2;
+              typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D;
+              typedef ConstIteratorAdapter< ConstIterator2D, Functor2, Functor2::Output > ConstIterator2DP;
 
-        Iterator3D a = slice.begin();
-        Iterator3D b = ++(slice.begin());
-        Dimension dimm = 0;
-        while( a->myCoordinates[dimm] != b->myCoordinates[dimm] )
-        {
-          ++dimm;
-        }
+              Iterator3D a = slice.begin();
+              Iterator3D b = ++(slice.begin());
+              Dimension dimm = 0;
+              while( a->myCoordinates[dimm] != b->myCoordinates[dimm] )
+                {
+                  ++dimm;
+                }
 
-        Functor projector;
-        projector.initRemoveOneDim( dimm );
-        ConstIterator2D xbegin( slice.begin(), projector );
-        ConstIterator2D xend( slice.end(), projector );
+              Functor projector;
+              projector.initRemoveOneDim( dimm );
+              ConstIterator2D xbegin( slice.begin(), projector );
+              ConstIterator2D xend( slice.end(), projector );
 
-        Functor::KSpace k2d;
-        Functor2 pointFunctor( k2d );
+              Functor::KSpace k2d;
+              Functor2 pointFunctor( k2d );
 
-        ConstIterator2DP pbegin( xbegin, pointFunctor );
-        ConstIterator2DP pend( xend, pointFunctor );
+              ConstIterator2DP pbegin( xbegin, pointFunctor );
+              ConstIterator2DP pend( xend, pointFunctor );
 
-        const Dimension pr2size = slice.size();
-        std::vector< Statistic< double > > v_statMSEL(pr2size);
-        for( Dimension ii = 0; ii < pr2size; ++ii )
-        {
-          v_statMSEL[ii] = Statistic<double>(true);
-        }
+              const Dimension pr2size = slice.size();
+              std::vector< Statistic< double > > v_statMSEL(pr2size);
+              for( Dimension ii = 0; ii < pr2size; ++ii )
+                {
+                  v_statMSEL[ii] = Statistic<double>(true);
+                }
 
-        analyseAllLengthMS<Functor::KSpace, ConstIterator2DP>( v_statMSEL, pbegin, pend );
+              analyseAllLengthMS<Functor::KSpace, ConstIterator2DP>( v_statMSEL, pbegin, pend );
 
-        //        for(Dimension ii = 0; ii < pr2size; ++ii )
-        //        {
-        //          v_statMSEL[ii].terminate();
-        //        }
+              //        for(Dimension ii = 0; ii < pr2size; ++ii )
+              //        {
+              //          v_statMSEL[ii].terminate();
+              //        }
 
-        Dimension iii = 0;
-        for( Iterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
-        {
-          Dimension surfel_pos = findSurfel( surfels, *sit );
-          ASSERT( surfel_pos != surfels_size );
-          if( marque[ &surfels[surfel_pos] ] == false )
-          {
-            marque[ &surfels[surfel_pos] ] = true;
-            ASSERT(( marque.size() == surfels_size ));
-            PairOfStatistics & otherpair = segments[ &surfels[surfel_pos] ];
-            ASSERT(( segments.size() == surfels_size ));
-            if( otherpair.first.samples() == 0 )
-            {
-              otherpair.first = v_statMSEL[ iii ];
-              //              segments[ (Surfel*)&(*sit) ] = otherpair;
+              Dimension iii = 0;
+              for( Iterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
+                {
+                  Dimension surfel_pos = findSurfel( surfels, *sit );
+                  ASSERT( surfel_pos != surfels_size );
+                  if( marque[ &surfels[surfel_pos] ] == false )
+                    {
+                      marque[ &surfels[surfel_pos] ] = true;
+                      ASSERT(( marque.size() == surfels_size ));
+                      PairOfStatistics & otherpair = segments[ &surfels[surfel_pos] ];
+                      ASSERT(( segments.size() == surfels_size ));
+                      if( otherpair.first.samples() == 0 )
+                        {
+                          otherpair.first = v_statMSEL[ iii ];
+                          //              segments[ (Surfel*)&(*sit) ] = otherpair;
+                        }
+                      else if ( otherpair.second.samples() == 0 )
+                        {
+                          otherpair.second = v_statMSEL[ iii ];
+                          //              segments[ (Surfel*)&(*sit) ] = otherpair;
+                        }
+                      else
+                        {
+                          FATAL_ERROR_MSG( false, "ALREADY FILLED" );
+                          trace.error() << "ALREADY FILLED" << std::endl;
+                        }
+                    }
+                  ++iii;
+                }
             }
-            else if ( otherpair.second.samples() == 0 )
-            {
-              otherpair.second = v_statMSEL[ iii ];
-              //              segments[ (Surfel*)&(*sit) ] = otherpair;
-            }
-            else
-            {
-              FATAL_ERROR_MSG( false, "ALREADY FILLED" );
-              trace.error() << "ALREADY FILLED" << std::endl;
-            }
-          }
-          ++iii;
         }
-      }
     }
-  }
 
 }
 
@@ -550,42 +550,42 @@ void computeGlobalSegment( std::vector< Surfel > & surfels,
   const Dimension surfels_size = surfels.size();
 
   for( Dimension ii = 0; ii < surfels_size; ++ii )
-  {
-    Statistic< double > & stata = segments[ &surfels[ii] ].first;
-    Statistic< double > & statb = segments[ &surfels[ii] ].second;
+    {
+      Statistic< double > & stata = segments[ &surfels[ii] ].first;
+      Statistic< double > & statb = segments[ &surfels[ii] ].second;
 
-    if( mode == "max" )
-    {
-      if( stata.max() > statb.max() )
-      {
-        allSegments.addValues< typename Statistic<double>::Iterator >( stata.begin(), stata.end() );
-      }
+      if( mode == "max" )
+        {
+          if( stata.max() > statb.max() )
+            {
+              allSegments.addValues< typename Statistic<double>::Iterator >( stata.begin(), stata.end() );
+            }
+          else
+            {
+              allSegments.addValues< typename Statistic<double>::Iterator >( statb.begin(), statb.end() );
+            }
+        }
+      else if( mode == "min" )
+        {
+          if( stata.max() < statb.max() )
+            {
+              allSegments.addValues< typename Statistic<double>::Iterator >( stata.begin(), stata.end() );
+            }
+          else
+            {
+              allSegments.addValues< typename Statistic<double>::Iterator >( statb.begin(), statb.end() );
+            }
+        }
+      else if( mode == "mean" )
+        {
+          allSegments.addValues< typename Statistic<double>::Iterator >( stata.begin(), stata.end() );
+          allSegments.addValues< typename Statistic<double>::Iterator >( statb.begin(), statb.end() );
+        }
       else
-      {
-        allSegments.addValues< typename Statistic<double>::Iterator >( statb.begin(), statb.end() );
-      }
+        {
+          trace.error() << "I dont understand " << mode << ". I need {min, mean, max} only." << std::endl;
+        }
     }
-    else if( mode == "min" )
-    {
-      if( stata.max() > statb.max() )
-      {
-        allSegments.addValues< typename Statistic<double>::Iterator >( stata.begin(), stata.end() );
-      }
-      else
-      {
-        allSegments.addValues< typename Statistic<double>::Iterator >( statb.begin(), statb.end() );
-      }
-    }
-    else if( mode == "mean" )
-    {
-      allSegments.addValues< typename Statistic<double>::Iterator >( stata.begin(), stata.end() );
-      allSegments.addValues< typename Statistic<double>::Iterator >( statb.begin(), statb.end() );
-    }
-    else
-    {
-      trace.error() << "I dont understand " << mode << ". I need {min, mean, max} only." << std::endl;
-    }
-  }
 }
 
 void checkSizeRadius( double & re,
@@ -593,13 +593,13 @@ void checkSizeRadius( double & re,
                       const double minRadiusAABB )
 {
   if(( re / h ) < 5.0 ) /// 	ridiculously small radius check
-  {
-    re = 5.0 * h;
-  }
+    {
+      re = 5.0 * h;
+    }
   if( re > ( 0.75 * minRadiusAABB ))
-  {
-    re = 0.75 * minRadiusAABB;
-  }
+    {
+      re = 0.75 * minRadiusAABB;
+    }
 }
 
 template< typename Surfel >
@@ -608,7 +608,9 @@ void computeRadius( std::vector< Surfel > & surfels,
                     const double constante,
                     const double h,
                     std::vector< double > & radius,
-                    const double minRadiusAABB )
+                    const double minRadiusAABB,
+                    const std::string & prop,
+                    const std::string & mode )
 {
   const Dimension surfels_size = surfels.size();
 
@@ -616,29 +618,65 @@ void computeRadius( std::vector< Surfel > & surfels,
   ASSERT(( segments.size() == surfels_size ));
 
   for( Dimension ii = 0; ii < surfels_size; ++ii )
-  {
-    Statistic< double > stata = segments[ &surfels[ii] ].first;
-    Statistic< double > statb = segments[ &surfels[ii] ].second;
-
-    stata.terminate();
-    statb.terminate();
-
-    double mean;
-    if( stata.max() < statb.max() )
     {
-      mean = stata.mean();
+      Statistic< double > & stata = segments[ &surfels[ii] ].first;
+      Statistic< double > & statb = segments[ &surfels[ii] ].second;
+
+      Statistic< double > stat(true);
+
+      stata.terminate();
+      statb.terminate();
+
+      if( mode == "max" )
+        {
+          if( stata.max() > statb.max() )
+            {
+              stat = stata;
+            }
+          else
+            {
+              stat = statb;
+            }
+        }
+      else if( mode == "min" )
+        {
+          if( stata.max() < statb.max() )
+            {
+              stat = stata;
+            }
+          else
+            {
+              stat = statb;
+            }
+        }
+      else if( mode == "mean" )
+        {
+          stat.addValues< typename Statistic<double>::Iterator >( stata.begin(), stata.end() );
+          stat.addValues< typename Statistic<double>::Iterator >( statb.begin(), statb.end() );
+        }
+      else
+        {
+          trace.error() << "I dont understand " << mode << ". I need {min, mean, max} only." << std::endl;
+        }
+
+      double result = -1.0;
+      if( prop == "mean" )
+        {
+          result = stat.mean();
+        }
+      else if( prop == "median" )
+        {
+          result = stat.median();
+        }
+
+      ASSERT(( result != -1.0 ));
+
+      double re = constante * result * result * h;
+
+      checkSizeRadius( re, h, minRadiusAABB );
+
+      radius[ii] = re;
     }
-    else
-    {
-      mean = statb.mean();
-    }
-
-    double re = constante * mean * mean * h;
-
-    checkSizeRadius( re, h, minRadiusAABB );
-
-    radius[ii] = re;
-  }
 }
 
 template< typename Estimator, typename Quantity, typename Functor, typename Surfel >
@@ -657,14 +695,14 @@ void computeCurvatureWithLocalSegments( const Z3i::KSpace & K,
 #pragma omp parallel for schedule(dynamic)
 #endif
   for( Dimension ii = 0; ii < surfels_size; ++ii )
-  {
-    double re = radius[ ii ];
-    re = ( re < 10.0 )? 10.0 : re;
+    {
+      double re = radius[ ii ];
+      re = ( re < 10.0 )? 10.0 : re;
 
-    Estimator estimator ( K, functor );
-    estimator.init( 1.0, radius[ ii ]);
-    curvatures[ ii ] = estimator.eval( &surfels[ ii ] );
-  }
+      Estimator estimator ( K, functor );
+      estimator.init( 1.0, radius[ ii ]);
+      curvatures[ ii ] = estimator.eval( &surfels[ ii ] );
+    }
 }
 
 template <typename Space, typename Shape>
@@ -700,16 +738,16 @@ compareShapeEstimators( const std::string & filename,
 
   KSpace K;
   if ( ! K.init( domain.lowerBound(), domain.upperBound(), true ) )
-  {
-    std::cerr << "[3dLocalEstimators] error in creating KSpace." << std::endl;
-    return false;
-  }
+    {
+      std::cerr << "[3dLocalEstimators] error in creating KSpace." << std::endl;
+      return false;
+    }
 
   try
   {
     if ( withNoise )
-    {
-      /*
+      {
+        /*
       typedef KanungoNoise< DigitalShape, Z3i::Domain > KanungoPredicate;
       typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > Boundary;
       typedef DigitalSurface< Boundary > MyDigitalSurface;
@@ -1096,565 +1134,734 @@ compareShapeEstimators( const std::string & filename,
         }
       }
       */
-    }
+      }
     else
-    {
-      typedef LightImplicitDigitalSurface< KSpace, DigitalShape > Boundary;
-      typedef DigitalSurface< Boundary > MyDigitalSurface;
-      typedef typename MyDigitalSurface::ConstIterator ConstIterator;
-
-      typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
-      typedef GraphVisitorRange< Visitor > VisitorRange;
-      typedef typename VisitorRange::ConstIterator VisitorConstIterator;
-
-      typedef PointFunctorFromPointPredicateAndDomain< DigitalShape, Z3i::Domain, unsigned int > MyPointFunctor;
-      typedef FunctorOnCells< MyPointFunctor, KSpace > MySpelFunctor;
-
-      // Extracts shape boundary
-      SCell bel = Surfaces<KSpace>::findABel ( K, dshape, 10000 );
-      Boundary boundary( K, dshape, SurfelAdjacency< KSpace::dimension >( true ), bel );
-      MyDigitalSurface surf ( boundary );
-
-      VisitorRange * range;
-      VisitorConstIterator ibegin;
-      VisitorConstIterator iend;
-
-      //      unsigned int cntIn = 0;
-      //      typedef typename Domain::ConstIterator DomainConstIterator;
-      //      DomainConstIterator d_ite = domain.end();
-      //      for( DomainConstIterator it = domain.begin(); it != d_ite; ++it )
-      //      {
-      //        if( dshape(*it) )
-      //        {
-      //          ++cntIn;
-      //        }
-      //      }
-      //
-      //      std::cout << "boundary:" << surf.size() << std::endl;
-      //      std::cout << "full:" << cntIn << std::endl;
-
-      // Estimations
-      Clock c;
-
-      // True
-      if( options.at( 0 ) != '0' )
       {
-        // True Mean Curvature
-        if( properties.at( 0 ) != '0' )
-        {
-          trace.beginBlock( "True mean curvature" );
+        typedef LightImplicitDigitalSurface< KSpace, DigitalShape > Boundary;
+        typedef DigitalSurface< Boundary > MyDigitalSurface;
+        typedef typename MyDigitalSurface::ConstIterator ConstIterator;
 
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_True_mean.dat" );
-          std::ofstream file( full_filename );
-          file << "# h = " << h << std::endl;
-          file << "# True Mean Curvature estimation" << std::endl;
+        typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
+        typedef GraphVisitorRange< Visitor > VisitorRange;
+        typedef typename VisitorRange::ConstIterator VisitorConstIterator;
 
-          std::ostream_iterator< double > out_it_true_mean( file, "\n" );
+        typedef PointFunctorFromPointPredicateAndDomain< DigitalShape, Z3i::Domain, unsigned int > MyPointFunctor;
+        typedef FunctorOnCells< MyPointFunctor, KSpace > MySpelFunctor;
 
-          range = new VisitorRange( new Visitor( surf, *surf.begin() ));
-          ibegin = range->begin();
-          iend = range->end();
+        // Extracts shape boundary
+        SCell bel = Surfaces<KSpace>::findABel ( K, dshape, 10000 );
+        Boundary boundary( K, dshape, SurfelAdjacency< KSpace::dimension >( true ), bel );
+        MyDigitalSurface surf ( boundary );
 
-          c.startClock();
+        VisitorRange * range;
+        VisitorConstIterator ibegin;
+        VisitorConstIterator iend;
 
-          estimateTrueMeanCurvatureQuantity( ibegin,
-                                             iend,
-                                             out_it_true_mean,
-                                             K,
-                                             h,
-                                             aShape );
+        //      unsigned int cntIn = 0;
+        //      typedef typename Domain::ConstIterator DomainConstIterator;
+        //      DomainConstIterator d_ite = domain.end();
+        //      for( DomainConstIterator it = domain.begin(); it != d_ite; ++it )
+        //      {
+        //        if( dshape(*it) )
+        //        {
+        //          ++cntIn;
+        //        }
+        //      }
+        //
+        //      std::cout << "boundary:" << surf.size() << std::endl;
+        //      std::cout << "full:" << cntIn << std::endl;
 
-          double TTrueMeanCurv = c.stopClock();
-          file << "# time = " << TTrueMeanCurv << std::endl;
+        // Estimations
+        Clock c;
 
-          file.close();
-          //          delete range;
+        // True
+        if( options.at( 0 ) != '0' )
+          {
+            // True Mean Curvature
+            if( properties.at( 0 ) != '0' )
+              {
+                trace.beginBlock( "True mean curvature" );
 
-          trace.endBlock();
-        }
+                char full_filename[360];
+                sprintf( full_filename, "%s%s", filename.c_str(), "_True_mean.dat" );
+                std::ofstream file( full_filename );
+                file << "# h = " << h << std::endl;
+                file << "# True Mean Curvature estimation" << std::endl;
 
-        // True Gaussian Curvature
-        if( properties.at( 1 ) != '0' )
-        {
-          trace.beginBlock( "True Gaussian curvature" );
+                std::ostream_iterator< double > out_it_true_mean( file, "\n" );
 
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_True_gaussian.dat" );
-          std::ofstream file( full_filename );
-          file << "# h = " << h << std::endl;
-          file << "# True Gaussian Curvature estimation" << std::endl;
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
 
-          std::ostream_iterator< double > out_it_true_gaussian( file, "\n" );
+                c.startClock();
 
-          range = new VisitorRange( new Visitor( surf, *surf.begin() ));
-          ibegin = range->begin();
-          iend = range->end();
-
-          c.startClock();
-
-          estimateTrueGaussianCurvatureQuantity( ibegin,
-                                                 iend,
-                                                 out_it_true_gaussian,
-                                                 K,
-                                                 h,
-                                                 aShape );
-
-          double TTrueGaussianCurv = c.stopClock();
-          file << "# time = " << TTrueGaussianCurv << std::endl;
-
-          file.close();
-
-          //          delete range;
-
-          trace.endBlock();
-        }
-
-        // True Principal Curvatures
-        if( properties.at( 2 ) != '0' )
-        {
-          trace.beginBlock( "True principal curvatures" );
-
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_True_principal.dat" );
-          std::ofstream file( full_filename );
-          file << "# h = " << h << std::endl;
-          file << "# True Gaussian Curvature estimation" << std::endl;
-
-          std::ostream_iterator< CurvatureInformations > out_it_true_pc( file, "\n" );
-
-          range = new VisitorRange( new Visitor( surf, *surf.begin() ));
-          ibegin = range->begin();
-          iend = range->end();
-
-          c.startClock();
-
-          estimateTruePrincipalCurvaturesQuantity( ibegin,
+                estimateTrueMeanCurvatureQuantity( ibegin,
                                                    iend,
-                                                   out_it_true_pc,
+                                                   out_it_true_mean,
                                                    K,
                                                    h,
                                                    aShape );
 
-          double TTruePrincCurv = c.stopClock();
-          file << "# time = " << TTruePrincCurv << std::endl;
+                double TTrueMeanCurv = c.stopClock();
+                file << "# time = " << TTrueMeanCurv << std::endl;
 
-          file.close();
+                file.close();
+                //          delete range;
 
-          //          delete range;
+                trace.endBlock();
+              }
 
-          trace.endBlock();
-        }
-      }
+            // True Gaussian Curvature
+            if( properties.at( 1 ) != '0' )
+              {
+                trace.beginBlock( "True Gaussian curvature" );
 
-      double re_convolution_kernel = 4.0;
-      //      double re_convolution_kernel = radius_kernel * std::pow( h, alpha ); // to obtains convergence results, re must follow the rule re=kh^(1/3)
+                char full_filename[360];
+                sprintf( full_filename, "%s%s", filename.c_str(), "_True_gaussian.dat" );
+                std::ofstream file( full_filename );
+                file << "# h = " << h << std::endl;
+                file << "# True Gaussian Curvature estimation" << std::endl;
 
-      // II
-      if( options.at( 1 ) != '0' )
-      {
-        MyPointFunctor pointFunctor( dshape, domain, 1, 0 );
-        MySpelFunctor functor( pointFunctor, K );
+                std::ostream_iterator< double > out_it_true_gaussian( file, "\n" );
 
-        double minRadiusAABB = ( border_max[0] - border_min[0] ) / 2.0; // this is a box.
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
 
-        // Integral Invariant Mean Curvature
-        if( properties.at( 0 ) != '0' )
-        {
-          std::vector< Surfel > surfels;
-          std::map< Surfel*, std::pair< Statistic< double >, Statistic< double > > > segments;
-          Statistic< double > allSegments( true );
+                c.startClock();
 
-          trace.beginBlock("Extracting all surfels...");
+                estimateTrueGaussianCurvatureQuantity( ibegin,
+                                                       iend,
+                                                       out_it_true_gaussian,
+                                                       K,
+                                                       h,
+                                                       aShape );
 
+                double TTrueGaussianCurv = c.stopClock();
+                file << "# time = " << TTrueGaussianCurv << std::endl;
+
+                file.close();
+
+                //          delete range;
+
+                trace.endBlock();
+              }
+
+            // True Principal Curvatures
+            if( properties.at( 2 ) != '0' )
+              {
+                trace.beginBlock( "True principal curvatures" );
+
+                char full_filename[360];
+                sprintf( full_filename, "%s%s", filename.c_str(), "_True_principal.dat" );
+                std::ofstream file( full_filename );
+                file << "# h = " << h << std::endl;
+                file << "# True Gaussian Curvature estimation" << std::endl;
+
+                std::ostream_iterator< CurvatureInformations > out_it_true_pc( file, "\n" );
+
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
+
+                c.startClock();
+
+                estimateTruePrincipalCurvaturesQuantity( ibegin,
+                                                         iend,
+                                                         out_it_true_pc,
+                                                         K,
+                                                         h,
+                                                         aShape );
+
+                double TTruePrincCurv = c.stopClock();
+                file << "# time = " << TTruePrincCurv << std::endl;
+
+                file.close();
+
+                //          delete range;
+
+                trace.endBlock();
+              }
+          }
+
+        double re_convolution_kernel = 4.0;
+        //      double re_convolution_kernel = radius_kernel * std::pow( h, alpha ); // to obtains convergence results, re must follow the rule re=kh^(1/3)
+
+        // II
+        if( options.at( 1 ) != '0' )
           {
-            VisitorRange ranger( new Visitor( surf, *surf.begin() ) );
-            VisitorConstIterator abegin = ranger.begin();
-            VisitorConstIterator aend = ranger.end();
+            MyPointFunctor pointFunctor( dshape, domain, 1, 0 );
+            MySpelFunctor functor( pointFunctor, K );
 
-            while( abegin != aend )
+            double minRadiusAABB = ( border_max[0] - border_min[0] ) / 2.0; // this is a box.
+
+            std::vector< Surfel > surfels;
+            std::map< Surfel*, std::pair< Statistic< double >, Statistic< double > > > segments;
+            Statistic< double > allSegments( true );
+
+            trace.beginBlock("Extracting all surfels...");
+
             {
-              surfels.push_back( *abegin );
-              ++abegin;
+              VisitorRange ranger( new Visitor( surf, *surf.begin() ) );
+              VisitorConstIterator abegin = ranger.begin();
+              VisitorConstIterator aend = ranger.end();
+
+              while( abegin != aend )
+                {
+                  surfels.push_back( *abegin );
+                  ++abegin;
+                }
             }
-          }
 
-          const Dimension size_surfels = surfels.size();
-
-          trace.endBlock();
-
-          trace.beginBlock("Analyse segments and Mapping segments <-> Surfels...");
-
-          for( Dimension ii = 0; ii < size_surfels; ++ii )
-          {
-            segments[ &surfels[ii] ] = std::pair< Statistic< double >, Statistic< double > >( Statistic< double >( true ), Statistic< double >( true ) );
-          }
-          computeSegments< Boundary, Surfel >( surfels, segments, K, boundary );
-          ASSERT(( segments.size() == size_surfels ));
-
-          trace.endBlock();
-
-          // Global contour analysis
-          if( optionsII.tests.at(0) != '0' || optionsII.tests.at(1) != '0' )
-          {
-            computeGlobalSegment( surfels, segments, allSegments, optionsII.modeSegments );
-            allSegments.terminate();
-
-            if( optionsII.tests.at(2) == '0' && optionsII.tests.at(3) == '0' )
-            {
-//              surfels.clear();
-//              segments.clear();
-            }
-          }
-
-          /////// global mean
-          if( optionsII.tests.at(0) != '0' )
-          {
-            c.startClock();
-
-            char full_filename[360];
-            sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_mean_curvature_global_mean_segments_", optionsII.modeSegments.c_str() ,".dat" );
-            std::ofstream file( full_filename );
-
-            file << "# h = " << h << std::endl;
-            file << "# Mean Curvature estimation from the Integral Invariant with global mean segment analysis" << std::endl;
-
-            double cste = optionsII.constante;
-            double mean = allSegments.mean();
-            double re = cste * mean * mean * h;
-            checkSizeRadius( re, h, minRadiusAABB );
-
-            file << "# computed kernel radius = " << re << std::endl;
-
-            trace.beginBlock("II mean curvature computation with global mean segments...");
-
-            typedef IntegralInvariantMeanCurvatureEstimator< KSpace, MySpelFunctor > Estimator;
-            Estimator estimator( K, functor );
-            estimator.init( h, re );
-
-            VisitorRange ranger( new Visitor( surf, *surf.begin() ) );
-            VisitorConstIterator abegin = ranger.begin();
-            VisitorConstIterator aend = ranger.end();
-
-            std::ostream_iterator< double > out( file, "\n" );
-
-            estimator.eval( abegin, aend, out );
+            const Dimension size_surfels = surfels.size();
 
             trace.endBlock();
-          }
 
-          /////// global median
-          if( optionsII.tests.at(1) != '0' )
-          {
-            c.startClock();
+            trace.beginBlock("Analyse segments and Mapping segments <-> Surfels...");
 
-            char full_filename[360];
-            sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_mean_curvature_global_median_segments_", optionsII.modeSegments.c_str() ,".dat" );
-            std::ofstream file( full_filename );
-
-            file << "# h = " << h << std::endl;
-            file << "# Mean Curvature estimation from the Integral Invariant with global median segment analysis" << std::endl;
-
-            double cste = optionsII.constante;
-            double median = allSegments.median();
-            double re = cste * median * median * h;
-            checkSizeRadius( re, h, minRadiusAABB );
-            file << "# computed kernel radius = " << re << std::endl;
-
-            trace.beginBlock("II mean curvature computation with global median segments...");
-
-            typedef IntegralInvariantMeanCurvatureEstimator< KSpace, MySpelFunctor > Estimator;
-            Estimator estimator( K, functor );
-            estimator.init( h, re );
-
-            VisitorRange ranger( new Visitor( surf, *surf.begin() ) );
-            VisitorConstIterator abegin = ranger.begin();
-            VisitorConstIterator aend = ranger.end();
-
-            std::ostream_iterator< double > out( file, "\n" );
-
-            estimator.eval( abegin, aend, out );
+            for( Dimension ii = 0; ii < size_surfels; ++ii )
+              {
+                segments[ &surfels[ii] ] = std::pair< Statistic< double >, Statistic< double > >( Statistic< double >( true ), Statistic< double >( true ) );
+              }
+            computeSegments< Boundary, Surfel >( surfels, segments, K, boundary );
+            ASSERT(( segments.size() == size_surfels ));
 
             trace.endBlock();
-          }
 
-          /////// local mean
-          if( optionsII.tests.at(2) != '0' )
-          {
-            //            char full_filename[360];
-            //            sprintf( full_filename, "%s%s", filename.c_str(), "_II_mean_curvature_local_mean.dat" );
-            //            std::ofstream file( full_filename );
+            // Global contour analysis
+            if( optionsII.tests.at(0) != '0' || optionsII.tests.at(1) != '0' )
+              {
+                computeGlobalSegment( surfels, segments, allSegments, optionsII.modeSegments );
+                allSegments.terminate();
 
-            //            file << "# h = " << h << std::endl;
-            //            file << "# Mean Curvature estimation from the Integral Invariant with local mean segment analysis" << std::endl;
-            //            file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+                if( optionsII.tests.at(2) == '0' && optionsII.tests.at(3) == '0' )
+                  {
+                    //              surfels.clear();
+                    //              segments.clear();
+                  }
+              }
 
-            //            trace.beginBlock("Computation of radius...");
-
-            //            std::vector< double > radius;
-            //            radius.resize( size_surfels );
-            //            computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius );
-
-            //            trace.endBlock();
-
-            //            typedef IntegralInvariantMeanCurvatureEstimator< Z3i::KSpace, MySpelFunctor > Estimator;
-
-            //            ASSERT(( radius.size() == size_surfels ));
-
-            //            trace.beginBlock("II mean curvature computation with local mean segments...");
-
-
-            //#ifdef WITH_OPENMP
-            //            typedef double Quantity;
-            //            std::vector< Quantity > curvatures( size_surfels, Quantity(0) );
-
-            //#pragma omp parallel for schedule(dynamic)
-            //            for( Dimension ii = 0; ii < size_surfels; ++ii )
-            //            {
-            //              //              Estimator estimator ( K, functor );
-            //              //              estimator.init( 1.0, radius[ ii ]);
-            //              //              curvatures[ii] = estimator.eval( &surfels[ ii ] );
-            //            }
-
-            //            for( Dimension ii = 0; ii < size_surfels; ++ii )
-            //            {
-            //              //              file << curvatures[ii] << std::endl;
-            //              file << radius[ii] << std::endl;
-            //            }
-            //#else
-            //            for( Dimension ii = 0; ii < size_surfels; ++ii )
-            //            {
-            //              double re = radius[ ii ];
-            //              re = ( re < 10.0 )? 10.0 : re;
-
-            //              Estimator estimator ( K, *functor );
-            //              estimator.init( 1.0, radius[ ii ]);
-            //              file << estimator.eval( &surfels[ ii ] ) << std::endl;
-            //            }
-            //#endif
-
-            //            trace.endBlock();
-          }
-
-          /////// local median
-          if( optionsII.tests.at(3) != '0' )
-          {
-
-          }
-          /*trace.beginBlock( "II mean curvature" );
-
-                    IntegralInvariantMeanCurvatureEstimator< KSpace, MySpelFunctor > * IIMeanCurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, MySpelFunctor >( K, *functor );
-
+            // Integral Invariant Mean Curvature
+            if( properties.at( 0 ) != '0' )
+              {
+                /////// global mean
+                if( optionsII.tests.at(0) != '0' )
+                  {
                     c.startClock();
-                    IIMeanCurvatureEstimator->init ( h, re_convolution_kernel );
 
                     char full_filename[360];
-                    sprintf( full_filename, "%s%s", filename.c_str(), "_II_mean.dat" );
+                    sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_mean_curvature_global_mean_segments_", optionsII.modeSegments.c_str() ,".dat" );
                     std::ofstream file( full_filename );
+
                     file << "# h = " << h << std::endl;
-                    file << "# Mean Curvature estimation from the Integral Invariant" << std::endl;
-                    file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+                    file << "# Mean Curvature estimation from the Integral Invariant with global mean segment analysis" << std::endl;
 
-                    range = new VisitorRange( new Visitor( surf, *surf.begin() ));
-                    ibegin = range->begin();
-                    iend = range->end();
+                    double cste = optionsII.constante;
+                    double mean = allSegments.mean();
+                    double re = cste * mean * mean * h;
+                    checkSizeRadius( re, h, minRadiusAABB );
 
-                    std::ostream_iterator< double > out_it_ii_mean( file, "\n" );
+                    file << "# computed kernel radius = " << re << std::endl;
 
-                    IIMeanCurvatureEstimator->eval( ibegin, iend, out_it_ii_mean );
+                    trace.beginBlock("II mean curvature computation with global mean segments...");
 
-                    double TIIMeanCurv = c.stopClock();
-                    file << "# time = " << TIIMeanCurv << std::endl;
-                    file.close();
+                    typedef IntegralInvariantMeanCurvatureEstimator< KSpace, MySpelFunctor > Estimator;
+                    Estimator estimator( K, functor );
+                    estimator.init( h, re );
 
-                    delete range;
-                    delete IIMeanCurvatureEstimator;
+                    VisitorRange ranger( new Visitor( surf, *surf.begin() ) );
+                    VisitorConstIterator abegin = ranger.begin();
+                    VisitorConstIterator aend = ranger.end();
 
-                    trace.endBlock();*/
-        }
+                    std::ostream_iterator< double > out( file, "\n" );
 
-        // Integral Invariant Gaussian Curvature
-        if( properties.at( 1 ) != '0' )
-        {
-          trace.beginBlock( "II Gaussian curvature" );
+                    estimator.eval( abegin, aend, out );
 
-          typedef IntegralInvariantGaussianCurvatureEstimator< KSpace, MySpelFunctor > Estimator;
-          Estimator estimator( K, functor );
+                    trace.endBlock();
+                  }
 
-          c.startClock();
-          estimator.init( h, re_convolution_kernel );
+                /////// global median
+                if( optionsII.tests.at(1) != '0' )
+                  {
+                    c.startClock();
 
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_II_gaussian.dat" );
-          std::ofstream file( full_filename );
-          file << "# h = " << h << std::endl;
-          file << "# Gaussian Curvature estimation from the Integral Invariant" << std::endl;
-          file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+                    char full_filename[360];
+                    sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_mean_curvature_global_median_segments_", optionsII.modeSegments.c_str() ,".dat" );
+                    std::ofstream file( full_filename );
 
-          std::ostream_iterator< double > out_it_ii_gaussian( file, "\n" );
+                    file << "# h = " << h << std::endl;
+                    file << "# Mean Curvature estimation from the Integral Invariant with global median segment analysis" << std::endl;
 
-          range = new VisitorRange( new Visitor( surf, *surf.begin() ));
-          ibegin = range->begin();
-          iend = range->end();
+                    double cste = optionsII.constante;
+                    double median = allSegments.median();
+                    double re = cste * median * median * h;
+                    checkSizeRadius( re, h, minRadiusAABB );
+                    file << "# computed kernel radius = " << re << std::endl;
 
-          estimator.eval ( ibegin, iend, out_it_ii_gaussian );
+                    trace.beginBlock("II mean curvature computation with global median segments...");
 
-          double TIIGaussCurv = c.stopClock();
-          file << "# time = " << TIIGaussCurv << std::endl;
-          file.close();
+                    typedef IntegralInvariantMeanCurvatureEstimator< KSpace, MySpelFunctor > Estimator;
+                    Estimator estimator( K, functor );
+                    estimator.init( h, re );
 
-          trace.endBlock();
-        }
+                    VisitorRange ranger( new Visitor( surf, *surf.begin() ) );
+                    VisitorConstIterator abegin = ranger.begin();
+                    VisitorConstIterator aend = ranger.end();
 
-        // Integral Invariant Principal Curvatures
-        if( properties.at( 2 ) != '0' )
-        {
-          trace.beginBlock( "II Principal curvatures" );
+                    std::ostream_iterator< double > out( file, "\n" );
 
-          typedef IntegralInvariantGaussianCurvatureEstimator< KSpace, MySpelFunctor > Estimator;
-          Estimator estimator( K, functor );
+                    estimator.eval( abegin, aend, out );
 
-          c.startClock();
-          estimator.init( h, re_convolution_kernel );
+                    trace.endBlock();
+                  }
 
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_II_principal.dat" );
-          std::ofstream file( full_filename );
-          file << "# h = " << h << std::endl;
-          file << "# Gaussian Curvature estimation from the Integral Invariant" << std::endl;
-          file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+                /////// local mean
+                if( optionsII.tests.at(2) != '0' )
+                  {
+                    char full_filename[360];
+                    sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_mean_curvature_local_mean_segments_", optionsII.modeSegments.c_str() ,".dat" );
+                    std::ofstream file( full_filename );
 
-          std::ostream_iterator< CurvatureInformations > out_it_ii_principal( file, "\n" );
+                    file << "# h = " << h << std::endl;
+                    file << "# Mean Curvature estimation from the Integral Invariant with local mean segment analysis" << std::endl;
 
-          range = new VisitorRange( new Visitor( surf, *surf.begin() ));
-          ibegin = range->begin();
-          iend = range->end();
+                    trace.beginBlock("Computation of radius...");
 
-          estimator.evalPrincipalCurvatures ( ibegin, iend, out_it_ii_principal );
+                    std::vector< double > radius;
+                    radius.resize( size_surfels );
+                    computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "mean", optionsII.modeSegments );
 
-          double TIIGaussCurv = c.stopClock();
-          file << "# time = " << TIIGaussCurv << std::endl;
-          file.close();
+                    trace.endBlock();
 
-          trace.endBlock();
-        }
+                    typedef IntegralInvariantMeanCurvatureEstimator< Z3i::KSpace, MySpelFunctor > Estimator;
 
+                    ASSERT(( radius.size() == size_surfels ));
+
+                    trace.beginBlock("II mean curvature computation with local mean segments...");
+
+
+#ifdef WITH_OPENMP
+                    typedef double Quantity;
+                    std::vector< Quantity > curvatures( size_surfels, Quantity(0) );
+
+#pragma omp parallel for schedule(dynamic)
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        Estimator estimator ( K, functor );
+                        estimator.init( h, radius[ ii ]);
+                        curvatures[ii] = estimator.eval( &surfels[ ii ] );
+                      }
+
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        file << curvatures[ii] << std::endl;
+                      }
+#else
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        double re = radius[ ii ];
+
+                        Estimator estimator ( K, functor );
+                        estimator.init( h, radius[ ii ]);
+                        file << estimator.eval( &surfels[ ii ] ) << std::endl;
+                      }
+#endif
+
+                    trace.endBlock();
+                  }
+
+                /////// local median
+                if( optionsII.tests.at(3) != '0' )
+                  {
+                    char full_filename[360];
+                    sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_mean_curvature_local_median_segments_", optionsII.modeSegments.c_str() ,".dat" );
+                    std::ofstream file( full_filename );
+
+                    file << "# h = " << h << std::endl;
+                    file << "# Mean Curvature estimation from the Integral Invariant with local median segment analysis" << std::endl;
+
+                    trace.beginBlock("Computation of radius...");
+
+                    std::vector< double > radius;
+                    radius.resize( size_surfels );
+                    computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "median", optionsII.modeSegments );
+
+                    trace.endBlock();
+
+                    typedef IntegralInvariantMeanCurvatureEstimator< Z3i::KSpace, MySpelFunctor > Estimator;
+
+                    ASSERT(( radius.size() == size_surfels ));
+
+                    trace.beginBlock("II mean curvature computation with local median segments...");
+
+
+#ifdef WITH_OPENMP
+                    typedef double Quantity;
+                    std::vector< Quantity > curvatures( size_surfels, Quantity(0) );
+
+#pragma omp parallel for schedule(dynamic)
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        Estimator estimator ( K, functor );
+                        estimator.init( h, radius[ ii ]);
+                        curvatures[ii] = estimator.eval( &surfels[ ii ] );
+                      }
+
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        file << curvatures[ii] << std::endl;
+                      }
+#else
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        double re = radius[ ii ];
+
+                        Estimator estimator ( K, functor );
+                        estimator.init( h, radius[ ii ]);
+                        file << estimator.eval( &surfels[ ii ] ) << std::endl;
+                      }
+#endif
+
+                    trace.endBlock();
+                  }
+
+              }
+
+            // Integral Invariant Gaussian Curvature
+            if( properties.at( 1 ) != '0' )
+              {
+                /////// global mean
+                if( optionsII.tests.at(0) != '0' )
+                  {
+                    c.startClock();
+
+                    char full_filename[360];
+                    sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_gaussian_curvature_global_mean_segments_", optionsII.modeSegments.c_str() ,".dat" );
+                    std::ofstream file( full_filename );
+
+                    file << "# h = " << h << std::endl;
+                    file << "# Gaussian Curvature estimation from the Integral Invariant with global mean segment analysis" << std::endl;
+
+                    double cste = optionsII.constante;
+                    double mean = allSegments.mean();
+                    double re = cste * mean * mean * h;
+                    checkSizeRadius( re, h, minRadiusAABB );
+
+                    file << "# computed kernel radius = " << re << std::endl;
+
+                    trace.beginBlock("II Gaussian curvature computation with global mean segments...");
+
+                    typedef IntegralInvariantGaussianCurvatureEstimator< KSpace, MySpelFunctor > Estimator;
+                    Estimator estimator( K, functor );
+                    estimator.init( h, re );
+
+                    VisitorRange ranger( new Visitor( surf, *surf.begin() ) );
+                    VisitorConstIterator abegin = ranger.begin();
+                    VisitorConstIterator aend = ranger.end();
+
+                    std::ostream_iterator< double > out( file, "\n" );
+
+                    estimator.eval( abegin, aend, out );
+
+                    trace.endBlock();
+                  }
+
+                /////// global median
+                if( optionsII.tests.at(1) != '0' )
+                  {
+                    c.startClock();
+
+                    char full_filename[360];
+                    sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_gaussian_curvature_global_median_segments_", optionsII.modeSegments.c_str() ,".dat" );
+                    std::ofstream file( full_filename );
+
+                    file << "# h = " << h << std::endl;
+                    file << "# Gaussian Curvature estimation from the Integral Invariant with global median segment analysis" << std::endl;
+
+                    double cste = optionsII.constante;
+                    double median = allSegments.median();
+                    double re = cste * median * median * h;
+                    checkSizeRadius( re, h, minRadiusAABB );
+                    file << "# computed kernel radius = " << re << std::endl;
+
+                    trace.beginBlock("II Gaussian curvature computation with global median segments...");
+
+                    typedef IntegralInvariantGaussianCurvatureEstimator< KSpace, MySpelFunctor > Estimator;
+                    Estimator estimator( K, functor );
+                    estimator.init( h, re );
+
+                    VisitorRange ranger( new Visitor( surf, *surf.begin() ) );
+                    VisitorConstIterator abegin = ranger.begin();
+                    VisitorConstIterator aend = ranger.end();
+
+                    std::ostream_iterator< double > out( file, "\n" );
+
+                    estimator.eval( abegin, aend, out );
+
+                    trace.endBlock();
+                  }
+
+                /////// local mean
+                if( optionsII.tests.at(2) != '0' )
+                  {
+                    char full_filename[360];
+                    sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_gaussian_curvature_local_mean_segments_", optionsII.modeSegments.c_str() ,".dat" );
+                    std::ofstream file( full_filename );
+
+                    file << "# h = " << h << std::endl;
+                    file << "# Gaussian Curvature estimation from the Integral Invariant with local mean segment analysis" << std::endl;
+
+                    trace.beginBlock("Computation of radius...");
+
+                    std::vector< double > radius;
+                    radius.resize( size_surfels );
+                    computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "mean", optionsII.modeSegments );
+
+                    trace.endBlock();
+
+                    typedef IntegralInvariantGaussianCurvatureEstimator< Z3i::KSpace, MySpelFunctor > Estimator;
+
+                    ASSERT(( radius.size() == size_surfels ));
+
+                    trace.beginBlock("II Gaussian curvature computation with local mean segments...");
+
+
+#ifdef WITH_OPENMP
+                    typedef double Quantity;
+                    std::vector< Quantity > curvatures( size_surfels, Quantity(0) );
+
+#pragma omp parallel for schedule(dynamic)
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        Estimator estimator ( K, functor );
+                        estimator.init( h, radius[ ii ]);
+                        curvatures[ii] = estimator.eval( &surfels[ ii ] );
+                      }
+
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        file << curvatures[ii] << std::endl;
+                      }
+#else
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        double re = radius[ ii ];
+
+                        Estimator estimator ( K, functor );
+                        estimator.init( h, radius[ ii ]);
+                        file << estimator.eval( &surfels[ ii ] ) << std::endl;
+                      }
+#endif
+
+                    trace.endBlock();
+                  }
+
+                /////// local median
+                if( optionsII.tests.at(3) != '0' )
+                  {
+                    char full_filename[360];
+                    sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_gaussian_curvature_local_median_segments_", optionsII.modeSegments.c_str() ,".dat" );
+                    std::ofstream file( full_filename );
+
+                    file << "# h = " << h << std::endl;
+                    file << "# Gaussian Curvature estimation from the Integral Invariant with local median segment analysis" << std::endl;
+
+                    trace.beginBlock("Computation of radius...");
+
+                    std::vector< double > radius;
+                    radius.resize( size_surfels );
+                    computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "median", optionsII.modeSegments );
+
+                    trace.endBlock();
+
+                    typedef IntegralInvariantGaussianCurvatureEstimator< Z3i::KSpace, MySpelFunctor > Estimator;
+
+                    ASSERT(( radius.size() == size_surfels ));
+
+                    trace.beginBlock("II Gaussian curvature computation with local median segments...");
+
+
+#ifdef WITH_OPENMP
+                    typedef double Quantity;
+                    std::vector< Quantity > curvatures( size_surfels, Quantity(0) );
+
+#pragma omp parallel for schedule(dynamic)
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        Estimator estimator ( K, functor );
+                        estimator.init( h, radius[ ii ]);
+                        curvatures[ii] = estimator.eval( &surfels[ ii ] );
+                      }
+
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        file << curvatures[ii] << std::endl;
+                      }
+#else
+                    for( Dimension ii = 0; ii < size_surfels; ++ii )
+                      {
+                        double re = radius[ ii ];
+
+                        Estimator estimator ( K, functor );
+                        estimator.init( h, radius[ ii ]);
+                        file << estimator.eval( &surfels[ ii ] ) << std::endl;
+                      }
+#endif
+
+                    trace.endBlock();
+                  }
+              }
+
+            // Integral Invariant Principal Curvatures
+            if( properties.at( 2 ) != '0' )
+              {
+                trace.beginBlock( "II Principal curvatures" );
+
+                typedef IntegralInvariantGaussianCurvatureEstimator< KSpace, MySpelFunctor > Estimator;
+                Estimator estimator( K, functor );
+
+                c.startClock();
+                estimator.init( h, re_convolution_kernel );
+
+                char full_filename[360];
+                sprintf( full_filename, "%s%s", filename.c_str(), "_II_principal.dat" );
+                std::ofstream file( full_filename );
+                file << "# h = " << h << std::endl;
+                file << "# Gaussian Curvature estimation from the Integral Invariant" << std::endl;
+                file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+
+                std::ostream_iterator< CurvatureInformations > out_it_ii_principal( file, "\n" );
+
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
+
+                estimator.evalPrincipalCurvatures ( ibegin, iend, out_it_ii_principal );
+
+                double TIIGaussCurv = c.stopClock();
+                file << "# time = " << TIIGaussCurv << std::endl;
+                file.close();
+
+                trace.endBlock();
+              }
+
+          }
+
+        // Monge
+        if( options.at( 2 ) != '0' )
+          {
+            // Monge Mean Curvature
+            if( properties.at( 0 ) != '0' )
+              {
+                trace.beginBlock( "Monge mean curvature" );
+
+                typedef MongeJetFittingMeanCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorMean;
+                typedef ConstValueFunctor< double > ConvFunctor;
+                typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorMean, ConvFunctor> ReporterH;
+                CanonicSCellEmbedder<KSpace> embedder( K );
+                FunctorMean estimatorH( embedder, h );
+                ConvFunctor convFunc(1.0);
+                ReporterH reporterH(surf.container(), Z3i::l2Metric, estimatorH, convFunc);
+                c.startClock();
+                reporterH.init( h , re_convolution_kernel / h  );
+
+                char full_filename[360];
+                sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_mean.dat" );
+                std::ofstream file( full_filename );
+                file << "# h = " << h << std::endl;
+                file << "# Mean Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
+                file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+                std::ostream_iterator< double > out_it_monge_mean( file, "\n" );
+
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
+
+                reporterH.eval(ibegin, iend , out_it_monge_mean);
+                double TMongeMeanCurv = c.stopClock();
+                file << "# time = " << TMongeMeanCurv << std::endl;
+                file.close();
+                //          delete range;
+
+
+                trace.endBlock();
+              }
+
+            // Monge Gaussian Curvature
+            if( properties.at( 1 ) != '0' )
+              {
+                trace.beginBlock( "Monge Gaussian curvature" );
+
+                typedef MongeJetFittingGaussianCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorGaussian;
+                typedef ConstValueFunctor< double > ConvFunctor;
+                typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorGaussian, ConvFunctor> ReporterK;
+                CanonicSCellEmbedder<KSpace> embedder( K );
+                FunctorGaussian estimatorK( embedder, h );
+                ConvFunctor convFunc(1.0);
+                ReporterK reporterK(surf.container(), Z3i::l2Metric, estimatorK, convFunc);
+                c.startClock();
+                reporterK.init( h , re_convolution_kernel / h  );
+
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
+
+                char full_filename[360];
+                sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_gaussian.dat" );
+                std::ofstream file( full_filename );
+                file << "# h = " << h << std::endl;
+                file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
+                file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+                std::ostream_iterator< double > out_it_monge_gaussian( file, "\n" );
+                reporterK.eval(ibegin, iend , out_it_monge_gaussian);
+                double TMongeGaussCurv = c.stopClock();
+                file << "# time = " << TMongeGaussCurv << std::endl;
+                file.close();
+                //          delete range;
+
+
+                trace.endBlock();
+              }
+
+            // Monge Principal Curvatures
+            if( properties.at( 2 ) != '0' )
+              {
+                trace.beginBlock( "Monge Principal Curvature" );
+
+                typedef MongeJetFittingPrincipalCurvaturesEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorPrincCurv;
+                typedef ConstValueFunctor< double > ConvFunctor;
+                typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorPrincCurv, ConvFunctor> ReporterK;
+                CanonicSCellEmbedder<KSpace> embedder( K );
+                FunctorPrincCurv estimatorK( embedder, h );
+                ConvFunctor convFunc(1.0);
+                ReporterK reporterK(surf.container(), Z3i::l2Metric, estimatorK, convFunc);
+                c.startClock();
+                reporterK.init( h , re_convolution_kernel / h  );
+
+                range = new VisitorRange( new Visitor( surf, *surf.begin() ));
+                ibegin = range->begin();
+                iend = range->end();
+
+                char full_filename[360];
+                sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_principal.dat" );
+                std::ofstream file( full_filename );
+                file << "# h = " << h << std::endl;
+                file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
+                file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
+                std::ostream_iterator< CurvatureInformations > out_it_monge_gaussian( file, "\n" );
+                reporterK.eval(ibegin, iend , out_it_monge_gaussian);
+                double TMongeGaussCurv = c.stopClock();
+                file << "# time = " << TMongeGaussCurv << std::endl;
+                file.close();
+                //          delete range;
+
+
+                trace.endBlock();
+              }
+
+          }
       }
-
-      // Monge
-      if( options.at( 2 ) != '0' )
-      {
-        // Monge Mean Curvature
-        if( properties.at( 0 ) != '0' )
-        {
-          trace.beginBlock( "Monge mean curvature" );
-
-          typedef MongeJetFittingMeanCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorMean;
-          typedef ConstValueFunctor< double > ConvFunctor;
-          typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorMean, ConvFunctor> ReporterH;
-          CanonicSCellEmbedder<KSpace> embedder( K );
-          FunctorMean estimatorH( embedder, h );
-          ConvFunctor convFunc(1.0);
-          ReporterH reporterH(surf.container(), Z3i::l2Metric, estimatorH, convFunc);
-          c.startClock();
-          reporterH.init( h , re_convolution_kernel / h  );
-
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_mean.dat" );
-          std::ofstream file( full_filename );
-          file << "# h = " << h << std::endl;
-          file << "# Mean Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
-          file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
-          std::ostream_iterator< double > out_it_monge_mean( file, "\n" );
-
-          range = new VisitorRange( new Visitor( surf, *surf.begin() ));
-          ibegin = range->begin();
-          iend = range->end();
-
-          reporterH.eval(ibegin, iend , out_it_monge_mean);
-          double TMongeMeanCurv = c.stopClock();
-          file << "# time = " << TMongeMeanCurv << std::endl;
-          file.close();
-          //          delete range;
-
-
-          trace.endBlock();
-        }
-
-        // Monge Gaussian Curvature
-        if( properties.at( 1 ) != '0' )
-        {
-          trace.beginBlock( "Monge Gaussian curvature" );
-
-          typedef MongeJetFittingGaussianCurvatureEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorGaussian;
-          typedef ConstValueFunctor< double > ConvFunctor;
-          typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorGaussian, ConvFunctor> ReporterK;
-          CanonicSCellEmbedder<KSpace> embedder( K );
-          FunctorGaussian estimatorK( embedder, h );
-          ConvFunctor convFunc(1.0);
-          ReporterK reporterK(surf.container(), Z3i::l2Metric, estimatorK, convFunc);
-          c.startClock();
-          reporterK.init( h , re_convolution_kernel / h  );
-
-          range = new VisitorRange( new Visitor( surf, *surf.begin() ));
-          ibegin = range->begin();
-          iend = range->end();
-
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_gaussian.dat" );
-          std::ofstream file( full_filename );
-          file << "# h = " << h << std::endl;
-          file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
-          file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
-          std::ostream_iterator< double > out_it_monge_gaussian( file, "\n" );
-          reporterK.eval(ibegin, iend , out_it_monge_gaussian);
-          double TMongeGaussCurv = c.stopClock();
-          file << "# time = " << TMongeGaussCurv << std::endl;
-          file.close();
-          //          delete range;
-
-
-          trace.endBlock();
-        }
-
-        // Monge Principal Curvatures
-        if( properties.at( 2 ) != '0' )
-        {
-          trace.beginBlock( "Monge Principal Curvature" );
-
-          typedef MongeJetFittingPrincipalCurvaturesEstimator<Surfel, CanonicSCellEmbedder<KSpace> > FunctorPrincCurv;
-          typedef ConstValueFunctor< double > ConvFunctor;
-          typedef LocalEstimatorFromSurfelFunctorAdapter<typename MyDigitalSurface::DigitalSurfaceContainer, Z3i::L2Metric, FunctorPrincCurv, ConvFunctor> ReporterK;
-          CanonicSCellEmbedder<KSpace> embedder( K );
-          FunctorPrincCurv estimatorK( embedder, h );
-          ConvFunctor convFunc(1.0);
-          ReporterK reporterK(surf.container(), Z3i::l2Metric, estimatorK, convFunc);
-          c.startClock();
-          reporterK.init( h , re_convolution_kernel / h  );
-
-          range = new VisitorRange( new Visitor( surf, *surf.begin() ));
-          ibegin = range->begin();
-          iend = range->end();
-
-          char full_filename[360];
-          sprintf( full_filename, "%s%s", filename.c_str(), "_MongeJetFitting_principal.dat" );
-          std::ofstream file( full_filename );
-          file << "# h = " << h << std::endl;
-          file << "# Gaussian Curvature estimation from CGAL Monge from and Jet Fitting" << std::endl;
-          file << "# computed kernel radius = " << re_convolution_kernel << std::endl;
-          std::ostream_iterator< CurvatureInformations > out_it_monge_gaussian( file, "\n" );
-          reporterK.eval(ibegin, iend , out_it_monge_gaussian);
-          double TMongeGaussCurv = c.stopClock();
-          file << "# time = " << TMongeGaussCurv << std::endl;
-          file.close();
-          //          delete range;
-
-
-          trace.endBlock();
-        }
-
-      }
-    }
   }
   catch ( InputException e )
   {
@@ -1736,27 +1943,27 @@ int main( int argc, char** argv )
   }
   po::notify( vm );
   if( !parseOK || vm.count("help") || argc <= 1 )
-  {
-    trace.info()<< "Compare local estimators on implicit shapes using DGtal library" <<std::endl
-                << "Basic usage: "<<std::endl
-                << "\t3dlocalEstimators --shape <shape> --h <h> --radius <radius> --estimators <binaryWord> --output <output>"<<std::endl
-                << std::endl
-                << "Below are the different available families of estimators: " << std::endl
-                << "\t - Integral Invariant Mean" << std::endl
-                << "\t - Integral Invariant Gaussian" << std::endl
-                << "\t - Monge Jet Fitting Mean" << std::endl
-                << "\t - Monge Jet Fitting Gaussian" << std::endl
-                << std::endl
-                << "The i-th family of estimators is enabled if the i-th character of the binary word is not 0. "
-                << "The default binary word is '1100'. This means that the first family of estimators, "
-                << "ie. Integral Invariant, is enabled, whereas the next ones are disabled. "
-                << "Below are the different available properties: " << std::endl
-                << "\t - Mean Curvature" << std::endl
-                << "\t - Gaussian Curvature" << std::endl
-                << "\t - k1/k2" << std::endl
-                << std::endl;
-    return 0;
-  }
+    {
+      trace.info()<< "Compare local estimators on implicit shapes using DGtal library" <<std::endl
+                  << "Basic usage: "<<std::endl
+                  << "\t3dlocalEstimators --shape <shape> --h <h> --radius <radius> --estimators <binaryWord> --output <output>"<<std::endl
+                  << std::endl
+                  << "Below are the different available families of estimators: " << std::endl
+                  << "\t - Integral Invariant Mean" << std::endl
+                  << "\t - Integral Invariant Gaussian" << std::endl
+                  << "\t - Monge Jet Fitting Mean" << std::endl
+                  << "\t - Monge Jet Fitting Gaussian" << std::endl
+                  << std::endl
+                  << "The i-th family of estimators is enabled if the i-th character of the binary word is not 0. "
+                  << "The default binary word is '1100'. This means that the first family of estimators, "
+                  << "ie. Integral Invariant, is enabled, whereas the next ones are disabled. "
+                  << "Below are the different available properties: " << std::endl
+                  << "\t - Mean Curvature" << std::endl
+                  << "\t - Gaussian Curvature" << std::endl
+                  << "\t - k1/k2" << std::endl
+                  << std::endl;
+      return 0;
+    }
 
   if (!(vm.count("output"))) missingParam("--output");
   if (!(vm.count("shape"))) missingParam("--shape");
@@ -1766,13 +1973,13 @@ int main( int argc, char** argv )
   int nb = 3;
   std::string options = vm["estimators"].as< std::string >();
   if (options.size() < nb)
-  {
-    trace.error() << " At least " << nb
-                  << " characters are required "
-                  << " with option --estimators.";
-    trace.info() << std::endl;
-    exit(1);
-  }
+    {
+      trace.error() << " At least " << nb
+                    << " characters are required "
+                    << " with option --estimators.";
+      trace.info() << std::endl;
+      exit(1);
+    }
   double h = vm["h"].as< double >();
   std::string poly_str = vm["shape"].as< std::string >();
   bool lambda_optimized = vm["lambda"].as< bool >();
@@ -1781,13 +1988,13 @@ int main( int argc, char** argv )
   nb = 3; //number of available properties
   std::string properties = vm["properties"].as<std::string>();
   if (properties.size() < nb)
-  {
-    trace.error() << " At least " << nb
-                  << " characters are required "
-                  << " with option --properties.";
-    trace.info() << std::endl;
-    exit(1);
-  }
+    {
+      trace.error() << " At least " << nb
+                    << " characters are required "
+                    << " with option --properties.";
+      trace.info() << std::endl;
+      exit(1);
+    }
 
   typedef Z3i::Space::RealPoint RealPoint;
   typedef Z3i::Space::RealPoint::Coordinate Ring;
@@ -1805,12 +2012,12 @@ int main( int argc, char** argv )
   Polynomial3Reader reader;
   std::string::const_iterator iter = reader.read( poly, poly_str.begin(), poly_str.end() );
   if ( iter != poly_str.end() )
-  {
-    std::cerr << "ERROR: I read only <"
-              << poly_str.substr( 0, iter - poly_str.begin() )
-              << ">, and I built P=" << poly << std::endl;
-    return 1;
-  }
+    {
+      std::cerr << "ERROR: I read only <"
+                << poly_str.substr( 0, iter - poly_str.begin() )
+                << ">, and I built P=" << poly << std::endl;
+      return 1;
+    }
 
   ImplicitShape* shape = new ImplicitShape( poly );
 
@@ -1820,13 +2027,13 @@ int main( int argc, char** argv )
   nb = 4; //number of available tests for II
   optII.tests = vm["testsII"].as<std::string>();
   if( optII.tests.size() < nb )
-  {
-    trace.error() << " At least " << nb
-                  << " characters are required "
-                  << " with option --testsII.";
-    trace.info() << std::endl;
-    exit(1);
-  }
+    {
+      trace.error() << " At least " << nb
+                    << " characters are required "
+                    << " with option --testsII.";
+      trace.info() << std::endl;
+      exit(1);
+    }
   optII.modeSegments = vm["modeSegments"].as< std::string >();
 
   compareShapeEstimators< Z3i::Space, ImplicitShape > (
