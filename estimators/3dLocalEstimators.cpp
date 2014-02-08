@@ -1926,7 +1926,7 @@ int main( int argc, char** argv )
       ("testsII,t",  po::value<std::string>()->default_value("1111"), "the i-th test for II estimator is disabled iff there is a 0 at position i" )
       ("nbKernels", po::value<unsigned int>()->default_value(0), "Nb of kernels to use. 0 by default (aka all the kernels computed")
       ("constante,k", po::value<double>()->default_value(0.1), "Constante")
-      ("modeSegments,m",  po::value< std::string >()->default_value("max"), "min, max, mean" )
+      ("modeSegments,m",  po::value< std::string >()->default_value("max"), "min, mean, max" )
       ("estimators,e",  po::value< std::string >()->default_value("110"), "the i-th estimator is disabled iff there is a 0 at position i" );
 
 

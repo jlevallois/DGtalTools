@@ -16,6 +16,10 @@ if (  WITH_CGAL )
   FOREACH(FILE ${CGAL_TESTS_SRC})
     add_executable(${FILE} ${FILE})
     target_link_libraries (${FILE}  ${DGTAL_LIBRARIES} ${DGtalToolsLibDependencies})
+    install(TARGETS ${FILE}
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)
   ENDFOREACH(FILE)
 endif ( WITH_CGAL )
 
