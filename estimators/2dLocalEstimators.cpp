@@ -110,6 +110,8 @@ struct OptionsIntegralInvariant
   bool lambda_optimized;
   double cste;
   std::string testsII;
+  unsigned int nbKernels;
+  double minRadius;
 };
 
 
@@ -245,6 +247,21 @@ void estimationError(int currentSize, int expectedSize)
     }
 
 }
+
+void checkSizeRadius( double & re,
+                      const double h,
+                      const double minRadiusAABB )
+{
+  if(( re / h ) < 5.0 ) /// 	ridiculously small radius check
+    {
+      re = 5.0 * h;
+    }
+  if( re > ( 0.75 * minRadiusAABB ))
+    {
+      re = 0.75 * minRadiusAABB;
+    }
+}
+
 
 template <typename KSpace, typename Iterator>
 void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
@@ -984,110 +1001,8 @@ computeLocalEstimations( const std::string & filename,
                     file.close();
                   }
 
-                /////// global max
-                if( optionsII.testsII.at(1) != '0' )
-                  {
-                    c.startClock();
-
-                    char full_filename[360];
-                    sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_global_max.dat" );
-                    std::ofstream file( full_filename );
-
-                    file << "# h = " << h << std::endl;
-                    file << "# Integral Invariant curvature estimation" << std::endl;
-                    file << "# range size = " << pointsRange.size() << std::endl;
-                    if ( withNoise )
-                      {
-                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
-                        file << "# noise level (current) = " << noiseLevel << std::endl;
-                      }
-
-                    if( optionsII.radius <= 0.0 )
-                      {
-                        optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-                        file << "# Estimated radius: " << optionsII.radius << std::endl;
-                      }
-
-                    double k = optionsII.cste;
-                    double max = statMSEL.max();
-                    double re_convolution_kernel = (k * (max * max)) * h;
-                    //          double re_convolution_kernel = optionsII.radius * std::pow( h, optionsII.alpha );
-                    file << "# full kernel (digital) size (with alpha = " << optionsII.alpha << ") = " <<
-                            re_convolution_kernel / h << std::endl;
-
-                    std::ostream_iterator< double > out_it( file, "\n" );
-
-                    if ( withNoise )
-                      {
-                        typedef LightImplicitDigitalSurface< KSpace, KanungoPredicate > LightImplicitDigSurface;
-                        typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-
-                        LightImplicitDigSurface LightImplDigSurf( K, *noisifiedObject, SAdj, bel );
-                        DigSurface surf( LightImplDigSurf );
-
-                        typedef PointFunctorFromPointPredicateAndDomain< KanungoPredicate, Domain, unsigned int > KanungoFunctor;
-                        KanungoFunctor * noisifiedFunctor = new KanungoFunctor( noisifiedObject, domain, 1, 0 );
-
-                        typedef FunctorOnCells< KanungoFunctor, KSpace > CurvatureIIFct;
-                        CurvatureIIFct * functor = new CurvatureIIFct( *noisifiedFunctor, K );
-
-                        IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
-
-                        typedef DepthFirstVisitor< DigSurface > Visitor;
-                        typedef GraphVisitorRange< Visitor > VisitorRange;
-                        typedef typename VisitorRange::ConstIterator I;
-
-                        VisitorRange range( new Visitor( surf, *surf.begin() ) );
-                        I ibegin = range.begin();
-                        I iend = range.end();
-
-                        IICurvatureEstimator->init( h, re_convolution_kernel );
-                        IICurvatureEstimator->eval( points.begin(), points.end(), out_it );
-
-                        delete functor;
-                        delete noisifiedFunctor;
-                        delete IICurvatureEstimator;
-                      }
-                    else
-                      {
-                        typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
-                        typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-
-                        LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
-                        DigSurface surf( LightImplDigSurf );
-
-                        typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
-                        MyPointFunctor * pointFunctor = new MyPointFunctor( dig, domain, 1, 0 );
-
-                        typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-                        CurvatureIIFct * functor = new CurvatureIIFct( *pointFunctor, K );
-
-                        IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct> * IICurvatureEstimator = new IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct>( K, *functor );
-
-                        typedef DepthFirstVisitor< DigSurface > Visitor;
-                        typedef GraphVisitorRange< Visitor > VisitorRange;
-                        typedef typename VisitorRange::ConstIterator I;
-
-                        VisitorRange range( new Visitor( surf, *surf.begin() ) );
-                        I ibegin = range.begin();
-                        I iend = range.end();
-
-                        IICurvatureEstimator->init( h, re_convolution_kernel );
-                        IICurvatureEstimator->eval( ibegin, iend, out_it );
-
-                        delete functor;
-                        delete pointFunctor;
-                        delete IICurvatureEstimator;
-                      }
-
-                    double time = c.stopClock();
-                    file << "# Time: " << time << std::endl;
-
-                    file.close();
-                  }
-
                 /////// global median
-                if( optionsII.testsII.at(2) != '0' )
+                if( optionsII.testsII.at(1) != '0' )
                   {
                     c.startClock();
 
@@ -1189,12 +1104,12 @@ computeLocalEstimations( const std::string & filename,
                   }
 
                 /////// local mean
-                if( optionsII.testsII.at(3) != '0' )
+                if( optionsII.testsII.at(2) != '0' )
                   {
                     c.startClock();
 
                     char full_filename[360];
-                    sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_local_mean.dat" );
+                    sprintf( full_filename, "%s%s%u%s", filename.c_str(), "_II_curvature_local_mean_with_", optionsII.nbKernels , "kernels.dat" );
                     std::ofstream file( full_filename );
 
                     file << "# h = " << h << std::endl;
@@ -1206,26 +1121,27 @@ computeLocalEstimations( const std::string & filename,
                         file << "# noise level (current) = " << noiseLevel << std::endl;
                       }
 
-                    if( optionsII.radius <= 0.0 )
-                      {
-                        optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-                        file << "# Estimated radius: " << optionsII.radius << std::endl;
-                      }
+//                    if( optionsII.radius <= 0.0 )
+//                      {
+//                        optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
+//                        file << "# Estimated radius: " << optionsII.radius << std::endl;
+//                      }
 
                     double k = optionsII.cste;
+                    double minRadiusAABB = optionsII.minRadius; // this is a box.
 
                     ///////////
-                    char full_filename2[360];
-                    sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_mean_re.dat" );
-                    std::ofstream file2( full_filename2 );
+//                    char full_filename2[360];
+//                    sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_mean_re.dat" );
+//                    std::ofstream file2( full_filename2 );
 
-                    char full_filename3[360];
-                    sprintf( full_filename3, "%s%s", filename.c_str(), "_II_curvature_local_stats.dat" );
-                    std::ofstream file3( full_filename3 );
+//                    char full_filename3[360];
+//                    sprintf( full_filename3, "%s%s", filename.c_str(), "_II_curvature_local_stats.dat" );
+//                    std::ofstream file3( full_filename3 );
 
-                    char full_filename4[360];
-                    sprintf( full_filename4, "%s%s", filename.c_str(), "_II_curvature_local_mean_re_used.dat" );
-                    std::ofstream file4( full_filename2 );
+//                    char full_filename4[360];
+//                    sprintf( full_filename4, "%s%s", filename.c_str(), "_II_curvature_local_mean_re_used.dat" );
+//                    std::ofstream file4( full_filename2 );
                     ///////////
 
                     if ( withNoise )
@@ -1280,12 +1196,14 @@ computeLocalEstimations( const std::string & filename,
                           {
                             Dimension current_pos = pr2size - 1 - ii;
                             double mean = v_statMSEL[ current_pos ].mean();
-                            v_estimated_radius[ii] = (k * (mean * mean)) * h;
-                            for( Statistic<double>::ConstIterator itb = v_statMSEL[current_pos].begin(), ite = v_statMSEL[current_pos].end(); itb != ite; ++itb )
-                              {
-                                file3 << *itb << " ";
-                              }
-                            file3 << std::endl;
+                            double re = (k * (mean * mean)) * h;
+                            checkSizeRadius( re, h, minRadiusAABB );
+                            v_estimated_radius[ii] = re;
+//                            for( Statistic<double>::ConstIterator itb = v_statMSEL[current_pos].begin(), ite = v_statMSEL[current_pos].end(); itb != ite; ++itb )
+//                              {
+//                                file3 << *itb << " ";
+//                              }
+//                            file3 << std::endl;
                           }
 
                         trace.endBlock();
@@ -1294,29 +1212,25 @@ computeLocalEstimations( const std::string & filename,
 
                         std::vector< double > v_radius;
                         std::vector< Dimension > v_registration;
+                        std::vector< Estimator* > v_estimators;
 
-                        const Dimension nbOfRadius = 10;
-
-                        suggestedRadiusForIntegralInvariantEstimators( v_estimated_radius, v_registration, v_radius, nbOfRadius );
-
-                        ASSERT(( v_radius.size() == nbOfRadius ));
-
-                        std::vector< Estimator* > v_estimators( nbOfRadius );
+                        if( optionsII.nbKernels > 0 )
+                        {
+                          v_estimators.resize( optionsII.nbKernels );
+                          suggestedRadiusForIntegralInvariantEstimators( v_estimated_radius, v_registration, v_radius, optionsII.nbKernels );
+                          ASSERT(( v_radius.size() == optionsII.nbKernels ));
 
 #ifdef WITH_OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
-                        for( Dimension ii = 0; ii < nbOfRadius; ++ii )
+                          for( Dimension ii = 0; ii < optionsII.nbKernels; ++ii )
                           {
-                            if(( v_radius[ii] / h ) < 10.0 ) /// 	ridiculously small radius check
-                              {
-                                v_radius[ii] = 10.0 * h;
-                              }
                             v_estimators[ii] = new Estimator( K, functor );
                             v_estimators[ii]->init( h, v_radius[ii] );
 
                             std::cout << "estimator #" << ii << " of radius " << v_radius[ii] << " initialized ..." << std::endl;
                           }
+                        }
 
                         trace.endBlock();
 
@@ -1329,339 +1243,251 @@ computeLocalEstimations( const std::string & filename,
 #endif
                         for( unsigned int ii = 0; ii < pr2size; ++ii )
                         {
-                          v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( contour.begin() + ii );
+                          if( optionsII.nbKernels > 0 )
+                          {
+                            v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( contour.begin() + ii );
+                          }
+                          else
+                          {
+                            Estimator estimator( K, functor );
+                            estimator.init( h, v_estimated_radius[ii] );
+                            v_curvatures[ii] = estimator.eval( contour.begin() + ii );
+                          }
                         }
 
-                    trace.endBlock();
+                        trace.endBlock();
 
-                    //              trace.info() << "step C.1" << std::endl;
-                    //              trace.endBlock();
+                        /// WAIT
+//                        for( Dimension ii = 0; ii < nbOfRadius; ++ii )
+//                          {
+//                            //                        delete v_estimators[ii];
+//                          }
 
-                    /// WAIT
-                    for( Dimension ii = 0; ii < nbOfRadius; ++ii )
-                      {
-//                        delete v_estimators[ii];
-                      }
+                        trace.beginBlock("Exporting results...");
 
-                    trace.beginBlock("Exporting results...");
-
-                    for( unsigned int ii = 0; ii < pr2size; ++ii )
-                      {
-                        file << v_curvatures[ii] << std::endl;
-                        file2 << v_estimated_radius[ii] << std::endl;
-                        file4 << v_radius[v_registration[ii]] << std::endl;
-                      }
-
-                    trace.endBlock();
-
-                    //              trace.info() << "step D." << std::endl;
-
-                    //              trace.endBlock();
-
-                  }
-
-                double time = c.stopClock();
-                file << "# Time: " << time << std::endl;
-
-                file.close();
-                file2.close();
-                file3.close();
-                file4.close();
-              }
-
-            /////// local max
-            if( optionsII.testsII.at(4) != '0' )
-              {
-                c.startClock();
-
-                char full_filename[360];
-                sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_local_max.dat" );
-                std::ofstream file( full_filename );
-
-                file << "# h = " << h << std::endl;
-                file << "# Integral Invariant curvature estimation" << std::endl;
-                file << "# range size = " << pointsRange.size() << std::endl;
-                if ( withNoise )
-                  {
-                    file << "# noise level (init) = " << noiseLevel/h << std::endl;
-                    file << "# noise level (current) = " << noiseLevel << std::endl;
-                  }
-
-                if( optionsII.radius <= 0.0 )
-                  {
-                    optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-                    file << "# Estimated radius: " << optionsII.radius << std::endl;
-                  }
-
-                double k = optionsII.cste;
-
-                ///////////
-                char full_filename2[360];
-                sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_max_re.dat" );
-                std::ofstream file2( full_filename2 );
-                ///////////
-
-                if ( withNoise )
-                  {
-                    trace.error() << "not yet" << std::endl;
-                  }
-                else
-                  {
-                    typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
-                    typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-                    typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
-                    typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-                    typedef IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct > Estimator;
-                    typedef DepthFirstVisitor< DigSurface > Visitor;
-                    typedef GraphVisitorRange< Visitor > VisitorRange;
-                    typedef typename VisitorRange::ConstIterator ConstIterator;
-
-                    LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
-                    DigSurface surf( LightImplDigSurf );
-
-                    MyPointFunctor pointFunctor( dig, domain, 1, 0 );
-                    CurvatureIIFct functor( pointFunctor, K );
-
-                    VisitorRange range( new Visitor( surf, *surf.begin() ) );
-                    ConstIterator ibegin = range.begin();
-                    ConstIterator iend = range.end();
-
-                    std::vector< SCell > contour;
-
-                    for( ; ibegin != iend; ++ibegin )
-                      {
-                        contour.push_back( *ibegin );
-                      }
-
-                    if( contour.size() != pr2size )
-                      {
-                        trace.error() << "ERROR! Not the same border size: " << contour.size() << " " << pr2size << std::endl;
-                        return 0;
-                      }
-
-                    std::vector< double > resultat( contour.size() );
-                    std::vector< double > re( contour.size() );
-
-                    trace.info() << "step A." << std::endl;
-
-#ifdef WITH_OPENMP
-#pragma omp parallel for schedule(dynamic)
-#endif
-                    for( unsigned int ii = 0; ii < pr2size; ++ii )
-                      {
-                        double max = v_statMSEL[ pr2size - 1 - ii ].max();
-                        re[ii] = (k * (max * max)) * h;
-                      }
-
-                    trace.info() << "step B.1" << std::endl;
-
-                    ///WAIT
-
-                    trace.info() << "step B.2" << std::endl;
-
-#ifdef WITH_OPENMP
-#pragma omp parallel for schedule(dynamic)
-
-                    for( unsigned int ii = 0; ii < pr2size; ++ii )
-                      {
-                        Estimator intinv( K, functor );
-                        intinv.init( h, re[ii] );
-                        resultat[ii] = intinv.eval( contour.begin() + ii );
-                      }
-#else
-                    Estimator intinv( K, functor );
-                    double last_re = -1.0;
-                    for( unsigned int ii = 0; ii < pr2size; ++ii )
-                      {
-                        if( last_re != re[ii] )
+                        for( unsigned int ii = 0; ii < pr2size; ++ii )
                           {
-                            last_re = re[ii];
-                            intinv.init( h, last_re );
+                            file << v_curvatures[ii] << std::endl;
+//                            file2 << v_estimated_radius[ii] << std::endl;
+//                            file4 << v_radius[v_registration[ii]] << std::endl;
                           }
-                        resultat[ii] = intinv.eval( contour.begin() + ii );
-                      }
-#endif
 
-                    trace.info() << "step C.1" << std::endl;
+                        trace.endBlock();
 
-                    /// WAIT
-
-                    trace.info() << "step C.2" << std::endl;
-
-                    for( unsigned int ii = 0; ii < pr2size; ++ii )
-                      {
-                        file << resultat[ii] << std::endl;
-                        file2 << re[ii] << std::endl;
                       }
 
-                    trace.info() << "step D." << std::endl;
+                    double time = c.stopClock();
+                    file << "# Time: " << time << std::endl;
 
+                    file.close();
+//                    file2.close();
+//                    file3.close();
+//                    file4.close();
                   }
 
-                double time = c.stopClock();
-                file << "# Time: " << time << std::endl;
-
-                file.close();
-                file2.close();
-              }
-
-            /////// local median
-            if( optionsII.testsII.at(5) != '0' )
-              {
-                c.startClock();
-
-                char full_filename[360];
-                sprintf( full_filename, "%s%s", filename.c_str(), "_II_curvature_local_median.dat" );
-                std::ofstream file( full_filename );
-
-                file << "# h = " << h << std::endl;
-                file << "# Integral Invariant curvature estimation" << std::endl;
-                file << "# range size = " << pointsRange.size() << std::endl;
-                if ( withNoise )
+                /////// local median
+                if( optionsII.testsII.at(5) != '0' )
                   {
-                    file << "# noise level (init) = " << noiseLevel/h << std::endl;
-                    file << "# noise level (current) = " << noiseLevel << std::endl;
-                  }
+                    c.startClock();
 
-                if( optionsII.radius <= 0.0 )
-                  {
-                    optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
-                    file << "# Estimated radius: " << optionsII.radius << std::endl;
-                  }
+                    char full_filename[360];
+                    sprintf( full_filename, "%s%s%u%s", filename.c_str(), "_II_curvature_local_median_with_", optionsII.nbKernels , "kernels.dat" );
+                    std::ofstream file( full_filename );
 
-                double k = optionsII.cste;
-
-                ///////////
-                char full_filename2[360];
-                sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_median_re.dat" );
-                std::ofstream file2( full_filename2 );
-                ///////////
-
-                if ( withNoise )
-                  {
-                    trace.error() << "not yet" << std::endl;
-                  }
-                else
-                  {
-                    typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
-                    typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
-                    typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
-                    typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
-                    typedef IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct > Estimator;
-                    typedef DepthFirstVisitor< DigSurface > Visitor;
-                    typedef GraphVisitorRange< Visitor > VisitorRange;
-                    typedef typename VisitorRange::ConstIterator ConstIterator;
-
-                    LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
-                    DigSurface surf( LightImplDigSurf );
-
-                    MyPointFunctor pointFunctor( dig, domain, 1, 0 );
-                    CurvatureIIFct functor( pointFunctor, K );
-
-                    VisitorRange range( new Visitor( surf, *surf.begin() ) );
-                    ConstIterator ibegin = range.begin();
-                    ConstIterator iend = range.end();
-
-                    std::vector< SCell > contour;
-
-                    for( ; ibegin != iend; ++ibegin )
+                    file << "# h = " << h << std::endl;
+                    file << "# Integral Invariant curvature estimation" << std::endl;
+                    file << "# range size = " << pointsRange.size() << std::endl;
+                    if ( withNoise )
                       {
-                        contour.push_back( *ibegin );
+                        file << "# noise level (init) = " << noiseLevel/h << std::endl;
+                        file << "# noise level (current) = " << noiseLevel << std::endl;
                       }
 
-                    if( contour.size() != pr2size )
+//                    if( optionsII.radius <= 0.0 )
+//                      {
+//                        optionsII.radius = suggestedSizeIntegralInvariant( h, dig->round( optionsII.center ), pointsRange.begin(), pointsRange.end() );
+//                        file << "# Estimated radius: " << optionsII.radius << std::endl;
+//                      }
+
+                    double k = optionsII.cste;
+                    double minRadiusAABB = optionsII.minRadius; // this is a box.
+
+                    ///////////
+//                    char full_filename2[360];
+//                    sprintf( full_filename2, "%s%s", filename.c_str(), "_II_curvature_local_mean_re.dat" );
+//                    std::ofstream file2( full_filename2 );
+
+//                    char full_filename3[360];
+//                    sprintf( full_filename3, "%s%s", filename.c_str(), "_II_curvature_local_stats.dat" );
+//                    std::ofstream file3( full_filename3 );
+
+//                    char full_filename4[360];
+//                    sprintf( full_filename4, "%s%s", filename.c_str(), "_II_curvature_local_mean_re_used.dat" );
+//                    std::ofstream file4( full_filename2 );
+                    ///////////
+
+                    if ( withNoise )
                       {
-                        trace.error() << "ERROR! Not the same border size: " << contour.size() << " " << pr2size << std::endl;
-                        return 0;
+                        trace.error() << "not yet" << std::endl;
                       }
-
-                    std::vector< double > resultat( contour.size() );
-                    std::vector< double > re( contour.size() );
-
-                    trace.info() << "step A." << std::endl;
-
-#ifdef WITH_OPENMP
-#pragma omp parallel for schedule(dynamic)
-#endif
-                    for( unsigned int ii = 0; ii < pr2size; ++ii )
+                    else
                       {
-                        double median = v_statMSEL[ pr2size - 1 - ii ].median();
-                        re[ii] = (k * (median * median)) * h;
-                      }
+                        typedef LightImplicitDigitalSurface< KSpace, Digitizer > LightImplicitDigSurface;
+                        typedef DigitalSurface< LightImplicitDigSurface > DigSurface;
+                        typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Domain, unsigned int > MyPointFunctor;
+                        typedef FunctorOnCells< MyPointFunctor, KSpace > CurvatureIIFct;
+                        typedef IntegralInvariantMeanCurvatureEstimator< KSpace, CurvatureIIFct > Estimator;
+                        typedef DepthFirstVisitor< DigSurface > Visitor;
+                        typedef GraphVisitorRange< Visitor > VisitorRange;
+                        typedef typename VisitorRange::ConstIterator ConstIterator;
 
-                    trace.info() << "step B.1" << std::endl;
+                        LightImplicitDigSurface LightImplDigSurf( K, *dig, SAdj, bel );
+                        DigSurface surf( LightImplDigSurf );
 
-                    ///WAIT
+                        MyPointFunctor pointFunctor( dig, domain, 1, 0 );
+                        CurvatureIIFct functor( pointFunctor, K );
 
-                    trace.info() << "step B.2" << std::endl;
+                        VisitorRange range( new Visitor( surf, *surf.begin() ) );
+                        ConstIterator ibegin = range.begin();
+                        ConstIterator iend = range.end();
 
-#ifdef WITH_OPENMP
-#pragma omp parallel for schedule(dynamic)
+                        trace.beginBlock("Extracting all surfels...");
 
-                    for( unsigned int ii = 0; ii < pr2size; ++ii )
-                      {
-                        Estimator intinv( K, functor );
-                        intinv.init( h, re[ii] );
-                        resultat[ii] = intinv.eval( contour.begin() + ii );
-                      }
-#else
-                    Estimator intinv( K, functor );
-                    double last_re = -1.0;
-                    for( unsigned int ii = 0; ii < pr2size; ++ii )
-                      {
-                        if( last_re != re[ii] )
+                        std::vector< SCell > contour;
+
+                        for( ; ibegin != iend; ++ibegin )
                           {
-                            last_re = re[ii];
-                            intinv.init( h, last_re );
+                            contour.push_back( *ibegin );
                           }
-                        resultat[ii] = intinv.eval( contour.begin() + ii );
-                      }
+
+                        if( contour.size() != pr2size )
+                          {
+                            trace.error() << "ERROR! Not the same border size: " << contour.size() << " " << pr2size << std::endl;
+                            trace.endBlock();
+                            return 0;
+                          }
+
+                        trace.endBlock();
+
+                        std::vector< double > v_curvatures( contour.size() );
+                        std::vector< double > v_estimated_radius( contour.size() );
+
+                        trace.beginBlock("Computation of radius...");
+
+                        for( Dimension ii = 0; ii < pr2size; ++ii )
+                          {
+                            Dimension current_pos = pr2size - 1 - ii;
+                            double median = v_statMSEL[ current_pos ].median();
+                            double re = (k * (median * median)) * h;
+                            checkSizeRadius( re, h, minRadiusAABB );
+                            v_estimated_radius[ii] = re;
+//                            for( Statistic<double>::ConstIterator itb = v_statMSEL[current_pos].begin(), ite = v_statMSEL[current_pos].end(); itb != ite; ++itb )
+//                              {
+//                                file3 << *itb << " ";
+//                              }
+//                            file3 << std::endl;
+                          }
+
+                        trace.endBlock();
+
+                        trace.beginBlock("Sorting radius & pre-computing estimators...");
+
+                        std::vector< double > v_radius;
+                        std::vector< Dimension > v_registration;
+                        std::vector< Estimator* > v_estimators;
+
+                        if( optionsII.nbKernels > 0 )
+                        {
+                          v_estimators.resize( optionsII.nbKernels );
+                          suggestedRadiusForIntegralInvariantEstimators( v_estimated_radius, v_registration, v_radius, optionsII.nbKernels );
+                          ASSERT(( v_radius.size() == optionsII.nbKernels ));
+
+#ifdef WITH_OPENMP
+#pragma omp parallel for schedule(dynamic)
 #endif
+                          for( Dimension ii = 0; ii < optionsII.nbKernels; ++ii )
+                          {
+                            v_estimators[ii] = new Estimator( K, functor );
+                            v_estimators[ii]->init( h, v_radius[ii] );
 
-                    trace.info() << "step C.1" << std::endl;
+                            std::cout << "estimator #" << ii << " of radius " << v_radius[ii] << " initialized ..." << std::endl;
+                          }
+                        }
 
-                    /// WAIT
+                        trace.endBlock();
 
-                    trace.info() << "step C.2" << std::endl;
+                        ///WAIT
 
-                    for( unsigned int ii = 0; ii < pr2size; ++ii )
-                      {
-                        file << resultat[ii] << std::endl;
-                        file2 << re[ii] << std::endl;
+                        trace.beginBlock("Curvature computation...");
+
+#ifdef WITH_OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+                        for( unsigned int ii = 0; ii < pr2size; ++ii )
+                        {
+                          if( optionsII.nbKernels > 0 )
+                          {
+                            v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( contour.begin() + ii );
+                          }
+                          else
+                          {
+                            Estimator estimator( K, functor );
+                            estimator.init( h, v_estimated_radius[ii] );
+                            v_curvatures[ii] = estimator.eval( contour.begin() + ii );
+                          }
+                        }
+
+                        trace.endBlock();
+
+                        /// WAIT
+//                        for( Dimension ii = 0; ii < nbOfRadius; ++ii )
+//                          {
+//                            //                        delete v_estimators[ii];
+//                          }
+
+                        trace.beginBlock("Exporting results...");
+
+                        for( unsigned int ii = 0; ii < pr2size; ++ii )
+                          {
+                            file << v_curvatures[ii] << std::endl;
+//                            file2 << v_estimated_radius[ii] << std::endl;
+//                            file4 << v_radius[v_registration[ii]] << std::endl;
+                          }
+
+                        trace.endBlock();
+
                       }
 
-                    trace.info() << "step D." << std::endl;
+                    double time = c.stopClock();
+                    file << "# Time: " << time << std::endl;
 
+                    file.close();
+//                    file2.close();
+//                    file3.close();
+//                    file4.close();
                   }
 
-                double time = c.stopClock();
-                file << "# Time: " << time << std::endl;
-
-                file.close();
-                file2.close();
               }
-
           }
-      }
 
-    //delete noisifiedObject;
-    delete dig;
+        //delete noisifiedObject;
+        delete dig;
+      }
+    else
+      {
+        //delete noisifiedObject;
+        delete dig;
+        std::cerr << "[computeLocalEstimations]"
+                  << " error: open digital curve found." << std::endl;
+        return false;
+      }
   }
-  else
+  catch ( InputException e )
   {
-    //delete noisifiedObject;
-    delete dig;
     std::cerr << "[computeLocalEstimations]"
-              << " error: open digital curve found." << std::endl;
+              << " error in finding a bel." << std::endl;
     return false;
   }
-}
-catch ( InputException e )
-{
-  std::cerr << "[computeLocalEstimations]"
-            << " error in finding a bel." << std::endl;
-  return false;
-}
 }
 
 
@@ -1679,7 +1505,7 @@ int main( int argc, char** argv )
       ("shape,s", po::value<std::string>(), "Shape name")
       ("radius,R",  po::value<double>(), "Radius of the shape" )
       //("kernelradius,K",  po::value<double>()->default_value(0.0), "Radius of the convolution kernel (Integral invariants estimators)" )
-      ("alpha",  po::value<double>()->default_value(1.0/3.0), "Alpha parameter for Integral Invariant computation" )
+      //("alpha",  po::value<double>()->default_value(1.0/3.0), "Alpha parameter for Integral Invariant computation" )
       ("axis1,A",  po::value<double>(), "Half big axis of the shape (ellipse)" )
       ("axis2,a",  po::value<double>(), "Half small axis of the shape (ellipse)" )
       ("smallradius,r",  po::value<double>()->default_value(5), "Small radius of the shape" )
@@ -1692,10 +1518,11 @@ int main( int argc, char** argv )
       ("center_y,y",   po::value<double>()->default_value(0.0), "y-coordinate of the shape center (double)" )
       ("gridstep,g",  po::value<double>()->default_value(1.0), "Grid step for the digitization" )
       ("cste",  po::value<double>()->default_value(0.1), "Constante for II estimator" )
+      ("nbKernels",  po::value<unsigned int>()->default_value(0), "Nb of kernels to use (precomputed. 0= don't precomputed them)" )
       ("noise,n",  po::value<double>()->default_value(0.0), "Level of noise to perturb the shape" )
       ("properties",  po::value<std::string>()->default_value("11"), "the i-th property is disabled iff there is a 0 at position i" )
       ("estimators,e",  po::value<std::string>()->default_value("10000"), "the i-th estimator is disabled iff there is a 0 at position i" )
-      ("testsII,t",  po::value<std::string>()->default_value("111111"), "the i-th test for II estimator is disabled iff there is a 0 at position i" )
+      ("testsII,t",  po::value<std::string>()->default_value("1111"), "the i-th test for II estimator is disabled iff there is a 0 at position i" )
       ("lambda,l",  po::value< bool >()->default_value( false ), "Use the shape to get a better approximation of the surface (optional)" );
 
 
@@ -1731,10 +1558,8 @@ int main( int argc, char** argv )
                   << std::endl
                   << "Below are the different tests available for Integral Invariant estimators: " << std::endl
                   << "\t - Global mean maximal segment based radius" << std::endl
-                  << "\t - Global max maximal segment based radius" << std::endl
                   << "\t - Global median maximal segment based radius" << std::endl
                   << "\t - Local mean maximal segment based radius" << std::endl
-                  << "\t - Local max maximal segment based radius" << std::endl
                   << "\t - Local median maximal segment based radius" << std::endl
                   << std::endl
                   << general_opt << std::endl;
@@ -1794,13 +1619,14 @@ int main( int argc, char** argv )
 
   struct OptionsIntegralInvariant< RealPoint > optII;
   //optII.radius = vm["kernelradius"].as<double>();
-  optII.alpha = vm["alpha"].as<double>();
+  //optII.alpha = vm["alpha"].as<double>();
   optII.lambda_optimized = vm["lambda"].as< bool >();
+  optII.nbKernels = vm["nbKernels"].as< unsigned int >();
   optII.center = center;
   optII.cste = vm["cste"].as<double>();
 
-  nb = 6; //number of available tests for II
-  optII.testsII = vm["testsII"].as<std::string>();
+  nb = 4; //number of available tests for II
+  optII.testsII = vm["testsII"].as< std::string >();
   if (optII.testsII.size() < nb)
     {
       trace.error() << " At least " << nb
@@ -1817,6 +1643,8 @@ int main( int argc, char** argv )
       if (!(vm.count("radius"))) missingParam("--radius");
       //if (!(vm.count("kernelradius"))) missingParam("--kernelradius");
       double radius = vm["radius"].as<double>();
+
+      optII.minRadius = radius;
 
       Ball2D<Space> * ball = new Ball2D<Space>( center, radius);
       computeLocalEstimations<Space>( filename, ball, h, optII, options, properties, noiseLevel );
@@ -1838,6 +1666,8 @@ int main( int argc, char** argv )
       double radius = vm["radius"].as<double>();
       double power = vm["power"].as<double>();
 
+      optII.minRadius = radius;
+
       ImplicitRoundedHyperCube<Space> ball( Z2i::Point(0,0), radius, power );
       trace.error()<< "Not available.";
       trace.info()<<std::endl;
@@ -1854,6 +1684,8 @@ int main( int argc, char** argv )
       unsigned int k = vm["k"].as<unsigned int>();
       double phi = vm["phi"].as<double>();
 
+      optII.minRadius = radius - 0.5*varsmallradius;
+
       Flower2D<Space> * flower = new Flower2D<Space>( center, radius, varsmallradius, k, phi );
       computeLocalEstimations<Space>( filename, flower, h, optII, options, properties, noiseLevel );
       delete flower;
@@ -1867,6 +1699,8 @@ int main( int argc, char** argv )
       double radius = vm["radius"].as<double>();
       unsigned int k = vm["k"].as<unsigned int>();
       double phi = vm["phi"].as<double>();
+
+      optII.minRadius = radius;
 
       NGon2D<Space> * object = new NGon2D<Space>( center, radius, k, phi );
       computeLocalEstimations<Space>( filename, object, h, optII, options, properties, noiseLevel );
@@ -1884,6 +1718,8 @@ int main( int argc, char** argv )
       unsigned int k = vm["k"].as<unsigned int>();
       double phi = vm["phi"].as<double>();
 
+      optII.minRadius = radius - 0.5*varsmallradius;
+
       AccFlower2D<Space> * accflower = new AccFlower2D<Space>( center, radius, varsmallradius, k, phi );
       computeLocalEstimations<Space>( filename, accflower, h, optII, options, properties, noiseLevel );
       delete accflower;
@@ -1897,6 +1733,8 @@ int main( int argc, char** argv )
       double a1 = vm["axis1"].as<double>();
       double a2 = vm["axis2"].as<double>();
       double phi = vm["phi"].as<double>();
+
+      optII.minRadius = a2;
 
       Ellipse2D<Space> * ellipse = new Ellipse2D<Space>( center, a1, a2, phi );
       computeLocalEstimations<Space>( filename, ellipse, h, optII, options, properties, noiseLevel );
