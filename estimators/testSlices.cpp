@@ -352,10 +352,10 @@ void computeRadius( std::vector< Surfel > & surfels,
 
     double re = constante * median * median * h;
 
-    if( re < 5.0 )
-    {
-      re = 5.0;
-    }
+//    if( re < 5.0 )
+//    {
+//      re = 5.0;
+//    }
 
     radius[ii] = re;
   }
@@ -368,7 +368,7 @@ void computeCurvature( const Z3i::KSpace & K,
                        const std::vector< double > & radius,
                        std::vector< Quantity > & curvatures )
 {
-  typedef IntegralInvariantGaussianCurvatureEstimator< Z3i::KSpace, Functor > GaussEstimator;
+  typedef IntegralInvariantMeanCurvatureEstimator< Z3i::KSpace, Functor > GaussEstimator;
 
   const Dimension surfels_size = surfels.size();
 
@@ -381,7 +381,7 @@ void computeCurvature( const Z3i::KSpace & K,
   for( Dimension ii = 0; ii < surfels_size; ++ii )
   {
     double re = radius[ ii ];
-    re = ( re < 10.0 )? 10.0 : re;
+    //re = ( re < 10.0 )? 10.0 : re;
 
     GaussEstimator estimator ( K, functor );
     estimator.init( 1.0, radius[ ii ]);

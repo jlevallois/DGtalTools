@@ -135,9 +135,9 @@ int ComputeStatistics ( const std::string & inputdata1,
             }
         }
 
-        if ( s1 == "NA" || s1 == "-nan" || s1 == "-inf" || s1 == "inf" || s1 == "" || s1 == " " )
+        if ( s1 == "NA" || s1 == "-nan" || s1 == "-inf" || s1 == "inf" || s1 == "" || s1 == " " || s1 == "-42" )
             continue;
-        if ( s2 == "NA" || s2 == "-nan" || s2 == "-inf" || s2 == "inf" || s2 == "" || s2 == " " )
+        if ( s2 == "NA" || s2 == "-nan" || s2 == "-inf" || s2 == "inf" || s2 == "" || s2 == " " || s2 == "-42" )
             continue;
 
         std::vector< std::string > elems1;

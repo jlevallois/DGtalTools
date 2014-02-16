@@ -243,7 +243,7 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
             ++l;
           statD[ii].addValue( (double) l );*/
       Vector v = *( sc.end() - 1 ) - *( sc.begin() );
-      statE[ii].addValue( v.norm() );
+      statE[ii].addValue( v.norm1() );
       //          std::cout << " v=" << v.norm() << std::endl;
     }
     /////////////
@@ -511,16 +511,20 @@ void computeGlobalSegment( std::vector< Surfel > & surfels,
 
 void checkSizeRadius( double & re,
                       const double h,
-                      const double minRadiusAABB )
+                      const double minRadiusAABB,
+                      const double minValue = 5.0,
+                      const double defaultValue = 10.0 )
 {
-  if(( re / h ) < 5.0 ) /// 	ridiculously small radius check
-  {
-    re = 5.0 * h;
-  }
-  if( re > ( 0.75 * minRadiusAABB ))
-  {
-    re = 0.75 * minRadiusAABB;
-  }
+    if( re/h <= minValue ) /// 	ridiculously small radius check
+    {
+  //    trace.error() << "re small " << re << std::endl;
+  //    re = 5.0 * h;
+      re = defaultValue;//*h;
+    }
+    if( re > ( 0.75 * minRadiusAABB ))
+    {
+      re = 0.75 * minRadiusAABB;
+    }
 }
 
 struct Euclidean
@@ -547,13 +551,15 @@ void suggestedRadiusForIntegralInvariantEstimators( const std::vector< double > 
 
 template< typename Surfel >
 Dimension computeRadius( std::vector< Surfel > & surfels,
-                    std::map< Surfel, std::pair< Statistic< double >, Statistic< double > > > & segments,
-                    const double constante,
-                    const double h,
-                    std::vector< double > & radius,
-                    const double minRadiusAABB,
-                    const std::string & prop,
-                    const std::string & mode )
+                         std::map< Surfel, std::pair< Statistic< double >, Statistic< double > > > & segments,
+                         const double constante,
+                         const double h,
+                         std::vector< double > & radius,
+                         const double minRadiusAABB,
+                         const std::string & prop,
+                         const std::string & mode,
+                         const double minValue = 5.0,
+                         const double defaultValue = 10.0 )
 {
   const Dimension surfels_size = surfels.size();
   std::map< double, unsigned int > nbKernelRadius;
@@ -625,7 +631,7 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
 
     double re = constante * result * result * h;
 
-    checkSizeRadius( re, h, minRadiusAABB );
+    checkSizeRadius( re, h, minRadiusAABB, minValue, defaultValue );
 
     radius[ii] = re;
 
@@ -1478,7 +1484,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "max", optionsII.modeSegments );
+            double min_re = 5;
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "max", optionsII.modeSegments, min_re, -42 );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -1567,7 +1574,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments );
+            double min_re = 5;
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments, min_re, -42.0 );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -1622,6 +1630,8 @@ compareShapeEstimators( const std::string & filename,
               }
               else
               {
+                if( v_estimated_radius[ii] == -42)
+                  continue;
                 Estimator estimator( K, functor );
                 estimator.init( h, v_estimated_radius[ii] );
                 v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
@@ -1656,7 +1666,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > radius;
             radius.resize( size_surfels );
-            computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "median", optionsII.modeSegments );
+            double min_re = 5;
+            computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "median", optionsII.modeSegments, min_re, -42 );
 
             trace.endBlock();
 
@@ -1711,7 +1722,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "min", optionsII.modeSegments );
+            double min_re = 5;
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "min", optionsII.modeSegments, min_re, -42 );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -1766,6 +1778,8 @@ compareShapeEstimators( const std::string & filename,
               }
               else
               {
+                if( v_estimated_radius[ii] == -42)
+                  continue;
                 Estimator estimator( K, functor );
                 estimator.init( h, v_estimated_radius[ii] );
                 v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
