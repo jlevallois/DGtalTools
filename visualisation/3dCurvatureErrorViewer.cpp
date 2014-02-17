@@ -255,7 +255,7 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
             ++l;
           statD[ii].addValue( (double) l );*/
       Vector v = *( sc.end() - 1 ) - *( sc.begin() );
-      statE[ii].addValue( v.norm1( ) );
+      statE[ii].addValue( v.norm( ) );
       //          std::cout << " v=" << v.norm() << std::endl;
     }
     /////////////
@@ -528,19 +528,19 @@ void computeGlobalSegment( std::vector< Surfel > & surfels,
 void checkSizeRadius( double & re,
                       const double h,
                       const double minRadiusAABB,
-                      const double minValue = 5.0,
+                      const unsigned int minValue = 5,
                       const double defaultValue = 10.0 )
 {
-    if( re/h <= minValue ) /// 	ridiculously small radius check
-    {
-  //    trace.error() << "re small " << re << std::endl;
-  //    re = 5.0 * h;
-      re = defaultValue;//*h;
-    }
-    if( re > ( 0.75 * minRadiusAABB ))
-    {
-      re = 0.75 * minRadiusAABB;
-    }
+  //    if( re/h <= minValue ) /// 	ridiculously small radius check
+  //    {
+  //  //    trace.error() << "re small " << re << std::endl;
+  //  //    re = 5.0 * h;
+  //      re = defaultValue;//*h;
+  //    }
+  if( re > ( 0.75 * minRadiusAABB ))
+  {
+    re = 0.75 * minRadiusAABB;
+  }
 }
 
 struct Euclidean
@@ -574,7 +574,7 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
                          const double minRadiusAABB,
                          const std::string & prop,
                          const std::string & mode,
-                         const double minValue = 5.0,
+                         const unsigned int minValue = 5,
                          const double defaultValue = 10.0 )
 {
   const Dimension surfels_size = surfels.size();
@@ -633,6 +633,10 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
     else if( prop == "mean" )
     {
       result = stat.mean();
+      if( result < minValue )
+      {
+        result = defaultValue;
+      }
     }
     else if( prop == "median" )
     {
@@ -645,9 +649,13 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
 
     ASSERT(( result != -1.0 ));
 
-    double re = constante * result * result * h;
+    double re = -1.0;
+    if( result == defaultValue )
+      re = defaultValue;
+    else
+      re = constante * result * result * h;
 
-    checkSizeRadius( re, h, minRadiusAABB, minValue, defaultValue );
+    checkSizeRadius( re, h, minRadiusAABB );
 
     radius[ii] = re;
 
@@ -692,7 +700,8 @@ void computeCurvatureWithLocalSegments( const Z3i::KSpace & K,
 
 template <typename Space, typename Shape>
 bool
-compareShapeEstimators( const std::string & filename,
+compareShapeEstimators( int argc, char** argv,
+                        const std::string & filename,
                         const Shape * aShape,
                         const typename Space::RealPoint & border_min,
                         const typename Space::RealPoint & border_max,
@@ -1595,11 +1604,11 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-//            double global_mean = allSegments.mean();
-//            double global_re = optionsII.constante * global_mean * global_mean * h;
+            //            double global_mean = allSegments.mean();
+            //            double global_re = optionsII.constante * global_mean * global_mean * h;
             double min_re = 5;//optionsII.constante * 2 * 2 * h;
             trace.error() << "min re " << min_re << std::endl;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments, min_re, -42.0 );
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments, min_re, -42 );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -1652,16 +1661,30 @@ compareShapeEstimators( const std::string & filename,
               if( optionsII.nbKernels > 0 )
               {
                 //                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
-                v_curvatures_II[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
-                //                v_curvatures_II[ii] = v_radius[v_registration[ ii ]];
+                if( v_radius[ v_registration[ii]] == -42 )
+                {
+                  v_curvatures_II[ii] = 0.25;//-42;
+                }
+                else
+                {
+                  v_curvatures_II[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+//                  v_curvatures_II[ii] = v_radius[v_registration[ ii ]];
+                }
               }
               else
               {
-                //                Estimator estimator( K, functor );
-                //                estimator.init( h, v_estimated_radius[ii] );
-                //                v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
-                //                v_curvatures_II[ii] = estimator.eval( surfels.begin() + ii );
-                v_curvatures_II[ii] = v_estimated_radius[ii];
+                if( v_estimated_radius[ii] == -42 )
+                {
+                  v_curvatures_II[ii] = -42;
+                }
+                else
+                {
+                                  Estimator estimator( K, functor );
+                                  estimator.init( h, v_estimated_radius[ii] );
+//                                  v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
+                                  v_curvatures_II[ii] = estimator.eval( surfels.begin() + ii );
+//                  v_curvatures_II[ii] = v_estimated_radius[ii];
+                }
               }
             }
 
@@ -2693,8 +2716,13 @@ compareShapeEstimators( const std::string & filename,
       double max = -500000;
       for( Dimension ii = 0; ii < v_curvatures_II.size(); ++ii )
       {
-        v_error[ii] = v_curvatures_II[ii];
-        //        v_error[ii] = std::abs ( v_curvatures_true[ii] - v_curvatures_II[ii] );
+        if(v_curvatures_II[ii] == -42)
+        {
+          v_error[ii] = -42;
+          continue;
+        }
+//        v_error[ii] = v_curvatures_II[ii];
+                v_error[ii] = std::abs ( v_curvatures_true[ii] - v_curvatures_II[ii] );
 
         if( v_error[ii] < min )
           min = v_error[ii];
@@ -2706,8 +2734,6 @@ compareShapeEstimators( const std::string & filename,
 
       trace.info() << "min: " << min << " max: " << max << std::endl;
 
-      int argc;
-      char** argv;
       QApplication application( argc, argv );
       typedef Viewer3D< Z3i::Space, Z3i::KSpace > Viewer;
       //typedef Board3D< Z3i::Space, Z3i::KSpace> Board3D;
@@ -2725,12 +2751,12 @@ compareShapeEstimators( const std::string & filename,
 
       for ( unsigned int ii = 0; ii < surfels.size(); ++ii )
       {
-        //        if( v_error[ii] == -42 )
-        //        {
-        //          viewer << CustomColors3D( AXIS_COLOR_GREEN, AXIS_COLOR_GREEN)
-        //               << surfels[ii];
-        //        }
-        //        else
+        if( v_error[ii] == -42 )
+        {
+          viewer << CustomColors3D( AXIS_COLOR_GREEN, AXIS_COLOR_GREEN)
+                 << surfels[ii];
+        }
+        else
         {
           viewer << CustomColors3D( Color::Black, cmap_grad( v_error[ ii ] ))
                  << surfels[ii];
@@ -2930,6 +2956,7 @@ int main( int argc, char** argv )
   optII.typeSegments = vm["typeSegments"].as< std::string >();
 
   compareShapeEstimators< Z3i::Space, ImplicitShape > (
+        argc, argv,
         file_export,
         shape,
         border_min, border_max,

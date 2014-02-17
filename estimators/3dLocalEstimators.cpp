@@ -466,7 +466,8 @@ template< typename Surfel >
 void computeGlobalSegment( std::vector< Surfel > & surfels,
                            std::map< Surfel, std::pair< Statistic< double >, Statistic< double > > > & segments,
                            Statistic< double > & allSegments,
-                           const std::string & mode )
+                           const std::string & mode,
+                           const unsigned int minValue = 5)
 {
   const Dimension surfels_size = surfels.size();
 
@@ -474,6 +475,11 @@ void computeGlobalSegment( std::vector< Surfel > & surfels,
   {
     Statistic< double > & stata = segments[ surfels[ii] ].first;
     Statistic< double > & statb = segments[ surfels[ii] ].second;
+
+//    if( stata.mean() < minValue && statb.mean() < minValue )
+//    {
+//      continue;
+//    }
 
     if( mode == "max" )
     {
@@ -512,20 +518,21 @@ void computeGlobalSegment( std::vector< Surfel > & surfels,
 void checkSizeRadius( double & re,
                       const double h,
                       const double minRadiusAABB,
-                      const double minValue = 5.0,
+                      const unsigned int minValue = 5,
                       const double defaultValue = 10.0 )
 {
-    if( re/h <= minValue ) /// 	ridiculously small radius check
-    {
-  //    trace.error() << "re small " << re << std::endl;
-  //    re = 5.0 * h;
-      re = defaultValue;//*h;
-    }
-    if( re > ( 0.75 * minRadiusAABB ))
-    {
-      re = 0.75 * minRadiusAABB;
-    }
+  //    if( re/h <= minValue ) /// 	ridiculously small radius check
+  //    {
+  //  //    trace.error() << "re small " << re << std::endl;
+  //  //    re = 5.0 * h;
+  //      re = defaultValue;//*h;
+  //    }
+  if( re > ( 0.75 * minRadiusAABB ))
+  {
+    re = 0.75 * minRadiusAABB;
+  }
 }
+
 
 struct Euclidean
 {
@@ -613,23 +620,43 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
     if( prop == "min" )
     {
       result = stat.min();
+      if( result < minValue )
+      {
+        result = defaultValue;
+      }
     }
     else if( prop == "mean" )
     {
       result = stat.mean();
+      if( result < minValue )
+      {
+        result = defaultValue;
+      }
     }
     else if( prop == "median" )
     {
       result = stat.median();
+      if( result < minValue )
+      {
+        result = defaultValue;
+      }
     }
     else if( prop == "max" )
     {
       result = stat.max();
+      if( result < minValue )
+      {
+        result = defaultValue;
+      }
     }
 
     ASSERT(( result != -1.0 ));
 
-    double re = constante * result * result * h;
+    double re = -1.0;
+    if( result == defaultValue )
+      re = constante * defaultValue * defaultValue * h; //defaultValue; //
+    else
+      re = constante * result * result * h;
 
     checkSizeRadius( re, h, minRadiusAABB, minValue, defaultValue );
 
@@ -1536,13 +1563,27 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+                if( v_radius[ v_registration[ii]] == -42 )
+                {
+                  v_curvatures[ii] = -42;
+                }
+                else
+                {
+                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+                }
               }
               else
               {
-                Estimator estimator( K, functor );
-                estimator.init( h, v_estimated_radius[ii] );
-                v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
+                if( v_estimated_radius[ii] == -42 )
+                {
+                  v_curvatures[ii] = -42;
+                }
+                else
+                {
+                  Estimator estimator( K, functor );
+                  estimator.init( h, v_estimated_radius[ii] );
+                  v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
+                }
               }
             }
 
@@ -1575,7 +1616,7 @@ compareShapeEstimators( const std::string & filename,
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
             double min_re = 5;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments, min_re, -42.0 );
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments, min_re, 5 );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -1626,15 +1667,27 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+                if( v_radius[ v_registration[ii]] == -42 )
+                {
+                  v_curvatures[ii] = -42;
+                }
+                else
+                {
+                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+                }
               }
               else
               {
-                if( v_estimated_radius[ii] == -42)
-                  continue;
-                Estimator estimator( K, functor );
-                estimator.init( h, v_estimated_radius[ii] );
-                v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
+                if( v_estimated_radius[ii] == -42 )
+                {
+                  v_curvatures[ii] = -42;
+                }
+                else
+                {
+                  Estimator estimator( K, functor );
+                  estimator.init( h, v_estimated_radius[ii] );
+                  v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
+                }
               }
             }
 
@@ -1656,7 +1709,7 @@ compareShapeEstimators( const std::string & filename,
           if( optionsII.tests.at(6) != '0' )
           {
             char full_filename[360];
-            sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_mean_curvature_local_median_segments_", optionsII.modeSegments.c_str() ,".dat" );
+            sprintf( full_filename, "%s%s%s%s%u%s", filename.c_str(), "_II_mean_curvature_local_median_segments_", optionsII.modeSegments.c_str(), "_with_", optionsII.nbKernels, "kernels.dat" );
             std::ofstream file( full_filename );
 
             file << "# h = " << h << std::endl;
@@ -1664,46 +1717,94 @@ compareShapeEstimators( const std::string & filename,
 
             trace.beginBlock("Computation of radius...");
 
-            std::vector< double > radius;
-            radius.resize( size_surfels );
+            std::vector< double > v_estimated_radius;
+            v_estimated_radius.resize( size_surfels );
             double min_re = 5;
-            computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "median", optionsII.modeSegments, min_re, -42 );
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "median", optionsII.modeSegments, min_re, -42 );
+            if( nbKernelsRadius < optionsII.nbKernels )
+            {
+              optionsII.nbKernels = nbKernelsRadius;
+            }
 
+            ASSERT(( v_estimated_radius.size() == size_surfels ));
             trace.endBlock();
 
             typedef IntegralInvariantMeanCurvatureEstimator< Z3i::KSpace, MySpelFunctor > Estimator;
 
-            ASSERT(( radius.size() == size_surfels ));
+            trace.beginBlock("Sorting radius & pre-computing estimators...");
+
+            std::vector< double > v_radius;
+            std::vector< Dimension > v_registration;
+            std::vector< Estimator* > v_estimators;
+
+            if( optionsII.nbKernels > 0 )
+            {
+              v_estimators.resize( optionsII.nbKernels );
+              suggestedRadiusForIntegralInvariantEstimators( v_estimated_radius, v_registration, v_radius, optionsII.nbKernels );
+              ASSERT(( v_radius.size() == optionsII.nbKernels ));
+
+#ifdef WITH_OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+              for( Dimension ii = 0; ii < optionsII.nbKernels; ++ii )
+              {
+                v_estimators[ii] = new Estimator( K, functor );
+                v_estimators[ii]->init( h, v_radius[ii] );
+
+                std::cout << "estimator #" << ii << " of radius " << v_radius[ii] << " initialized ..." << std::endl;
+              }
+            }
+
+            trace.endBlock();
+
 
             trace.beginBlock("II mean curvature computation with local median segments...");
 
 
-#ifdef WITH_OPENMP
             typedef double Quantity;
-            std::vector< Quantity > curvatures( size_surfels, Quantity(0) );
+            std::vector< Quantity > v_curvatures( size_surfels, Quantity(0) );
 
+#ifdef WITH_OPENMP
 #pragma omp parallel for schedule(dynamic)
-            for( Dimension ii = 0; ii < size_surfels; ++ii )
-            {
-              Estimator estimator ( K, functor );
-              estimator.init( h, radius[ ii ]);
-              curvatures[ii] = estimator.eval( &surfels[ ii ] );
-            }
-
-            for( Dimension ii = 0; ii < size_surfels; ++ii )
-            {
-              file << curvatures[ii] << std::endl;
-            }
-#else
-            for( Dimension ii = 0; ii < size_surfels; ++ii )
-            {
-              double re = radius[ ii ];
-
-              Estimator estimator ( K, functor );
-              estimator.init( h, radius[ ii ]);
-              file << estimator.eval( &surfels[ ii ] ) << std::endl;
-            }
 #endif
+            for( Dimension ii = 0; ii < size_surfels; ++ii )
+            {
+              if( optionsII.nbKernels > 0 )
+              {
+                if( v_radius[ v_registration[ii]] == -42 )
+                {
+                  v_curvatures[ii] = -42;
+                }
+                else
+                {
+                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+                }
+              }
+              else
+              {
+                if( v_estimated_radius[ii] == -42 )
+                {
+                  v_curvatures[ii] = -42;
+                }
+                else
+                {
+                  Estimator estimator( K, functor );
+                  estimator.init( h, v_estimated_radius[ii] );
+                  v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
+                }
+              }
+            }
+
+            trace.endBlock();
+
+            trace.beginBlock("Exporting results...");
+
+            for( unsigned int ii = 0; ii < size_surfels; ++ii )
+            {
+              file << v_curvatures[ii] << std::endl;
+              //                            file2 << v_estimated_radius[ii] << std::endl;
+              //                            file4 << v_radius[v_registration[ii]] << std::endl;
+            }
 
             trace.endBlock();
           }
@@ -1774,15 +1875,27 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+                if( v_radius[ v_registration[ii]] == -42 )
+                {
+                  v_curvatures[ii] = -42;
+                }
+                else
+                {
+                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+                }
               }
               else
               {
-                if( v_estimated_radius[ii] == -42)
-                  continue;
-                Estimator estimator( K, functor );
-                estimator.init( h, v_estimated_radius[ii] );
-                v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
+                if( v_estimated_radius[ii] == -42 )
+                {
+                  v_curvatures[ii] = -42;
+                }
+                else
+                {
+                  Estimator estimator( K, functor );
+                  estimator.init( h, v_estimated_radius[ii] );
+                  v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
+                }
               }
             }
 
@@ -2358,7 +2471,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "max", optionsII.modeSegments );
+            double min_re = 5;
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "max", optionsII.modeSegments, min_re, -42 );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -2408,13 +2522,33 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
+                if( v_radius[ v_registration[ii]] == -42 )
+                {
+                  Quantity thisIsEmpty;
+                  thisIsEmpty.k1 = -42;
+                  thisIsEmpty.k2 = -42;
+                  v_curvatures[ii] = thisIsEmpty;
+                }
+                else
+                {
+                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
+                }
               }
               else
               {
-                Estimator estimator( K, functor );
-                estimator.init( h, v_estimated_radius[ii] );
-                v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
+                if( v_estimated_radius[ii] == -42 )
+                {
+                  Quantity thisIsEmpty;
+                  thisIsEmpty.k1 = -42;
+                  thisIsEmpty.k2 = -42;
+                  v_curvatures[ii] = thisIsEmpty;
+                }
+                else
+                {
+                  Estimator estimator( K, functor );
+                  estimator.init( h, v_estimated_radius[ii] );
+                  v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
+                }
               }
             }
 
@@ -2446,7 +2580,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments );
+            double min_re = 5;
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments, min_re, 5 );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -2496,13 +2631,33 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
+                if( v_radius[ v_registration[ii]] == -42 )
+                {
+                  Quantity thisIsEmpty;
+                  thisIsEmpty.k1 = -42;
+                  thisIsEmpty.k2 = -42;
+                  v_curvatures[ii] = thisIsEmpty;
+                }
+                else
+                {
+                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
+                }
               }
               else
               {
-                Estimator estimator( K, functor );
-                estimator.init( h, v_estimated_radius[ii] );
-                v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
+                if( v_estimated_radius[ii] == -42 )
+                {
+                  Quantity thisIsEmpty;
+                  thisIsEmpty.k1 = -42;
+                  thisIsEmpty.k2 = -42;
+                  v_curvatures[ii] = thisIsEmpty;
+                }
+                else
+                {
+                  Estimator estimator( K, functor );
+                  estimator.init( h, v_estimated_radius[ii] );
+                  v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
+                }
               }
             }
 
@@ -2524,7 +2679,7 @@ compareShapeEstimators( const std::string & filename,
           if( optionsII.tests.at(6) != '0' )
           {
             char full_filename[360];
-            sprintf( full_filename, "%s%s%s%s", filename.c_str(), "_II_principal_curvatures_local_median_segments_", optionsII.modeSegments.c_str() ,".dat" );
+            sprintf( full_filename, "%s%s%s%s%u%s", filename.c_str(), "_II_principal_curvatures_local_median_segments_", optionsII.modeSegments.c_str(), "_with_", optionsII.nbKernels, "kernels.dat" );
             std::ofstream file( full_filename );
 
             file << "# h = " << h << std::endl;
@@ -2532,45 +2687,99 @@ compareShapeEstimators( const std::string & filename,
 
             trace.beginBlock("Computation of radius...");
 
-            std::vector< double > radius;
-            radius.resize( size_surfels );
-            computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "median", optionsII.modeSegments );
+            std::vector< double > v_estimated_radius;
+            v_estimated_radius.resize( size_surfels );
+            double min_re = 5;
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "median", optionsII.modeSegments, min_re, -42 );
+            if( nbKernelsRadius < optionsII.nbKernels )
+            {
+              optionsII.nbKernels = nbKernelsRadius;
+            }
+
+            ASSERT(( v_estimated_radius.size() == size_surfels ));
 
             trace.endBlock();
 
             typedef IntegralInvariantGaussianCurvatureEstimator< Z3i::KSpace, MySpelFunctor > Estimator;
 
-            ASSERT(( radius.size() == size_surfels ));
+            trace.beginBlock("Sorting radius & pre-computing estimators...");
+
+            std::vector< double > v_radius;
+            std::vector< Dimension > v_registration;
+            std::vector< Estimator* > v_estimators;
+
+            if( optionsII.nbKernels > 0 )
+            {
+              v_estimators.resize( optionsII.nbKernels );
+              suggestedRadiusForIntegralInvariantEstimators( v_estimated_radius, v_registration, v_radius, optionsII.nbKernels );
+              ASSERT(( v_radius.size() == optionsII.nbKernels ));
+
+#ifdef WITH_OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+              for( Dimension ii = 0; ii < optionsII.nbKernels; ++ii )
+              {
+                v_estimators[ii] = new Estimator( K, functor );
+                v_estimators[ii]->init( h, v_radius[ii] );
+
+                std::cout << "estimator #" << ii << " of radius " << v_radius[ii] << " initialized ..." << std::endl;
+              }
+            }
+
+            trace.endBlock();
 
             trace.beginBlock("II Principal curvatures computation with local median segments...");
 
+            typedef CurvatureInformations Quantity;
+            std::vector< Quantity > v_curvatures( size_surfels, Quantity() );
 
 #ifdef WITH_OPENMP
-            typedef CurvatureInformations Quantity;
-            std::vector< Quantity > curvatures( size_surfels, Quantity() );
-
 #pragma omp parallel for schedule(dynamic)
-            for( Dimension ii = 0; ii < size_surfels; ++ii )
-            {
-              Estimator estimator ( K, functor );
-              estimator.init( h, radius[ ii ]);
-              curvatures[ii] = estimator.evalPrincipalCurvatures( &surfels[ ii ] );
-            }
-
-            for( Dimension ii = 0; ii < size_surfels; ++ii )
-            {
-              file << curvatures[ii] << std::endl;
-            }
-#else
-            for( Dimension ii = 0; ii < size_surfels; ++ii )
-            {
-              double re = radius[ ii ];
-
-              Estimator estimator ( K, functor );
-              estimator.init( h, radius[ ii ]);
-              file << estimator.evalPrincipalCurvatures( &surfels[ ii ] ) << std::endl;
-            }
 #endif
+            for( Dimension ii = 0; ii < size_surfels; ++ii )
+            {
+              if( optionsII.nbKernels > 0 )
+              {
+                if( v_radius[ v_registration[ii]] == -42 )
+                {
+                  Quantity thisIsEmpty;
+                  thisIsEmpty.k1 = -42;
+                  thisIsEmpty.k2 = -42;
+                  v_curvatures[ii] = thisIsEmpty;
+                }
+                else
+                {
+                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
+                }
+              }
+              else
+              {
+                if( v_estimated_radius[ii] == -42 )
+                {
+                  Quantity thisIsEmpty;
+                  thisIsEmpty.k1 = -42;
+                  thisIsEmpty.k2 = -42;
+                  v_curvatures[ii] = thisIsEmpty;
+                }
+                else
+                {
+                  Estimator estimator( K, functor );
+                  estimator.init( h, v_estimated_radius[ii] );
+                  v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
+                }
+              }
+            }
+
+            trace.endBlock();
+
+            trace.beginBlock("Exporting results...");
+
+            for( unsigned int ii = 0; ii < size_surfels; ++ii )
+            {
+              file << v_curvatures[ii] << std::endl;
+              //                            file2 << v_estimated_radius[ii] << std::endl;
+              //                            file4 << v_radius[v_registration[ii]] << std::endl;
+            }
 
             trace.endBlock();
           }
@@ -2589,7 +2798,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "min", optionsII.modeSegments );
+            double min_re = 5;
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "min", optionsII.modeSegments, min_re, -42 );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -2639,13 +2849,33 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
+                if( v_radius[ v_registration[ii]] == -42 )
+                {
+                  Quantity thisIsEmpty;
+                  thisIsEmpty.k1 = -42;
+                  thisIsEmpty.k2 = -42;
+                  v_curvatures[ii] = thisIsEmpty;
+                }
+                else
+                {
+                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
+                }
               }
               else
               {
-                Estimator estimator( K, functor );
-                estimator.init( h, v_estimated_radius[ii] );
-                v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
+                if( v_estimated_radius[ii] == -42 )
+                {
+                  Quantity thisIsEmpty;
+                  thisIsEmpty.k1 = -42;
+                  thisIsEmpty.k2 = -42;
+                  v_curvatures[ii] = thisIsEmpty;
+                }
+                else
+                {
+                  Estimator estimator( K, functor );
+                  estimator.init( h, v_estimated_radius[ii] );
+                  v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
+                }
               }
             }
 
