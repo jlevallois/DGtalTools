@@ -89,9 +89,6 @@
 
 using namespace DGtal;
 
-#undef WITH_OPENMP
-
-
 /**
  * Global vectors to describe the available shapes and their
  * parameters.
@@ -961,10 +958,11 @@ computeLocalEstimations( const std::string & filename,
             double re = (k * (mean * mean)) * h;
             checkSizeRadius( re, h, minRadiusAABB );
 
-            Estimator estimator( K, functor );
-            estimator.init( h, re );
-            estimator.eval( contour.begin(), contour.end(), out_it );
+//            Estimator estimator( K, functor );
+//            estimator.init( h, re );
+//            estimator.eval( contour.begin(), contour.end(), out_it );
 
+            file << "#radius" << re << std::endl;
             double time = c.stopClock() + timeSegmentGlobal;
             file << h << " " << time / 1000.0 <<  std::endl;
 
@@ -1065,7 +1063,7 @@ computeLocalEstimations( const std::string & filename,
 #endif
               for( Dimension kk = 0; kk < optionsII.nbKernels; ++kk )
               {
-                v_estimators[kk]->eval( v_contour_ordered[kk].begin(), v_contour_ordered[kk].end(), v_out_it_ordered[kk] );
+//                v_estimators[kk]->eval( v_contour_ordered[kk].begin(), v_contour_ordered[kk].end(), v_out_it_ordered[kk] );
               }
             }
             else
@@ -1075,9 +1073,9 @@ computeLocalEstimations( const std::string & filename,
 #endif
               for( unsigned int ii = 0; ii < pr2size; ++ii )
               {
-                Estimator estimator( K, functor );
-                estimator.init( h, v_estimated_radius[ii] );
-                v_curvatures[ii] = estimator.eval( contour.begin() + ii );
+//                Estimator estimator( K, functor );
+//                estimator.init( h, v_estimated_radius[ii] );
+//                v_curvatures[ii] = estimator.eval( contour.begin() + ii );
               }
             }
 //            trace.endBlock();

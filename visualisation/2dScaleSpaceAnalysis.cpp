@@ -38,6 +38,14 @@
 #include "DGtal/base/Common.h"
 #include "DGtal/base/Clock.h"
 
+#include "DGtal/math/KMeans.h"
+#include "DGtal/math/Statistic.h"
+#include "DGtal/geometry/curves/ArithmeticalDSS.h"
+#include "DGtal/geometry/curves/estimation/SegmentComputerEstimators.h"
+#include "DGtal/geometry/curves/ArithmeticalDSSComputer.h"
+#include "DGtal/geometry/curves/StabbingCircleComputer.h"
+#include "DGtal/geometry/curves/SaturatedSegmentation.h"
+
 //shapes
 #include "DGtal/shapes/ShapeFactory.h"
 #include "DGtal/shapes/Shapes.h"
@@ -58,6 +66,7 @@
 //Image & Viewer3D
 #include "DGtal/images/ImageSelector.h"
 #include "DGtal/io/colormaps/GradientColorMap.h"
+#include "DGtal/io/colormaps/GrayscaleColorMap.h"
 #include "DGtal/io/writers/PPMWriter.h"
 
 #include <boost/program_options/options_description.hpp>
@@ -95,17 +104,280 @@ getDigitalSurface( KSpace & K, Digitizer & dig, Surfel & bel )
   return surf;
 }
 
+void checkSizeRadius( double & re,
+                      const double h,
+                      const double minRadiusAABB )
+{
+  if(( re / h ) < 5.0 ) /// 	ridiculously small radius check
+  {
+    re = 5.0 * h;
+  }
+  if( re > ( 0.75 * minRadiusAABB ))
+  {
+    re = 0.75 * minRadiusAABB;
+  }
+}
+
+struct Euclidean
+{
+  double distance(const double &a, const double &b) const
+  {
+    return (double)std::sqrt((b-a)*(b-a));
+  }
+
+  template< typename Point >
+  double distance(const Point &a, const Point &b) const
+  {
+    return (double)(b-a).norm();
+  }
+};
+
+void suggestedRadiusForIntegralInvariantEstimators( const std::vector< double > & radius,
+                                                    std::vector< Dimension > & registration,
+                                                    std::vector< double > & chosenRadius,
+                                                    const Dimension nbRadius )
+{
+  KMeans<double, Euclidean>( radius, nbRadius, Euclidean(), registration, chosenRadius);
+}
+
+template <typename KSpace, typename Iterator>
+void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
+                         Iterator itb, Iterator ite )
+{
+  typedef typename KSpace::Space Space;
+  typedef typename Space::Point Point;
+  typedef typename Space::Vector Vector;
+  typedef ArithmeticalDSSComputer< Iterator, int, 4 > SegmentComputer;
+  typedef SaturatedSegmentation< SegmentComputer > Decomposition;
+  typedef typename Decomposition::SegmentComputerIterator SegmentComputerIterator;
+  typedef std::vector< SegmentComputerIterator > VectorOfSegmentComputerIterator;
+  typedef std::map< Point, VectorOfSegmentComputerIterator > Pmap;
+
+  // Computes the tangential cover
+  SegmentComputer algo;
+  Decomposition theDecomposition( itb, ite, algo);
+
+  Pmap map;
+  for( Iterator itc = itb; itc != ite; ++itc )
+  {
+    map.insert( std::pair< Point, VectorOfSegmentComputerIterator >( *itc, VectorOfSegmentComputerIterator() ) );
+  }
+
+
+  for ( SegmentComputerIterator scIt = theDecomposition.begin(), scItEnd = theDecomposition.end();
+        scIt != scItEnd; ++scIt )
+  {
+    const SegmentComputer & sc = *scIt;
+    for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
+    {
+      typename Pmap::iterator mloc = map.find( *ptIt );
+      if( mloc != map.end() )
+      {
+        mloc->second.push_back( scIt );
+      }
+    }
+  }
+
+  Dimension ii = 0;
+  for( Iterator itc = itb; itc != ite; ++itc )
+  {
+    //statD[ii].clear();
+    statE[ii].clear();
+    typename Pmap::iterator mloc = map.find( *itc );
+    ASSERT(( mloc != map.end() ));
+
+    /////////////
+    for( typename VectorOfSegmentComputerIterator::iterator scIt = mloc->second.begin(), scItEnd = mloc->second.end(); scIt != scItEnd; ++scIt )
+    {
+      const SegmentComputer & sc = *(*scIt);
+      /*int64_t l = 0;
+          for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
+            ++l;
+          statD[ii].addValue( (double) l );*/
+      Vector v = *( sc.end() - 1 ) - *( sc.begin() );
+      statE[ii].addValue( v.norm() );
+      //          std::cout << " v=" << v.norm() << std::endl;
+    }
+    /////////////
+
+    ++ii;
+  }
+}
+
+template <typename KSpace, typename Iterator>
+void analyseLengthMS( /*Statistic<double> & statD,*/ Statistic<double> & statE,
+                      Iterator itb, Iterator ite )
+{
+  typedef typename KSpace::Space Space;
+  typedef typename Space::Point Point;
+  typedef typename Space::Vector Vector;
+  typedef ArithmeticalDSSComputer< Iterator, int, 4 > SegmentComputer;
+  typedef SaturatedSegmentation< SegmentComputer > Decomposition;
+  typedef typename Decomposition::SegmentComputerIterator SegmentComputerIterator;
+  // Computes the tangential cover
+  SegmentComputer algo;
+  Decomposition theDecomposition( itb, ite, algo);
+  //statD.clear();
+  statE.clear();
+  for ( SegmentComputerIterator scIt = theDecomposition.begin(), scItEnd = theDecomposition.end();
+        scIt != scItEnd; ++scIt )
+  {
+    const SegmentComputer & sc = *scIt;
+    /*int64_t l = 0;
+      for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
+        ++l;
+      statD.addValue( (double) l );*/
+    Vector v = *( sc.end() - 1 ) - *( sc.begin() );
+    statE.addValue( v.norm() );
+  }
+}
+
+template< typename MyShape >
+void ComputeRadiuses( const MyShape & shape,
+                      const double h,
+                      const double constante,
+                      unsigned int & nbKernels,
+                      std::vector< double > & v_local_radiuses,
+                      double & global_radius)
+{
+  typedef Z2i::KSpace::Surfel Surfel;
+  typedef Z2i::KSpace::SCell SCell;
+  typedef GaussDigitizer< Z2i::Space, MyShape > Digitizer;
+  typedef typename Digitizer::RealPoint RealPoint;
+
+  Digitizer dig;
+  dig.attach( shape );
+  dig.init( shape.getLowerBound(), shape.getUpperBound(), h );
+
+  Z2i::Domain domain = dig.getDomain();
+  Z2i::KSpace K;
+  bool space_ok = K.init( domain.lowerBound(), domain.upperBound(), true );
+  if ( !space_ok )
+  {
+    trace.error() << "Error in the Khalimsky space construction."<<std::endl;
+    return;
+  }
+
+  Surfel bel = Surfaces< Z2i::KSpace >::findABel( K, dig, 100000 );
+
+  typedef DigitalSurface< LightImplicitDigitalSurface< Z2i::KSpace, Digitizer > > MyDigitalSurface;
+  typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
+  typedef GraphVisitorRange< Visitor > VisitorRange;
+  typedef typename VisitorRange::ConstIterator SurfelConstIterator;
+  typedef SCellToPoint< Z2i::KSpace > Functor2;
+  Functor2 embedder(K);
+
+  MyDigitalSurface surf = getDigitalSurface( K, dig, bel );
+  VisitorRange range( new Visitor( surf, *surf.begin() ) );
+  SurfelConstIterator abegin = range.begin();
+  SurfelConstIterator aend = range.end();
+
+  std::vector< Z2i::Point > contour;
+
+  while(abegin != aend )
+  {
+    contour.push_back( embedder(*abegin) );
+    ++abegin;
+  }
+
+  /*std::vector< SCell > points;
+  SurfelAdjacency< Z2i::KSpace::dimension > SAdj( true );
+  Surfaces< Z2i::KSpace >::track2DBoundary( points, K, SAdj, dig, bel );
+
+  GridCurve< Z2i::KSpace > gridcurve;
+  gridcurve.initFromSCellsVector( points );
+  typedef typename GridCurve< Z2i::KSpace >::PointsRange PointsRange;
+  PointsRange pointsRange = gridcurve.getPointsRange();*/
+
+  Statistic<double> statMSEL( true );
+  analyseLengthMS<Z2i::KSpace>( /*statMSL,*/ statMSEL, contour.begin(), contour.end() );
+
+  const Dimension pr2size = (contour.size());
+  std::vector< Statistic< double > > v_statMSEL(pr2size);
+  for(Dimension ii = 0; ii < pr2size; ++ii )
+  {
+    v_statMSEL[ii] = Statistic<double>(true);
+  }
+  analyseAllLengthMS<Z2i::KSpace>( v_statMSEL, contour.begin(), contour.end() );
+
+  double mean = statMSEL.mean();
+  global_radius = constante * mean * mean * h;
+  v_local_radiuses.clear();
+  v_local_radiuses.resize( pr2size );
+  double min = 99999999999;
+  double max = -99999999999;
+  double radius;
+  std::vector< double > v_estimated_radius( pr2size );
+  std::map< double, unsigned int > nbKernelRadius;
+  for( Dimension ii = 0; ii < pr2size; ++ii )
+  {
+    Dimension current_pos = pr2size - 1 - ii;
+    mean = v_statMSEL[ ii ].mean();
+    radius = constante * mean * mean * h;
+    checkSizeRadius( radius, h, 20.0 );
+    if( radius < min )
+    {
+      min = radius;
+    }
+    if( radius > max )
+    {
+      max = radius;
+    }
+    v_estimated_radius[ii] = radius;
+    if( nbKernels != 0 )
+    {
+      if( nbKernelRadius.find(radius) == nbKernelRadius.end() )
+      {
+        nbKernelRadius[ radius ] = 1;
+      }
+      else
+      {
+        nbKernelRadius[ radius ] += 1;
+      }
+    }
+  }
+  if( nbKernelRadius.size() < nbKernels )
+  {
+    nbKernels = nbKernelRadius.size();
+  }
+
+  std::vector< double > v_radius;
+  std::vector< unsigned int > v_registration;
+
+  if( nbKernels != 0 )
+  {
+    suggestedRadiusForIntegralInvariantEstimators( v_estimated_radius, v_registration, v_radius, nbKernels );
+  }
+
+  for( Dimension ii = 0; ii < pr2size; ++ii )
+  {
+    if( nbKernels != 0 )
+    {
+      v_local_radiuses[ii] =  v_radius[ v_registration[ ii ]];
+    }
+    else
+    {
+      v_local_radiuses[ii] = v_estimated_radius[ii];
+    }
+  }
+
+  trace.info() << "min: " << min << "\nmax: " << max << std::endl;
+}
 
 template< typename MyShape >
 int Compute( const MyShape & shape,
              const std::vector< double > & re_array,
              const double h,
              const std::string & options,
-             const std::string name )
+             const std::string name,
+             const std::vector< double > & v_local_radiuses,
+             const double & global_radius)
 {
   typedef ImageSelector< Z2i::Domain, float >::Type Image;
 
   Image * image;
+  Image * image_local;
+  Image * image_global;
 
   typedef Z2i::KSpace::Surfel Surfel;
   typedef GaussDigitizer< Z2i::Space, MyShape > Digitizer;
@@ -165,6 +437,8 @@ int Compute( const MyShape & shape,
     Z2i::Point bb( surf_size - 1, c_re_size - 1 );
     Z2i::Domain domain_image( aa, bb );
     image = new Image( domain_image );
+    image_local = new Image( domain_image );
+    image_global = new Image( domain_image );
 
     data_size = image->size();
     data.resize( data_size );
@@ -172,6 +446,24 @@ int Compute( const MyShape & shape,
 
   const uint c_data_size = data_size;
   const uint c_surf_size = surf_size;
+
+  int global_pos = -1;
+  std::vector< int > local_pos( surf_size, -1 );
+
+  for (unsigned int step_re = 0; step_re < c_re_size; ++step_re )
+  {
+    if( global_pos == -1 && re_array[ step_re ] > global_radius )
+    {
+      global_pos = step_re * c_surf_size;
+    }
+    for ( uint ii = 0; ii < c_surf_size; ++ii )
+    {
+      if( local_pos[ii] == -1 && re_array[ step_re ] > v_local_radiuses[ii] )
+      {
+        local_pos[ii] = step_re * c_surf_size + ii;
+      }
+    }
+  }
 
 #ifdef WITH_OPENMP
 #pragma omp parallel for schedule(dynamic)
@@ -291,12 +583,33 @@ int Compute( const MyShape & shape,
   cmap_grad.addColor( Color( 255, 0, 0 ) );
   cmap_grad.addColor( Color( 255, 255, 10 ) );
 
-  std::stringstream sstm;
-  sstm << name << ".ppm";
-  std::string exportname = sstm.str();
-  PPMWriter< Image, Gradient >::exportPPM( exportname, *image, cmap_grad );
+  typedef GrayscaleColorMap<unsigned char> GrayScale;
+  GrayScale cmap_gray(0,255);
+
+  for ( uint ii = 0; ii < c_surf_size; ++ii )
+  {
+    (*image_global)[global_pos + ii] = 255;
+    (*image_local)[local_pos[ii]] = 255;
+  }
+
+//  std::stringstream sstm;
+//  sstm << name << ".ppm";
+//  std::string exportname = sstm.str();
+//  PPMWriter< Image, Gradient >::exportPPM( exportname, *image, cmap_grad );
+
+  std::stringstream sstm2;
+  sstm2 << name << "_local.ppm";
+  std::string exportname2 = sstm2.str();
+  PPMWriter< Image, GrayScale >::exportPPM( exportname2, *image_local, cmap_gray );
+
+  std::stringstream sstm3;
+  sstm3 << name << "_global.ppm";
+  std::string exportname3 = sstm3.str();
+  PPMWriter< Image, GrayScale >::exportPPM( exportname3, *image_global, cmap_gray );
 
   delete image;
+  delete image_local;
+  delete image_global;
 
   return 1;
 }
@@ -442,13 +755,14 @@ int main ( int argc, char** argv )
       ("power,p",   po::value<double>()->default_value(2.0), "Power of the metric (double)" )
       ("center_x,x",   po::value<double>()->default_value(0.0), "x-coordinate of the shape center (double)" )
       ("center_y,y",   po::value<double>()->default_value(0.0), "y-coordinate of the shape center (double)" )
-
+      ("constante",  po::value<double>()->default_value(0.2), "Constante for II estimator" )
       ("re_min,re_min",  po::value<double>()->default_value(1.0), "min Euclidean radius of the convolution kernel" )
       ("re_max,re_max",  po::value<double>()->default_value(7.0), "max Euclidean radius of the convolution kernel" )
       ("re_step,re_step",  po::value<double>()->default_value(0.05), "step of the increase of the Euclidean radius of the convolution kernel" )
       ("gridstep_min,g_min",  po::value<double>()->default_value(0.05), "min Grid step for the digitization" )
       ("gridstep_max,g_max",  po::value<double>()->default_value(0.05), "max Grid step for the digitization" )
       ("gridstep_step,g_step",  po::value<double>()->default_value(0.01), "step of the increase of the Grid step for the digitization" )
+      ("nbKernels",  po::value<unsigned int>()->default_value(0), "Nb of kernels to use (precomputed. 0= don't precomputed them)" )
       ("export,e",  po::value<std::string>()->default_value("11"), "the i-th estimator is disabled iff there is a 0 at position i" )
       ("filename,f",  po::value<std::string>(), "filename for the export" );
 
@@ -491,6 +805,9 @@ int main ( int argc, char** argv )
     displayList();
     return 0;
   }
+
+  double constante = vm["constante"].as<double>();
+  unsigned int nbKernels = vm["nbKernels"].as< unsigned int >();
 
   //Parse options
   if( !( vm.count( "shape" )))
@@ -558,12 +875,16 @@ int main ( int argc, char** argv )
     Ball2D< Z2i::Space > ball( Z2i::Point( 0, 0 ), radius );
     for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
     {
+      std::vector< double > v_local_radiuses;
+      double global_radius;
+      ComputeRadiuses( ball, rh_array[ i_h ], constante, nbKernels, v_local_radiuses, global_radius );
+
       std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
       std::stringstream sstm;
       sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
       std::string exportname = sstm.str();
 
-      Compute( ball, re_array, rh_array[ i_h ], options, exportname.c_str() );
+      Compute( ball, re_array, rh_array[ i_h ], options, exportname.c_str(), v_local_radiuses, global_radius );
     }
   }
   else if( id == 1 )
@@ -618,12 +939,16 @@ int main ( int argc, char** argv )
     Flower2D< Z2i::Space > flower( center, radius, varsmallradius, k, phi );
     for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
     {
+      std::vector< double > v_local_radiuses;
+      double global_radius;
+      ComputeRadiuses( flower, rh_array[ i_h ], constante, nbKernels, v_local_radiuses, global_radius );
+
       std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
       std::stringstream sstm;
       sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
       std::string exportname = sstm.str();
 
-      Compute( flower, re_array, rh_array[ i_h ], options, exportname.c_str() );
+      Compute( flower, re_array, rh_array[ i_h ], options, exportname.c_str(), v_local_radiuses, global_radius );
     }
   }
   else if( id == 4 )
@@ -646,12 +971,16 @@ int main ( int argc, char** argv )
     NGon2D< Z2i::Space > object( center, radius, k, phi );
     for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
     {
+      std::vector< double > v_local_radiuses;
+      double global_radius;
+      ComputeRadiuses( object, rh_array[ i_h ], constante, nbKernels, v_local_radiuses, global_radius );
+
       std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
       std::stringstream sstm;
       sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
       std::string exportname = sstm.str();
 
-      Compute( object, re_array, rh_array[ i_h ], options, exportname.c_str() );
+      Compute( object, re_array, rh_array[ i_h ], options, exportname.c_str(), v_local_radiuses, global_radius );
     }
   }
   else if( id == 5 )
@@ -679,12 +1008,16 @@ int main ( int argc, char** argv )
     AccFlower2D< Z2i::Space > accflower( center, radius, varsmallradius, k, phi );
     for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
     {
+      std::vector< double > v_local_radiuses;
+      double global_radius;
+      ComputeRadiuses( accflower, rh_array[ i_h ], constante, nbKernels, v_local_radiuses, global_radius );
+
       std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
       std::stringstream sstm;
       sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
       std::string exportname = sstm.str();
 
-      Compute( accflower, re_array, rh_array[ i_h ], options, exportname.c_str() );
+      Compute( accflower, re_array, rh_array[ i_h ], options, exportname.c_str(), v_local_radiuses, global_radius );
     }
   }
   else if( id == 6 )
@@ -707,12 +1040,16 @@ int main ( int argc, char** argv )
     Ellipse2D< Z2i::Space > ellipse( center, a1, a2, phi );
     for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
     {
+      std::vector< double > v_local_radiuses;
+      double global_radius;
+      ComputeRadiuses( ellipse, rh_array[ i_h ], constante, nbKernels, v_local_radiuses, global_radius );
+
       std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
       std::stringstream sstm;
       sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ];
       std::string exportname = sstm.str();
 
-      Compute( ellipse, re_array, rh_array[ i_h ], options, exportname.c_str() );
+      Compute( ellipse, re_array, rh_array[ i_h ], options, exportname.c_str(), v_local_radiuses, global_radius );
     }
   }
   else if( id == 7 )
@@ -735,12 +1072,16 @@ int main ( int argc, char** argv )
     Cublipse2D< Z2i::Space > cublipse( center, a1, a2, phi );
     for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
     {
+      std::vector< double > v_local_radiuses;
+      double global_radius;
+      ComputeRadiuses( cublipse, rh_array[ i_h ], constante, nbKernels, v_local_radiuses, global_radius );
+
       std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
       std::stringstream sstm;
       sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ];
       std::string exportname = sstm.str();
 
-      Compute( cublipse, re_array, rh_array[ i_h ], options, exportname.c_str() );
+      Compute( cublipse, re_array, rh_array[ i_h ], options, exportname.c_str(), v_local_radiuses, global_radius );
     }
   }
 
