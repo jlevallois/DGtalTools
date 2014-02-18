@@ -317,9 +317,9 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
           for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
             ++l;
           statD[ii].addValue( (double) l );*/
-      Vector v = *( sc.end() - 1 ) - *( sc.begin() );
-      statE[ii].addValue( v.norm1() );
-      //          std::cout << " v=" << v.norm() << std::endl;
+
+      double v = (sc.back( ) - sc.front()).norm1();
+      statE[ii].addValue( v );
     }
     /////////////
 
@@ -350,8 +350,8 @@ void analyseLengthMS( /*Statistic<double> & statD,*/ Statistic<double> & statE,
       for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
         ++l;
       statD.addValue( (double) l );*/
-    Vector v = *( sc.end() - 1 ) - *( sc.begin() );
-    statE.addValue( v.norm1() );
+    double v = (sc.back( ) - sc.front()).norm1();
+    statE.addValue( v );
   }
 }
 
