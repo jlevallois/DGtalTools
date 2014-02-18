@@ -2556,33 +2556,15 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                if( v_radius[ v_registration[ii]] == -42 )
-                {
-                  Quantity thisIsEmpty;
-                  thisIsEmpty.k1 = -42;
-                  thisIsEmpty.k2 = -42;
-                  v_curvatures[ii] = thisIsEmpty;
-                }
-                else
-                {
-                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
-                }
+                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
               }
               else
               {
-                if( v_estimated_radius[ii] == -42 )
-                {
-                  Quantity thisIsEmpty;
-                  thisIsEmpty.k1 = -42;
-                  thisIsEmpty.k2 = -42;
-                  v_curvatures[ii] = thisIsEmpty;
-                }
-                else
-                {
+
                   Estimator estimator( K, functor );
                   estimator.init( h, v_estimated_radius[ii] );
                   v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
-                }
+
               }
             }
 
@@ -2665,33 +2647,15 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                if( v_radius[ v_registration[ii]] == -42 )
-                {
-                  Quantity thisIsEmpty;
-                  thisIsEmpty.k1 = -42;
-                  thisIsEmpty.k2 = -42;
-                  v_curvatures[ii] = thisIsEmpty;
-                }
-                else
-                {
-                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
-                }
+                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
               }
               else
               {
-                if( v_estimated_radius[ii] == -42 )
-                {
-                  Quantity thisIsEmpty;
-                  thisIsEmpty.k1 = -42;
-                  thisIsEmpty.k2 = -42;
-                  v_curvatures[ii] = thisIsEmpty;
-                }
-                else
-                {
+
                   Estimator estimator( K, functor );
                   estimator.init( h, v_estimated_radius[ii] );
                   v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
-                }
+
               }
             }
 
@@ -2774,33 +2738,16 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                if( v_radius[ v_registration[ii]] == -42 )
-                {
-                  Quantity thisIsEmpty;
-                  thisIsEmpty.k1 = -42;
-                  thisIsEmpty.k2 = -42;
-                  v_curvatures[ii] = thisIsEmpty;
-                }
-                else
-                {
-                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
-                }
+                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
+
               }
               else
               {
-                if( v_estimated_radius[ii] == -42 )
-                {
-                  Quantity thisIsEmpty;
-                  thisIsEmpty.k1 = -42;
-                  thisIsEmpty.k2 = -42;
-                  v_curvatures[ii] = thisIsEmpty;
-                }
-                else
-                {
+
                   Estimator estimator( K, functor );
                   estimator.init( h, v_estimated_radius[ii] );
                   v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
-                }
+
               }
             }
 
@@ -2883,33 +2830,15 @@ compareShapeEstimators( const std::string & filename,
             {
               if( optionsII.nbKernels > 0 )
               {
-                if( v_radius[ v_registration[ii]] == -42 )
-                {
-                  Quantity thisIsEmpty;
-                  thisIsEmpty.k1 = -42;
-                  thisIsEmpty.k2 = -42;
-                  v_curvatures[ii] = thisIsEmpty;
-                }
-                else
-                {
-                  v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
-                }
+                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->evalPrincipalCurvatures( surfels.begin() + ii );
               }
               else
               {
-                if( v_estimated_radius[ii] == -42 )
-                {
-                  Quantity thisIsEmpty;
-                  thisIsEmpty.k1 = -42;
-                  thisIsEmpty.k2 = -42;
-                  v_curvatures[ii] = thisIsEmpty;
-                }
-                else
-                {
+
                   Estimator estimator( K, functor );
                   estimator.init( h, v_estimated_radius[ii] );
                   v_curvatures[ii] = estimator.evalPrincipalCurvatures( surfels.begin() + ii );
-                }
+
               }
             }
 

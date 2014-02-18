@@ -281,10 +281,13 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
   Decomposition theDecomposition( itb, ite, algo);
 
   Pmap map;
-  for( Iterator itc = itb; itc != ite; ++itc )
+  Iterator itc = itb;
+  //for( Iterator itc = itb; itc != ite; ++itc )
+  do
   {
     map.insert( std::pair< Point, VectorOfSegmentComputerIterator >( *itc, VectorOfSegmentComputerIterator() ) );
-  }
+    ++itc;
+  } while ( itc != ite );
 
 
   for ( SegmentComputerIterator scIt = theDecomposition.begin(), scItEnd = theDecomposition.end();
@@ -302,7 +305,10 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
   }
 
   Dimension ii = 0;
-  for( Iterator itc = itb; itc != ite; ++itc )
+
+  itc = itb;
+  //for( Iterator itc = itb; itc != ite; ++itc )
+  do
   {
     //statD[ii].clear();
     statE[ii].clear();
@@ -324,7 +330,8 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
     /////////////
 
     ++ii;
-  }
+    ++itc;
+  } while( itc != ite );
 }
 
 template <typename KSpace, typename Iterator>
@@ -544,7 +551,7 @@ computeLocalEstimations( const std::string & filename,
       //////////////////////////
       //Statistic<double> statMSL( true );
       Statistic<double> statMSEL( true );
-      analyseLengthMS<KSpace>( /*statMSL,*/ statMSEL, pointsRange2.begin(), pointsRange2.end() );
+      analyseLengthMS<KSpace>( /*statMSL,*/ statMSEL, pointsRange2.c(), pointsRange2.c() );
       //statMSL.terminate();
       /*Statistic<double> resolution( false );
         for ( Statistic<double>::ConstIterator
@@ -568,7 +575,7 @@ computeLocalEstimations( const std::string & filename,
 
       trace.beginBlock("Analyse segments and Mapping segments <-> Surfels...");
 
-      analyseAllLengthMS<KSpace>( v_statMSEL, pointsRange2.begin(), pointsRange2.end() );
+      analyseAllLengthMS<KSpace>( v_statMSEL, pointsRange2.c(), pointsRange2.c() );
 
       trace.endBlock();
 
