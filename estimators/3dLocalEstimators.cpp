@@ -187,6 +187,80 @@ Dimension findSurfel( const std::vector< Surfel > & surfels,
 }
 
 
+template <typename K3D, typename K2D>
+class SCellToMyPoint
+{
+public:
+  typedef K3D KSpace3D;
+  typedef K2D KSpace2D;
+  typedef typename Z2i::Point Output;
+  typedef Output Value;
+  typedef typename KSpace3D::SCell Input;
+  typedef typename KSpace3D::Point Point;
+
+private:
+  /**
+       * Aliasing pointer on the Khalimsky space.
+      */
+  const KSpace3D* myK;
+  Dimension i;
+
+public:
+
+  /**
+       * Default constructor.
+      */
+  SCellToMyPoint() : myK(NULL), i(0) { }
+  /**
+       * Constructor.
+       * @param aK a Khalimsky space
+      */
+  SCellToMyPoint(const KSpace3D& aK, Dimension myDimension) : myK(&aK), i(myDimension) { }
+
+  /**
+     * Copy constructor.
+     * @param other any SCellToPoint functor
+     */
+  SCellToMyPoint(const SCellToMyPoint& other)
+    : myK(other.myK), i(other.i) { }
+
+  /**
+     * Assignment.
+     *
+     * @param other the object to copy.
+     * @return a reference on 'this'.
+     */
+  SCellToMyPoint& operator= ( const SCellToMyPoint & other )
+  {
+    if (this != &other)
+    {
+      myK = other.myK;
+      i = other.i;
+    }
+    return *this;
+  }
+
+  /**
+     * Returns a point (with integer coordinates)
+     * from a scell (with khalimsky coordinates)
+     * @param aSCell a scell
+     * @return the corresponding point.
+     */
+  Output operator()(const Input& aSCell) const
+  {
+    Input s = aSCell;
+    Dimension k = myK->sOrthDir( s );
+    Dimension j = (k+1)%3;
+    if ( j == i ) j = (i+1)%3;
+    Input next_linel = myK->sDirectIncident( s, j );
+    Input base_pointel = myK->sIncident( next_linel, i, false );
+    Point p = myK->sCoords( base_pointel );
+    Output q( p[(i+1)%3], p[(i+2)%3] );
+    return q;
+  }
+
+}; // end of class SCellToMyPoint
+
 template< typename KSpace, typename Iterator >
 void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
                          Iterator itb,
@@ -198,18 +272,22 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
   typedef ArithmeticalDSSComputer< Iterator, int, 4 > SegmentComputer;
   typedef SaturatedSegmentation< SegmentComputer > Decomposition;
   typedef typename Decomposition::SegmentComputerIterator SegmentComputerIterator;
-  typedef std::vector< SegmentComputerIterator > VectorOfSegmentComputerIterator;
-  typedef std::map< Point, VectorOfSegmentComputerIterator > Pmap;
+  typedef std::vector< SegmentComputer > VectorOfSegmentComputer;
+  typedef std::map< Point, VectorOfSegmentComputer > Pmap;
 
   // Computes the tangential cover
   SegmentComputer algo;
-  Decomposition theDecomposition( itb, ite, algo);
+  Iterator itbegin = itb;
+  Iterator itend = ite;
+  Decomposition theDecomposition( itbegin, itend, algo);
 
   Pmap map;
-  for( Iterator itc = itb; itc != ite; ++itc )
+  //for( itbegin = itb; itbegin != itend; ++itbegin )
+  do
   {
-    map.insert( std::pair< Point, VectorOfSegmentComputerIterator >( *itc, VectorOfSegmentComputerIterator() ) );
-  }
+    map.insert( std::pair< Point, VectorOfSegmentComputer >( *itbegin, VectorOfSegmentComputer() ) );
+    ++itbegin;
+  } while( itbegin != itend );
 
 
   for ( SegmentComputerIterator scIt = theDecomposition.begin(), scItEnd = theDecomposition.end();
@@ -221,35 +299,44 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
       typename Pmap::iterator mloc = map.find( *ptIt );
       if( mloc != map.end() )
       {
-        mloc->second.push_back( scIt );
+        mloc->second.push_back( sc );
+      }
+      else
+      {
+        trace.error() << "not found ?" << std::endl;
       }
     }
   }
 
+  itbegin = itb;
+  itend = ite;
   Dimension ii = 0;
-  for( Iterator itc = itb; itc != ite; ++itc )
+  //for( itbegin = itb; itbegin != itend; ++itbegin )
+  do
   {
     //statD[ii].clear();
     statE[ii].clear();
-    typename Pmap::iterator mloc = map.find( *itc );
+    typename Pmap::iterator mloc = map.find( *itbegin );
     ASSERT(( mloc != map.end() ));
 
     /////////////
-    for( typename VectorOfSegmentComputerIterator::iterator scIt = mloc->second.begin(), scItEnd = mloc->second.end(); scIt != scItEnd; ++scIt )
+    for( typename VectorOfSegmentComputer::iterator scIt = mloc->second.begin(), scItEnd = mloc->second.end(); scIt != scItEnd; ++scIt )
     {
-      const SegmentComputer & sc = *(*scIt);
+      const SegmentComputer & sc = *scIt;
       /*int64_t l = 0;
           for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
             ++l;
           statD[ii].addValue( (double) l );*/
-      Vector v = *( sc.end() - 1 ) - *( sc.begin() );
-      statE[ii].addValue( v.norm1() );
+      double v = (sc.back( ) - sc.front()).norm1() ; // sc.size();  //*( sc.end() - 1 ) - *( sc.begin() );
+      statE[ii].addValue( v )  ; //v.norm( ) );
       //          std::cout << " v=" << v.norm() << std::endl;
     }
+
     /////////////
 
     ++ii;
-  }
+    ++itbegin;
+  } while( itbegin != itend );
 }
 
 template< typename ImplicitDigitalSurface, typename Surfel >
@@ -388,47 +475,29 @@ void computeSegments( std::vector< Surfel > & surfels,
         MySlice slice( &ptrTracker, otherdim );
 
         typedef typename MySlice::ConstIterator ConstIterator3D;
-        typedef typename MySlice::Iterator Iterator3D;
-        typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
-        typedef SCellToPoint< Functor::KSpace > Functor2;
-        typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D;
-        typedef ConstIteratorAdapter< ConstIterator2D, Functor2, Functor2::Output > ConstIterator2DP;
+        typedef typename MySlice::ConstCirculator ConstCirculator3D;
+        typedef SCellToMyPoint< typename MySlice::KSpace, Z2i::KSpace > Functor2D;
+        typedef ConstIteratorAdapter< ConstIterator3D, Functor2D > ConstIterator3D2P;
 
-        Iterator3D a = slice.begin();
-        Iterator3D b = ++(slice.begin());
-        Dimension dimm = 0;
-        while( a->myCoordinates[dimm] != b->myCoordinates[dimm] )
-        {
-          ++dimm;
-        }
+        Functor2D pointFunctor(K, dim);
 
-        Functor projector;
-        projector.initRemoveOneDim( dimm );
-        ConstIterator2D xbegin( slice.begin(), projector );
-        ConstIterator2D xend( slice.end(), projector );
+        ConstIterator3D2P pbegin( slice.begin(), pointFunctor );
+        ConstIterator3D2P pend( slice.end(), pointFunctor );
 
-        Functor::KSpace k2d;
-        Functor2 pointFunctor( k2d );
-
-        ConstIterator2DP pbegin( xbegin, pointFunctor );
-        ConstIterator2DP pend( xend, pointFunctor );
-
-        const Dimension pr2size = slice.size();
-        std::vector< Statistic< double > > v_statMSEL(pr2size);
-        for( Dimension ii = 0; ii < pr2size; ++ii )
+        const Dimension size_slice = slice.size();
+        std::vector< Statistic< double > > v_statMSEL( size_slice );
+        for( Dimension ii = 0; ii < size_slice; ++ii )
         {
           v_statMSEL[ii] = Statistic<double>(true);
         }
 
-        analyseAllLengthMS<Functor::KSpace, ConstIterator2DP>( v_statMSEL, pbegin, pend );
+        Circulator< ConstIterator3D2P > cbegin( pbegin, pbegin, pend );
+        Circulator< ConstIterator3D2P > cend( cbegin );
 
-        //        for(Dimension ii = 0; ii < pr2size; ++ii )
-        //        {
-        //          v_statMSEL[ii].terminate();
-        //        }
+        analyseAllLengthMS<Z2i::KSpace>( v_statMSEL, cbegin, cend );
 
         Dimension iii = 0;
-        for( Iterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
+        for( ConstIterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
         {
           Dimension surfel_pos = findSurfel( surfels, *sit );
           ASSERT( surfel_pos != surfels_size );
@@ -454,6 +523,10 @@ void computeSegments( std::vector< Surfel > & surfels,
               trace.error() << "ALREADY FILLED" << std::endl;
             }
           }
+          else
+          {
+            trace.error() << "WAHAAAAT?" << std::endl;
+          }
           ++iii;
         }
       }
@@ -466,8 +539,7 @@ template< typename Surfel >
 void computeGlobalSegment( std::vector< Surfel > & surfels,
                            std::map< Surfel, std::pair< Statistic< double >, Statistic< double > > > & segments,
                            Statistic< double > & allSegments,
-                           const std::string & mode,
-                           const unsigned int minValue = 5)
+                           const std::string & mode )
 {
   const Dimension surfels_size = surfels.size();
 
@@ -475,11 +547,6 @@ void computeGlobalSegment( std::vector< Surfel > & surfels,
   {
     Statistic< double > & stata = segments[ surfels[ii] ].first;
     Statistic< double > & statb = segments[ surfels[ii] ].second;
-
-//    if( stata.mean() < minValue && statb.mean() < minValue )
-//    {
-//      continue;
-//    }
 
     if( mode == "max" )
     {
@@ -517,19 +584,18 @@ void computeGlobalSegment( std::vector< Surfel > & surfels,
 
 void checkSizeRadius( double & re,
                       const double h,
-                      const double minRadiusAABB,
-                      const unsigned int minValue = 5,
-                      const double defaultValue = 10.0 )
+                      const double globalRadius )
 {
-  //    if( re/h <= minValue ) /// 	ridiculously small radius check
-  //    {
-  //  //    trace.error() << "re small " << re << std::endl;
-  //  //    re = 5.0 * h;
-  //      re = defaultValue;//*h;
-  //    }
-  if( re > ( 0.75 * minRadiusAABB ))
+  double a = (1.0/3.0)*globalRadius;
+  double b = 3.0*globalRadius;
+
+  if( re < a )
   {
-    re = 0.75 * minRadiusAABB;
+    re = a;
+  }
+  if( re > b )
+  {
+    re = b;
   }
 }
 
@@ -562,11 +628,9 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
                          const double constante,
                          const double h,
                          std::vector< double > & radius,
-                         const double minRadiusAABB,
+                         const double globalRadius,
                          const std::string & prop,
-                         const std::string & mode,
-                         const double minValue = 5.0,
-                         const double defaultValue = 10.0 )
+                         const std::string & mode )
 {
   const Dimension surfels_size = surfels.size();
   std::map< double, unsigned int > nbKernelRadius;
@@ -620,45 +684,25 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
     if( prop == "min" )
     {
       result = stat.min();
-      if( result < minValue )
-      {
-        result = defaultValue;
-      }
     }
     else if( prop == "mean" )
     {
       result = stat.mean();
-      if( result < minValue )
-      {
-        result = defaultValue;
-      }
     }
     else if( prop == "median" )
     {
       result = stat.median();
-      if( result < minValue )
-      {
-        result = defaultValue;
-      }
     }
     else if( prop == "max" )
     {
       result = stat.max();
-      if( result < minValue )
-      {
-        result = defaultValue;
-      }
     }
 
     ASSERT(( result != -1.0 ));
 
-    double re = -1.0;
-    if( result == defaultValue )
-      re = constante * defaultValue * defaultValue * h; //defaultValue; //
-    else
-      re = constante * result * result * h;
+    double re = constante * result * result * h;
 
-    checkSizeRadius( re, h, minRadiusAABB, minValue, defaultValue );
+    checkSizeRadius( re, h, globalRadius );
 
     radius[ii] = re;
 
@@ -1340,17 +1384,16 @@ compareShapeEstimators( const std::string & filename,
         trace.endBlock();
 
         // Global contour analysis
-        if( optionsII.tests.at(0) != '0' || optionsII.tests.at(1) != '0' )
+//        if( optionsII.tests.at(0) != '0' || optionsII.tests.at(1) != '0' )
         {
           computeGlobalSegment( surfels, segments, allSegments, optionsII.modeSegments );
           allSegments.terminate();
-
-          if( optionsII.tests.at(2) == '0' && optionsII.tests.at(3) == '0' )
-          {
-            //              surfels.clear();
-            //              segments.clear();
-          }
         }
+
+        double constante = optionsII.constante;
+        double g_mean = allSegments.mean();
+        const double global_mean = constante * g_mean * g_mean * h;
+
 
         // Integral Invariant Mean Curvature
         if( properties.at( 0 ) != '0' )
@@ -1367,10 +1410,9 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Mean Curvature estimation from the Integral Invariant with global max segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
             double max = allSegments.max();
-            double re = cste * max * max * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * max * max * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
 
             file << "# computed kernel radius = " << re << std::endl;
 
@@ -1403,10 +1445,9 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Mean Curvature estimation from the Integral Invariant with global mean segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
-            double mean = allSegments.mean();
-            double re = cste * mean * mean * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+
+            double re = global_mean;
+//            checkSizeRadius( re, h, minRadiusAABB );
 
             file << "# computed kernel radius = " << re << std::endl;
 
@@ -1439,10 +1480,9 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Mean Curvature estimation from the Integral Invariant with global median segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
             double median = allSegments.median();
-            double re = cste * median * median * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * median * median * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
             file << "# computed kernel radius = " << re << std::endl;
 
             trace.beginBlock("II mean curvature computation with global median segments...");
@@ -1474,10 +1514,9 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Mean Curvature estimation from the Integral Invariant with global min segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
             double min = allSegments.min();
-            double re = cste * min * min * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * min * min * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
             file << "# computed kernel radius = " << re << std::endl;
 
             trace.beginBlock("II mean curvature computation with global min segments...");
@@ -1511,8 +1550,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            double min_re = 5;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "max", optionsII.modeSegments, min_re, -42 );
+
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, constante, h, v_estimated_radius, global_mean, "max", optionsII.modeSegments );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -1615,8 +1654,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            double min_re = 5;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments, min_re, 5 );
+
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, constante, h, v_estimated_radius, global_mean, "mean", optionsII.modeSegments );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -1719,8 +1758,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            double min_re = 5;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "median", optionsII.modeSegments, min_re, -42 );
+
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, constante, h, v_estimated_radius, global_mean, "median", optionsII.modeSegments );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -1823,8 +1862,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            double min_re = 5;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "min", optionsII.modeSegments, min_re, -42 );
+
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, constante, h, v_estimated_radius, global_mean, "min", optionsII.modeSegments );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -1929,10 +1968,9 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Gaussian Curvature estimation from the Integral Invariant with global max segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
             double max = allSegments.max();
-            double re = cste * max * max * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * max * max * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
 
             file << "# computed kernel radius = " << re << std::endl;
 
@@ -1965,10 +2003,10 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Gaussian Curvature estimation from the Integral Invariant with global mean segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
+
             double mean = allSegments.mean();
-            double re = cste * mean * mean * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * mean * mean * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
 
             file << "# computed kernel radius = " << re << std::endl;
 
@@ -2001,10 +2039,10 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Gaussian Curvature estimation from the Integral Invariant with global median segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
+
             double median = allSegments.median();
-            double re = cste * median * median * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * median * median * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
             file << "# computed kernel radius = " << re << std::endl;
 
             trace.beginBlock("II Gaussian curvature computation with global median segments...");
@@ -2036,10 +2074,10 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Gaussian Curvature estimation from the Integral Invariant with global min segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
+
             double min = allSegments.min();
-            double re = cste * min * min * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * min * min * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
             file << "# computed kernel radius = " << re << std::endl;
 
             trace.beginBlock("II Gaussian curvature computation with global min segments...");
@@ -2073,7 +2111,7 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "max", optionsII.modeSegments );
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, constante, h, v_estimated_radius, global_mean, "max", optionsII.modeSegments );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -2162,7 +2200,7 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > radius;
             radius.resize( size_surfels );
-            computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "mean", optionsII.modeSegments );
+            computeRadius< Surfel >( surfels, segments, constante, h, radius, global_mean, "mean", optionsII.modeSegments );
 
             trace.endBlock();
 
@@ -2217,7 +2255,7 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > radius;
             radius.resize( size_surfels );
-            computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "median", optionsII.modeSegments );
+            computeRadius< Surfel >( surfels, segments, constante, h, radius, global_mean, "median", optionsII.modeSegments );
 
             trace.endBlock();
 
@@ -2272,7 +2310,7 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > radius;
             radius.resize( size_surfels );
-            computeRadius< Surfel >( surfels, segments, optionsII.constante, h, radius, minRadiusAABB, "min", optionsII.modeSegments );
+            computeRadius< Surfel >( surfels, segments, constante, h, radius, global_mean, "min", optionsII.modeSegments );
 
             trace.endBlock();
 
@@ -2329,10 +2367,9 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Principal curvatures estimation from the Integral Invariant with global max segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
             double max = allSegments.max();
-            double re = cste * max * max * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * max * max * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
             file << "# computed kernel radius = " << re << std::endl;
 
             trace.beginBlock("II Principal curvatures computation with global max segments...");
@@ -2364,10 +2401,9 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Principal curvatures estimation from the Integral Invariant with global mean segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
             double mean = allSegments.mean();
-            double re = cste * mean * mean * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * mean * mean * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
             file << "# computed kernel radius = " << re << std::endl;
 
             trace.beginBlock("II Principal curvatures computation with global mean segments...");
@@ -2399,10 +2435,9 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Principal curvatures estimation from the Integral Invariant with global median segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
             double median = allSegments.median();
-            double re = cste * median * median * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * median * median * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
             file << "# computed kernel radius = " << re << std::endl;
 
             trace.beginBlock("II Principal curvatures computation with global median segments...");
@@ -2434,10 +2469,9 @@ compareShapeEstimators( const std::string & filename,
             file << "# h = " << h << std::endl;
             file << "# Principal curvatures estimation from the Integral Invariant with global min segment analysis" << std::endl;
 
-            double cste = optionsII.constante;
             double min = allSegments.min();
-            double re = cste * min * min * h;
-            checkSizeRadius( re, h, minRadiusAABB );
+            double re = constante * min * min * h;
+//            checkSizeRadius( re, h, minRadiusAABB );
             file << "# computed kernel radius = " << re << std::endl;
 
             trace.beginBlock("II Principal curvatures computation with global min segments...");
@@ -2471,8 +2505,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            double min_re = 5;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "max", optionsII.modeSegments, min_re, -42 );
+
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, constante, h, v_estimated_radius, global_mean, "max", optionsII.modeSegments );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -2580,8 +2614,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            double min_re = 5;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "mean", optionsII.modeSegments, min_re, 5 );
+
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, constante, h, v_estimated_radius, global_mean, "mean", optionsII.modeSegments );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -2689,8 +2723,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            double min_re = 5;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "median", optionsII.modeSegments, min_re, -42 );
+
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, constante, h, v_estimated_radius, global_mean, "median", optionsII.modeSegments );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
@@ -2798,8 +2832,8 @@ compareShapeEstimators( const std::string & filename,
 
             std::vector< double > v_estimated_radius;
             v_estimated_radius.resize( size_surfels );
-            double min_re = 5;
-            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, optionsII.constante, h, v_estimated_radius, minRadiusAABB, "min", optionsII.modeSegments, min_re, -42 );
+
+            Dimension nbKernelsRadius = computeRadius< Surfel >( surfels, segments, constante, h, v_estimated_radius, global_mean, "min", optionsII.modeSegments );
             if( nbKernelsRadius < optionsII.nbKernels )
             {
               optionsII.nbKernels = nbKernelsRadius;
