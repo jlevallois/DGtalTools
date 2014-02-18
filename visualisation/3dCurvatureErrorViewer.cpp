@@ -214,10 +214,12 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
   Decomposition theDecomposition( itbegin, itend, algo);
 
   Pmap map;
-  for( itbegin = itb; itbegin != itend; ++itbegin )
+  //for( itbegin = itb; itbegin != itend; ++itbegin )
+  do
   {
     map.insert( std::pair< Point, VectorOfSegmentComputer >( *itbegin, VectorOfSegmentComputer() ) );
-  }
+    ++itbegin;
+  } while( itbegin != itend );
 
 
   for ( SegmentComputerIterator scIt = theDecomposition.begin(), scItEnd = theDecomposition.end();
@@ -238,8 +240,11 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
     }
   }
 
+  itbegin = itb;
+  itend = ite;
   Dimension ii = 0;
-  for( itbegin = itb; itbegin != itend; ++itbegin )
+  //for( itbegin = itb; itbegin != itend; ++itbegin )
+  do
   {
     //statD[ii].clear();
     statE[ii].clear();
@@ -258,10 +263,12 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
       statE[ii].addValue( v.norm( ) );
       //          std::cout << " v=" << v.norm() << std::endl;
     }
+
     /////////////
 
     ++ii;
-  }
+    ++itbegin;
+  } while( itbegin != itend );
 }
 
 template< typename ImplicitDigitalSurface, typename Surfel >
@@ -400,14 +407,17 @@ void computeSegments( std::vector< Surfel > & surfels,
         MySlice slice( &ptrTracker, otherdim );
 
         typedef typename MySlice::ConstIterator ConstIterator3D;
+        typedef typename MySlice::ConstCirculator ConstCirculator3D;
         typedef typename MySlice::Iterator Iterator3D;
         typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
         typedef SCellToPoint< Functor::KSpace > Functor2;
-        typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D;
+        typedef ConstIteratorAdapter< ConstCirculator3D, Functor, Functor::SCell > ConstIterator2D;
+        typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D2;
         typedef ConstIteratorAdapter< ConstIterator2D, Functor2, Functor2::Output > ConstIterator2DP;
+        typedef ConstIteratorAdapter< ConstIterator2D2, Functor2, Functor2::Output > ConstIterator2DP2;
 
-        Iterator3D a = slice.begin();
-        Iterator3D b = ++(slice.begin());
+        ConstIterator3D a = slice.begin();
+        ConstIterator3D b = ++(slice.begin());
         Dimension dimm = 0;
         while( a->myCoordinates[dimm] != b->myCoordinates[dimm] )
         {
@@ -416,8 +426,11 @@ void computeSegments( std::vector< Surfel > & surfels,
 
         Functor projector;
         projector.initRemoveOneDim( dimm );
-        ConstIterator2D xbegin( slice.begin(), projector );
-        ConstIterator2D xend( slice.end(), projector );
+        ConstIterator2D xbegin( slice.c(), projector );
+        ConstIterator2D xend( slice.c(), projector );
+
+        ConstIterator2D2 xxbegin( slice.begin(), projector );
+        ConstIterator2D2 xxend( slice.end(), projector );
 
         Functor::KSpace k2d;
         Functor2 pointFunctor( k2d );
@@ -425,14 +438,57 @@ void computeSegments( std::vector< Surfel > & surfels,
         ConstIterator2DP pbegin( xbegin, pointFunctor );
         ConstIterator2DP pend( xend, pointFunctor );
 
-        const Dimension pr2size = slice.size();
-        std::vector< Statistic< double > > v_statMSEL(pr2size);
-        for( Dimension ii = 0; ii < pr2size; ++ii )
+        ConstIterator2DP2 ppbegin( xxbegin, pointFunctor );
+        ConstIterator2DP2 ppend( xxend, pointFunctor );
+
+
+        const Dimension size_slice = slice.size();
+        std::vector< Statistic< double > > v_statMSEL(size_slice);
+
+        typedef typename Functor::KSpace::Point Point;
+        std::vector< Point > pts;
+
+        do
+        {
+          pts.push_back( *pbegin );
+          ++pbegin;
+        } while( pbegin != pend );
+
+//        SCell bel = Surfaces< Functor::KSpace >::findABel( k2d, slice, 10000 );
+//        SurfelAdjacency< Functor::KSpace::dimension > SAdj( true );
+//        Surfaces< Functor::KSpace >::track2DBoundary( pts, k2d, SAdj, slice, bel );
+
+//        typedef GridCurve<  Functor::KSpace >::PointsRange PointRange;
+//        GridCurve<  Functor::KSpace > gridcurve;
+//        gridcurve.initFromSCellsVector( pts );
+//        PointRange pr = gridcurve.getPointsRange();
+
+
+
+        Circulator< std::vector< Point >::iterator > cbegin( pts.begin(), pts.begin(), pts.end() );
+        for( int i = 0; i < 5; ++i )
+          ++cbegin;
+        Circulator< std::vector< Point >::iterator > cend( cbegin );
+
+        for( Dimension ii = 0; ii < size_slice; ++ii )
         {
           v_statMSEL[ii] = Statistic<double>(true);
         }
 
-        analyseAllLengthMS<Functor::KSpace, ConstIterator2DP>( v_statMSEL, pbegin, pend );
+//        trace.error() << "size " << size_slice << std::endl;
+        if( size_slice <= 4 )
+        {
+          for( Dimension ii = 0; ii < size_slice; ++ii )
+          {
+            v_statMSEL[ii].addValue(10);
+          }
+          analyseAllLengthMS<Functor::KSpace>( v_statMSEL, ppbegin, ppend );
+        }
+        else
+        {
+          analyseAllLengthMS<Functor::KSpace>( v_statMSEL, cbegin, cend );
+
+        }
 
         //                for(Dimension ii = 0; ii < pr2size; ++ii )
         //                {
@@ -440,7 +496,9 @@ void computeSegments( std::vector< Surfel > & surfels,
         //                }
 
         Dimension iii = 0;
-        for( Iterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
+//        ConstIterator3D sit = slice.begin();
+//        ConstIterator3D send = slice.end();
+        for( ConstIterator3D sit = slice.begin(), send = slice.end(); sit != send; ++sit )
         {
           Dimension surfel_pos = findSurfel( surfels, *sit );
           ASSERT( surfel_pos != surfels_size );
@@ -471,11 +529,11 @@ void computeSegments( std::vector< Surfel > & surfels,
             trace.error() << "WHHHHHAT" << std::endl;
           }
           ++iii;
-        }
+//          ++sit;
+        }// while( sit != send );
       }
     }
   }
-
 }
 
 template< typename Surfel >
@@ -714,7 +772,6 @@ compareShapeEstimators( int argc, char** argv,
   typedef typename KSpace::SCell SCell;
   typedef typename KSpace::Surfel Surfel;
 
-  ASSERT (( noiseLevel < 1.0 ));
   // Digitizer
   DigitalShape dshape;
   dshape.attach( *aShape );
@@ -891,8 +948,8 @@ compareShapeEstimators( int argc, char** argv,
 #endif
               for( Dimension ii = 0; ii < optionsII.nbKernels; ++ii )
               {
-                v_estimators[ii] = new Estimator( K, functor );
-                v_estimators[ii]->init( h, v_radius[ii] );
+//                v_estimators[ii] = new Estimator( K, functor );
+//                v_estimators[ii]->init( h, v_radius[ii] );
 
                 std::cout << "estimator #" << ii << " of radius " << v_radius[ii] << " initialized ..." << std::endl;
               }
@@ -915,30 +972,30 @@ compareShapeEstimators( int argc, char** argv,
               if( optionsII.nbKernels > 0 )
               {
                 //                v_curvatures[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
-                if( v_radius[ v_registration[ii]] == -42 )
-                {
-                  v_curvatures_II[ii] = 0.25;//-42;
-                }
-                else
-                {
-                  v_curvatures_II[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
-//                  v_curvatures_II[ii] = v_radius[v_registration[ ii ]];
-                }
+//                if( v_radius[ v_registration[ii]] == -42 )
+//                {
+//                  v_curvatures_II[ii] = 0.25;//-42;
+//                }
+//                else
+//                {
+//                  v_curvatures_II[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+                  v_curvatures_II[ii] = v_radius[v_registration[ ii ]];
+//                }
               }
               else
               {
-                if( v_estimated_radius[ii] == -42 )
-                {
-                  v_curvatures_II[ii] = -42;
-                }
-                else
-                {
-                                  Estimator estimator( K, functor );
-                                  estimator.init( h, v_estimated_radius[ii] );
+//                if( v_estimated_radius[ii] == -42 )
+//                {
+//                  v_curvatures_II[ii] = -42;
+//                }
+//                else
+//                {
+//                                  Estimator estimator( K, functor );
+//                                  estimator.init( h, v_estimated_radius[ii] );
 //                                  v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
-                                  v_curvatures_II[ii] = estimator.eval( surfels.begin() + ii );
-//                  v_curvatures_II[ii] = v_estimated_radius[ii];
-                }
+//                                  v_curvatures_II[ii] = estimator.eval( surfels.begin() + ii );
+                  v_curvatures_II[ii] = v_estimated_radius[ii];
+//                }
               }
             }
 
@@ -969,8 +1026,8 @@ compareShapeEstimators( int argc, char** argv,
           v_error[ii] = -42;
           continue;
         }
-//        v_error[ii] = v_curvatures_II[ii];
-                v_error[ii] = std::abs ( v_curvatures_true[ii] - v_curvatures_II[ii] );
+        v_error[ii] = v_curvatures_II[ii];
+//                v_error[ii] = std::abs ( v_curvatures_true[ii] - v_curvatures_II[ii] );
 
         if( v_error[ii] < min )
           min = v_error[ii];
