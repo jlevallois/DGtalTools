@@ -33,7 +33,6 @@
 #include <string>
 
 #include "DGtal/base/Common.h"
-#include "DGtal/base/Clock.h"
 #include "DGtal/helpers/StdDefs.h"
 
 #include <boost/program_options/options_description.hpp>
@@ -43,7 +42,7 @@
 #include "DGtal/math/KMeans.h"
 
 //shapes
-#include "DGtal/shapes/implicit/ImplicitBall.h"
+//#include "DGtal/shapes/implicit/ImplicitBall.h"
 #include "DGtal/math/MPolynomial.h"
 #include "DGtal/io/readers/MPolynomialReader.h"
 #include "DGtal/shapes/implicit/ImplicitPolynomial3Shape.h"
@@ -53,6 +52,7 @@
 #include "DGtal/topology/LightImplicitDigitalSurface.h"
 #include "DGtal/topology/DigitalSurface.h"
 #include "DGtal/graph/DepthFirstVisitor.h"
+#include "DGtal/graph/DistanceBreadthFirstVisitor.h"
 #include "DGtal/geometry/volumes/KanungoNoise.h"
 #include "DGtal/topology/CanonicSCellEmbedder.h"
 
@@ -70,15 +70,18 @@
 
 #include "DGtal/geometry/curves/estimation/TrueLocalEstimatorOnPoints.h"
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantMeanCurvatureEstimator.h"
-#include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator.h"
+//#include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator.h"
 
+#if 0
 #include "DGtal/geometry/surfaces/estimation/LocalEstimatorFromSurfelFunctorAdapter.h"
 #include "DGtal/geometry/surfaces/estimation/estimationFunctors/MongeJetFittingMeanCurvatureEstimator.h"
 #include "DGtal/geometry/surfaces/estimation/estimationFunctors/MongeJetFittingGaussianCurvatureEstimator.h"
 #include "DGtal/geometry/surfaces/estimation/estimationFunctors/MongeJetFittingPrincipalCurvaturesEstimator.h"
+#endif
+
 
 // Drawing
-#include "DGtal/io/boards/Board3D.h"
+//#include "DGtal/io/boards/Board3D.h"
 #include "DGtal/io/viewers/Viewer3D.h"
 #include "DGtal/io/colormaps/GradientColorMap.h"
 #include <QtGui/QApplication>
@@ -141,7 +144,7 @@ estimateTrueGaussianCurvatureQuantity( const ConstIterator & it_begin,
   }
 }
 
-template < typename Shape, typename KSpace, typename ConstIterator, typename OutputIterator >
+/*template < typename Shape, typename KSpace, typename ConstIterator, typename OutputIterator >
 void
 estimateTruePrincipalCurvaturesQuantity( const ConstIterator & it_begin,
                                          const ConstIterator & it_end,
@@ -168,7 +171,7 @@ estimateTruePrincipalCurvaturesQuantity( const ConstIterator & it_begin,
     ++output;
   }
 }
-
+*/
 /**
  * return the position inside surfels, size of surfels else
  */
@@ -259,8 +262,8 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
           for ( Iterator ptIt = sc.begin(), ptItEnd = sc.end(); ptIt != ptItEnd; ++ptIt )
             ++l;
           statD[ii].addValue( (double) l );*/
-      Vector v = *( sc.end() - 1 ) - *( sc.begin() );
-      statE[ii].addValue( v.norm( ) );
+      double v = (sc.back( ) - sc.front()).norm1() ; // sc.size();  //*( sc.end() - 1 ) - *( sc.begin() );
+      statE[ii].addValue( v )  ; //v.norm( ) );
       //          std::cout << " v=" << v.norm() << std::endl;
     }
 
@@ -270,6 +273,17 @@ void analyseAllLengthMS( std::vector< Statistic<double> > & statE,
     ++itbegin;
   } while( itbegin != itend );
 }
+
+template<typename Point2, typename Point1>
+struct Myfunctor
+{
+  typedef Point2 Output;
+  Point2 operator()(const Point1&a) const
+  {
+    return Point2(a.myCoordinates[0]/2,a.myCoordinates[1]/2);
+  }
+};
+
 
 template< typename ImplicitDigitalSurface, typename Surfel >
 void computeDPSSegments( std::vector< Surfel > & surfels,
@@ -406,11 +420,15 @@ void computeSegments( std::vector< Surfel > & surfels,
         //dimSlice
         MySlice slice( &ptrTracker, otherdim );
 
+
         typedef typename MySlice::ConstIterator ConstIterator3D;
         typedef typename MySlice::ConstCirculator ConstCirculator3D;
         typedef typename MySlice::Iterator Iterator3D;
-        typedef SCellProjector< KhalimskySpaceND<2, int> > Functor;
-        typedef SCellToPoint< Functor::KSpace > Functor2;
+        typedef SCellProjector< KhalimskySpaceND<2,int> > Functor;
+//        typedef CanonicSCellEmbedder< Functor::KSpace > Functor2;
+        typedef Myfunctor<typename Functor::KSpace::Point , typename Functor::KSpace::SCell> Functor2;
+
+
         typedef ConstIteratorAdapter< ConstCirculator3D, Functor, Functor::SCell > ConstIterator2D;
         typedef ConstIteratorAdapter< ConstIterator3D, Functor, Functor::SCell > ConstIterator2D2;
         typedef ConstIteratorAdapter< ConstIterator2D, Functor2, Functor2::Output > ConstIterator2DP;
@@ -433,7 +451,8 @@ void computeSegments( std::vector< Surfel > & surfels,
         ConstIterator2D2 xxend( slice.end(), projector );
 
         Functor::KSpace k2d;
-        Functor2 pointFunctor( k2d );
+        Functor2 pointFunctor;
+//        Functor2 pointFunctor(k2d);
 
         ConstIterator2DP pbegin( xbegin, pointFunctor );
         ConstIterator2DP pend( xend, pointFunctor );
@@ -444,15 +463,24 @@ void computeSegments( std::vector< Surfel > & surfels,
 
         const Dimension size_slice = slice.size();
         std::vector< Statistic< double > > v_statMSEL(size_slice);
+//        std::vector< Statistic< double > > v_statMSEL2(size_slice);
 
         typedef typename Functor::KSpace::Point Point;
         std::vector< Point > pts;
 
+//        if (K.sKCoords(*slice.begin())[0] == 1)
+//        trace.warning()<< "Slice begin"<< K.sKCoords(*slice.begin())<<std::endl;
         do
         {
-          pts.push_back( *pbegin );
+//          if (K.sKCoords(*slice.begin())[0] == 1)
+//          {
+//            trace.info() << *pbegin << " ";
+//          }
+            pts.push_back( *pbegin );
           ++pbegin;
         } while( pbegin != pend );
+//        if (K.sKCoords(*slice.begin())[0] == 1)
+//          trace.info()<< "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"<<std::endl;
 
 //        SCell bel = Surfaces< Functor::KSpace >::findABel( k2d, slice, 10000 );
 //        SurfelAdjacency< Functor::KSpace::dimension > SAdj( true );
@@ -466,8 +494,6 @@ void computeSegments( std::vector< Surfel > & surfels,
 
 
         Circulator< std::vector< Point >::iterator > cbegin( pts.begin(), pts.begin(), pts.end() );
-        for( int i = 0; i < 5; ++i )
-          ++cbegin;
         Circulator< std::vector< Point >::iterator > cend( cbegin );
 
         for( Dimension ii = 0; ii < size_slice; ++ii )
@@ -475,19 +501,29 @@ void computeSegments( std::vector< Surfel > & surfels,
           v_statMSEL[ii] = Statistic<double>(true);
         }
 
+
 //        trace.error() << "size " << size_slice << std::endl;
         if( size_slice <= 4 )
         {
-          for( Dimension ii = 0; ii < size_slice; ++ii )
-          {
-            v_statMSEL[ii].addValue(10);
-          }
+//          for( Dimension ii = 0; ii < size_slice; ++ii )
+//          {
+//            v_statMSEL[ii].addValue(10);
+//          }
           analyseAllLengthMS<Functor::KSpace>( v_statMSEL, ppbegin, ppend );
         }
         else
         {
           analyseAllLengthMS<Functor::KSpace>( v_statMSEL, cbegin, cend );
-
+//          Circulator< std::vector< Point >::iterator > cbegin2( pts.begin(), pts.begin(), pts.end() );
+//          int shift = 0;//size_slice / 2;
+//          for( int i = 0; i < shift; ++i )
+//            ++cbegin2;
+//          Circulator< std::vector< Point >::iterator > cend2( cbegin2 );
+//          analyseAllLengthMS<Functor::KSpace>( v_statMSEL, cbegin2, cend2 );
+//          for( Dimension ii = 0; ii < size_slice; ++ii )
+//          {
+//            v_statMSEL[ii].addValues( v_statMSEL2[ ( ii + shift ) % size_slice ].begin(), v_statMSEL2[ ( ii + shift ) % size_slice ].end());
+//          }
         }
 
         //                for(Dimension ii = 0; ii < pr2size; ++ii )
@@ -651,7 +687,7 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
     stata.terminate();
     statb.terminate();
 
-    if( mode == "max" )
+    //if( mode == "max" )
     {
       if( stata.max() > statb.max() )
       {
@@ -662,7 +698,7 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
         stat = statb;
       }
     }
-    else if( mode == "min" )
+   /* else if( mode == "min" )
     {
       if( stata.max() < statb.max() )
       {
@@ -681,39 +717,39 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
     else
     {
       trace.error() << "I dont understand " << mode << ". I need {min, mean, max} only." << std::endl;
-    }
+    }*/
 
     double result = -1.0;
-    if( prop == "min" )
+    /*if( prop == "min" )
     {
       result = stat.min();
     }
-    else if( prop == "mean" )
+    else if( prop == "mean" )*/
     {
       result = stat.mean();
-      if( result < minValue )
-      {
-        result = defaultValue;
-      }
+//      if( result < minValue )
+//      {
+//        result = defaultValue;
+//      }
     }
-    else if( prop == "median" )
+   /* else if( prop == "median" )
     {
       result = stat.median();
     }
     else if( prop == "max" )
     {
       result = stat.max();
-    }
+    }*/
 
     ASSERT(( result != -1.0 ));
 
     double re = -1.0;
-    if( result == defaultValue )
+   /* if( result == defaultValue )
       re = defaultValue;
-    else
+    else*/
       re = constante * result * result * h;
 
-    checkSizeRadius( re, h, minRadiusAABB );
+    //checkSizeRadius( re, h, minRadiusAABB );
 
     radius[ii] = re;
 
@@ -1021,11 +1057,11 @@ compareShapeEstimators( int argc, char** argv,
       double max = -500000;
       for( Dimension ii = 0; ii < v_curvatures_II.size(); ++ii )
       {
-        if(v_curvatures_II[ii] == -42)
-        {
-          v_error[ii] = -42;
-          continue;
-        }
+//        if(v_curvatures_II[ii] == -42)
+//        {
+//          v_error[ii] = -42;
+//          continue;
+//        }
         v_error[ii] = v_curvatures_II[ii];
 //                v_error[ii] = std::abs ( v_curvatures_true[ii] - v_curvatures_II[ii] );
 
@@ -1056,16 +1092,20 @@ compareShapeEstimators( int argc, char** argv,
 
       for ( unsigned int ii = 0; ii < surfels.size(); ++ii )
       {
-        if( v_error[ii] == -42 )
+     //  if( K.sKCoords(surfels[ii])[0] == 1)
         {
-          viewer << CustomColors3D( AXIS_COLOR_GREEN, AXIS_COLOR_GREEN)
-                 << surfels[ii];
-        }
-        else
+
+//        if( v_error[ii] == -42 )
+//        {
+//          viewer << CustomColors3D( AXIS_COLOR_GREEN, AXIS_COLOR_GREEN)
+//                 << surfels[ii];
+//        }
+//        else
         {
           viewer << CustomColors3D( Color::Black, cmap_grad( v_error[ ii ] ))
                  << surfels[ii];
         }
+      }
       }
 
       viewer << Viewer3D<>::updateDisplay;
