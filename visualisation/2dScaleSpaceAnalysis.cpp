@@ -232,16 +232,17 @@ void analyseLengthMS( /*Statistic<double> & statD,*/ Statistic<double> & statE,
   }
 }
 
-template< typename MyShape >
+template< typename MyShape, typename SCell >
 void ComputeRadiuses( const MyShape & shape,
                       const double h,
                       const double constante,
                       unsigned int & nbKernels,
                       std::vector< double > & v_local_radiuses,
-                      double & global_radius)
+                      double & global_radius,
+                      SCell & bel )
 {
   typedef Z2i::KSpace::Surfel Surfel;
-  typedef Z2i::KSpace::SCell SCell;
+//  typedef Z2i::KSpace::SCell SCell;
   typedef GaussDigitizer< Z2i::Space, MyShape > Digitizer;
   typedef typename Digitizer::RealPoint RealPoint;
 
@@ -258,7 +259,7 @@ void ComputeRadiuses( const MyShape & shape,
     return;
   }
 
-  Surfel bel = Surfaces< Z2i::KSpace >::findABel( K, dig, 100000 );
+//  Surfel bel = Surfaces< Z2i::KSpace >::findABel( K, dig, 100000 );
 
   typedef DigitalSurface< LightImplicitDigitalSurface< Z2i::KSpace, Digitizer > > MyDigitalSurface;
   typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
@@ -364,14 +365,15 @@ void ComputeRadiuses( const MyShape & shape,
   trace.info() << "min: " << min << "\nmax: " << max << std::endl;
 }
 
-template< typename MyShape >
+template< typename MyShape, typename SCell >
 int Compute( const MyShape & shape,
              const std::vector< double > & re_array,
              const double h,
              const std::string & options,
              const std::string name,
              const std::vector< double > & v_local_radiuses,
-             const double & global_radius)
+             const double & global_radius,
+             SCell & bel )
 {
   typedef ImageSelector< Z2i::Domain, float >::Type Image;
 
@@ -396,7 +398,8 @@ int Compute( const MyShape & shape,
     return 0;
   }
 
-  Surfel bel = Surfaces< Z2i::KSpace >::findABel( K, dig, 100000 );
+//  Surfel
+  bel = Surfaces< Z2i::KSpace >::findABel( K, dig, 100000 );
 
   typedef DigitalSurface< LightImplicitDigitalSurface< Z2i::KSpace, Digitizer > > MyDigitalSurface;
   typedef PointFunctorFromPointPredicateAndDomain< Digitizer, Z2i::Domain, unsigned int > MyPointFunctor;
@@ -592,10 +595,10 @@ int Compute( const MyShape & shape,
     (*image_local)[local_pos[ii]] = 255;
   }
 
-//  std::stringstream sstm;
-//  sstm << name << ".ppm";
-//  std::string exportname = sstm.str();
-//  PPMWriter< Image, Gradient >::exportPPM( exportname, *image, cmap_grad );
+  std::stringstream sstm;
+  sstm << name << ".ppm";
+  std::string exportname = sstm.str();
+  PPMWriter< Image, Gradient >::exportPPM( exportname, *image, cmap_grad );
 
   std::stringstream sstm2;
   sstm2 << name << "_local.ppm";
@@ -749,7 +752,7 @@ int main ( int argc, char** argv )
       ("axis2,a",  po::value<double>(), "Half small axis of the shape (ellipse)" )
       ("smallradius,r",  po::value<double>()->default_value(5), "Small radius of the shape" )
       ("varsmallradius,v",  po::value<double>()->default_value(5), "Variable small radius of the shape" )
-      ("k,k",  po::value<unsigned int>()->default_value(3), "Number of branches or corners the shape" )
+      ("k,k",  po::value<unsigned int>()->default_value(6), "Number of branches or corners the shape" )
       ("phi",  po::value<double>()->default_value(0.0), "Phase of the shape (in radian)" )
       ("width,w",  po::value<double>()->default_value(10.0), "Width of the shape" )
       ("power,p",   po::value<double>()->default_value(2.0), "Power of the metric (double)" )
@@ -865,7 +868,7 @@ int main ( int argc, char** argv )
   RealPoint center( vm[ "center_x" ].as< double >(),
       vm[ "center_y" ].as< double >());
 
-  if( id == 0 )
+  /*if( id == 0 )
   {
     if( !( vm.count( "radius" )))
     {
@@ -913,8 +916,8 @@ int main ( int argc, char** argv )
     ImplicitRoundedHyperCube< Z2i::Space > ball( Z2i::Point( 0, 0 ), radius, power );
     trace.error() << "Not available.";
     trace.info() << std::endl;
-  }
-  else if( id == 3 )
+  }*/
+  /*else if( id == 3 )*/
   {
     if( !( vm.count( "varsmallradius" )))
     {
@@ -934,23 +937,67 @@ int main ( int argc, char** argv )
     }
     double radius = vm[ "radius" ].as< double >();
     double varsmallradius = vm[ "varsmallradius" ].as< double >();
-    unsigned int k = vm[ "k" ].as< unsigned int >();
+    unsigned int k = 6;//vm[ "k" ].as< unsigned int >();
     double phi = vm[ "phi" ].as< double >();
-    Flower2D< Z2i::Space > flower( center, radius, varsmallradius, k, phi );
+    Flower2D< Z2i::Space > flower( center, radius, varsmallradius, 6, phi );
     for ( uint i_h = 0; i_h < rh_array.size (); ++i_h )
     {
       std::vector< double > v_local_radiuses;
       double global_radius;
-      ComputeRadiuses( flower, rh_array[ i_h ], constante, nbKernels, v_local_radiuses, global_radius );
 
       std::cout << "computation for h=" << rh_array[ i_h ] << std::endl;
       std::stringstream sstm;
       sstm << "ScaleSpaceMean2D_" << filename << "_h_" << rh_array[ i_h ] << ".pgm";
       std::string exportname = sstm.str();
 
-      Compute( flower, re_array, rh_array[ i_h ], options, exportname.c_str(), v_local_radiuses, global_radius );
+      //////////////
+      typedef typename Z2i::Space::Point Point;
+      typedef typename Z2i::Space::Vector Vector;
+      typedef typename Z2i::Space::RealPoint RealPoint;
+      typedef typename Z2i::Space::Integer Integer;
+      typedef HyperRectDomain<Z2i::Space> Domain;
+      typedef KhalimskySpaceND<Z2i::Space::dimension,Integer> KSpace;
+      typedef typename KSpace::SCell SCell;
+      typedef GaussDigitizer<Z2i::Space, Flower2D< Z2i::Space > > Digitizer;
+
+      SCell bel;
+
+      // Digitizer
+      Digitizer dig;
+      dig.attach( flower ); // attaches the shape.
+      Vector vlow(-1,-1); Vector vup(1,1);
+      dig.init( flower.getLowerBound()+vlow, flower.getUpperBound()+vup, rh_array[ i_h ] );
+      Domain domain = dig.getDomain();
+
+      //Noise
+
+      Clock c;
+
+      // Create cellular space
+      KSpace K;
+      bool ok = K.init( dig.getLowerBound(), dig.getUpperBound(), true );
+      if ( ! ok )
+      {
+        std::cerr << "[2dLocalEstimators]"
+                  << " error in creating KSpace." << std::endl;
+        return false;
+      }
+      {
+
+        // Extracts shape boundary
+        SurfelAdjacency< KSpace::dimension > SAdj( true );
+
+        {
+          bel = Surfaces< KSpace >::findABel( K, dig, 10000 );
+        }
+      }
+
+        //////////////////
+      ComputeRadiuses( flower, rh_array[ i_h ], constante, nbKernels, v_local_radiuses, global_radius, bel );
+
+      Compute( flower, re_array, rh_array[ i_h ], options, exportname.c_str(), v_local_radiuses, global_radius, bel );
     }
-  }
+  }/*
   else if( id == 4 )
   {
     if( !( vm.count( "radius" )))
@@ -1083,7 +1130,7 @@ int main ( int argc, char** argv )
 
       Compute( cublipse, re_array, rh_array[ i_h ], options, exportname.c_str(), v_local_radiuses, global_radius );
     }
-  }
+  }*/
 
   return 42;
 }

@@ -182,7 +182,7 @@ int ComputeStatistics ( const std::string & inputdata1,
     }
 
     double meanL1 = L1 / (double)nb_elements;
-    double meanL2 = ( sqrt ( L2 )) / (double)nb_elements;
+    double meanL2 = ( sqrt ( L2  / (double)nb_elements));
 
     output << h << " "
            << meanL1 << " "

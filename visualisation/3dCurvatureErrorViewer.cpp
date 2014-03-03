@@ -84,6 +84,7 @@
 //#include "DGtal/io/boards/Board3D.h"
 #include "DGtal/io/viewers/Viewer3D.h"
 #include "DGtal/io/colormaps/GradientColorMap.h"
+#include "DGtal/io/colormaps/RandomColorMap.h"
 #include <QtGui/QApplication>
 
 using namespace DGtal;
@@ -818,7 +819,7 @@ Dimension computeRadius( std::vector< Surfel > & surfels,
     }
     else if( prop == "mean" )*/
     {
-      result = stat.min();
+      result = stat.mean();
 //      if( result < minValue )
 //      {
 //        result = defaultValue;
@@ -1076,8 +1077,8 @@ compareShapeEstimators( int argc, char** argv,
 #endif
               for( Dimension ii = 0; ii < optionsII.nbKernels; ++ii )
               {
-                v_estimators[ii] = new Estimator( K, functor );
-                v_estimators[ii]->init( h, v_radius[ii] );
+//                v_estimators[ii] = new Estimator( K, functor );
+//                v_estimators[ii]->init( h, v_radius[ii] );
 
                 std::cout << "estimator #" << ii << " of radius " << v_radius[ii] << " initialized ..." << std::endl;
               }
@@ -1106,8 +1107,8 @@ compareShapeEstimators( int argc, char** argv,
 //                }
 //                else
 //                {
-                  v_curvatures_II[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
-//                  v_curvatures_II[ii] = v_radius[v_registration[ ii ]];
+//                  v_curvatures_II[ii] = v_estimators[ v_registration[ ii ]]->eval( surfels.begin() + ii );
+                  v_curvatures_II[ii] = v_registration[ ii ];//v_radius[v_registration[ ii ]];
 //                }
               }
               else
@@ -1118,11 +1119,11 @@ compareShapeEstimators( int argc, char** argv,
 //                }
 //                else
 //                {
-                Estimator estimator( K, functor );
-                estimator.init( h, v_estimated_radius[ii] );
+//                Estimator estimator( K, functor );
+//                estimator.init( h, v_estimated_radius[ii] );
 //                                  v_curvatures[ii] = estimator.eval( surfels.begin() + ii );
-                v_curvatures_II[ii] = estimator.eval( surfels.begin() + ii );
-//                  v_curvatures_II[ii] = v_estimated_radius[ii];
+//                v_curvatures_II[ii] = estimator.eval( surfels.begin() + ii );
+                  v_curvatures_II[ii] = v_estimated_radius[ii];
 //                }
               }
             }
@@ -1154,8 +1155,8 @@ compareShapeEstimators( int argc, char** argv,
 //          v_error[ii] = -42;
 //          continue;
 //        }
-//        v_error[ii] = v_curvatures_II[ii];
-        v_error[ii] = std::abs ( v_curvatures_true[ii] - v_curvatures_II[ii] );
+        v_error[ii] = v_curvatures_II[ii];
+//        v_error[ii] = std::abs ( v_curvatures_true[ii] - v_curvatures_II[ii] );
 
         if( v_error[ii] < min )
           min = v_error[ii];
@@ -1173,7 +1174,15 @@ compareShapeEstimators( int argc, char** argv,
       Viewer viewer( K );
       viewer.show();
 
-      typedef GradientColorMap< double > Gradient;
+//      typedef  RandomColorMap Gradient;
+//      Gradient cmap_grad( 0, optionsII.nbKernels );
+//      cmap_grad.addColor( Color::Blue );
+//      cmap_grad.addColor( Color::Green );
+//      cmap_grad.addColor( Color::Black );
+
+//      typedef  HueShadeColorMap<double> Gradient;
+//      Gradient cmap_grad( min, max, 1 );
+      typedef  GradientColorMap<double> Gradient;
       Gradient cmap_grad( min, max );
       cmap_grad.addColor( Color( 50, 50, 255 ) );
       cmap_grad.addColor( Color( 255, 0, 0 ) );
