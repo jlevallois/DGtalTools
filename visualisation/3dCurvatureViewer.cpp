@@ -68,7 +68,9 @@
 #include "DGtal/io/colormaps/GradientColorMap.h"
 #include <QtGui/QApplication>
 
-using namespace std;
+#include <cmath>
+
+//using namespace std;
 using namespace DGtal;
 
 const Color  AXIS_COLOR_RED( 200, 20, 20, 255 );
@@ -97,15 +99,15 @@ int main( int argc, char** argv )
   // parse command line ----------------------------------------------
   po::options_description general_opt("Allowed options are");
   general_opt.add_options()
-    ("help,h", "display this message")
-    ("input-file,i", po::value< std::string >(), ".vol file")
-    ("radius,r",  po::value< double >(), "Kernel radius for IntegralInvariant" )
-    ("try,t",  po::value< unsigned int >()->default_value(150), "Max number of tries to find a proper bel" )
-    ("mode,m", po::value< std::string >()->default_value("mean"), "type of output : mean, gaussian, prindir1 or prindir2 (default mean)");
+      ("help,h", "display this message")
+      ("input-file,i", po::value< std::string >(), ".vol file")
+      ("radius,r",  po::value< double >(), "Kernel radius for IntegralInvariant" )
+      ("try,t",  po::value< unsigned int >()->default_value(150), "Max number of tries to find a proper bel" )
+      ("mode,m", po::value< std::string >()->default_value("mean"), "type of output : mean, gaussian, prindir1 or prindir2 (default mean)");
 
   bool parseOK = true;
   po::variables_map vm;
-  try 
+  try
   {
     po::store( po::parse_command_line( argc, argv, general_opt ), vm );
   }
@@ -116,14 +118,14 @@ int main( int argc, char** argv )
   }
   po::notify( vm );
   bool neededArgsGiven=true;
-  if (!(vm.count("input-file"))){ 
+  if (!(vm.count("input-file"))){
     missingParam("--input-file");
     neededArgsGiven=false;
   }
-  if (!(vm.count("radius"))){ 
+  if (!(vm.count("radius"))){
     missingParam("--radius");
     neededArgsGiven=false;
-  }  
+  }
   double h = 1.0;
 
   bool wrongMode = false;
@@ -138,7 +140,7 @@ int main( int argc, char** argv )
     trace.info()<< "Visualisation of 3d curvature from .vol file using curvature from Integral Invariant" <<std::endl
                 << general_opt << "\n"
                 << "Basic usage: "<<std::endl
-                << "\t3dCurvatureViewer -i <file.vol> --radius <radius> --mode <\"mean\">"<<std::endl
+                << "\t3dCurvatureViewer -i <file.vol> --radius <radius> --properties <\"mean\">"<<std::endl
                 << std::endl
                 << "Below are the different available modes: " << std::endl
                 << "\t - \"mean\" for the mean curvature" << std::endl
@@ -189,17 +191,17 @@ int main( int argc, char** argv )
   unsigned int maxTries = vm["try"].as< unsigned int >();
   while( digSurf.size() < 2 * minsize || tries > maxTries )
   {
-      delete boundary;
-      bel = Surfaces< KSpace >::findABel( K, predicate, 10000 );
-      boundary = new Boundary( K, predicate, SurfelAdjacency< KSpace::dimension >( true ), bel );
-      digSurf = MyDigitalSurface( *boundary );
-      ++tries;
+    delete boundary;
+    bel = Surfaces< KSpace >::findABel( K, predicate, 10000 );
+    boundary = new Boundary( K, predicate, SurfelAdjacency< KSpace::dimension >( true ), bel );
+    digSurf = MyDigitalSurface( *boundary );
+    ++tries;
   }
 
   if( tries > 150 )
   {
-      std::cerr << "Can't found a proper bel. So .... I ... just ... kill myself." << std::endl;
-      return false;
+    std::cerr << "Can't found a proper bel. So .... I ... just ... kill myself." << std::endl;
+    return false;
   }
 
   typedef DepthFirstVisitor<MyDigitalSurface> Visitor;
@@ -213,6 +215,7 @@ int main( int argc, char** argv )
   MyPointFunctor pointFunctor( image, predicate, 1 );
 
   // Integral Invariant stuff
+
   typedef FunctorOnCells< MyPointFunctor, Z3i::KSpace > MyCellFunctor;
   MyCellFunctor functor ( pointFunctor, K ); // Creation of a functor on Cells, returning true if the cell is inside the shape
 
@@ -310,7 +313,7 @@ int main( int argc, char** argv )
     // Drawing results
     typedef  Matrix3x3::RowVector RowVector;
     typedef  Matrix3x3::ColumnVector ColumnVector;
-    viewer << SetMode3D(K.uCell( K.sKCoords(*abegin2) ).className(), "Basic" );
+    viewer << SetMode3D((*abegin2).className(), "Basic" );//<< SetMode3D(K.uCell( K.sKCoords(*abegin2) ).className(), "Basic" );
     for ( unsigned int i = 0; i < results.size(); ++i )
     {
       CurvInformation current = results[ i ];
@@ -321,48 +324,63 @@ int main( int argc, char** argv )
         outer = K.sDirectIncident( *abegin2, kDim);
       }
 
-      Cell unsignedSurfel = K.uCell( K.sKCoords(*abegin2) );
-      viewer << CustomColors3D( DGtal::Color(255,255,255,255),
-                                DGtal::Color(255,255,255,255))
-             << unsignedSurfel;
-      ColumnVector curv1 = current.vectors.column(1).getNormalized();
-      ColumnVector curv2 = current.vectors.column(2).getNormalized();
+      //      Cell unsignedSurfel = K.uCell( K.sKCoords(*abegin2) );
+      double k1abs = current.k1;//abs( current.k1 );
+      double k2abs = current.k2;//abs( current.k2 );
+      double val = k1abs / k2abs;
 
-      double eps = 0.01;
-      RealPoint center = embedder( outer );
-
-      if( ( mode.compare("prindir1") == 0 ) )
+      if( val < 0.2 )
       {
-        viewer.setLineColor(AXIS_COLOR_BLUE);
-        viewer.addLine (
-              RealPoint(
-                center[0] -  0.5 * curv1[0],
-            center[1] -  0.5 * curv1[1],
-            center[2] -  0.5 * curv1[2]
-            ),
-            RealPoint(
-              center[0] +  0.5 * curv1[0],
-            center[1] +  0.5 * curv1[1],
-            center[2] +  0.5 * curv1[2]
-            ),
-            AXIS_LINESIZE );
+        viewer << CustomColors3D( DGtal::Color(255,0,0,255),
+                                  DGtal::Color(255,0,0,255))
+               << *abegin2;//unsignedSurfel;
       }
       else
       {
-        viewer.setLineColor(AXIS_COLOR_RED);
-        viewer.addLine (
-              RealPoint(
-                center[0] -  0.5 * curv2[0],
-            center[1] -  0.5 * curv2[1],
-            center[2] -  0.5 * curv2[2]
-            ),
-            RealPoint(
-              center[0] +  0.5 * curv2[0],
-            center[1] +  0.5 * curv2[1],
-            center[2] +  0.5 * curv2[2]
-            ),
-            AXIS_LINESIZE );
+//        std::cout << current.k1 << " " << current.k2 << std::endl;
+        viewer << CustomColors3D( DGtal::Color(255,255,255,255),
+                                  DGtal::Color(255,255,255,255))
+               << *abegin2;
       }
+
+//      ColumnVector curv1 = current.vectors.column(1).getNormalized();
+//      ColumnVector curv2 = current.vectors.column(2).getNormalized();
+
+//      double eps = 0.01;
+//      RealPoint center = embedder( outer );
+
+//      //      if( ( mode.compare("prindir1") == 0 ) )
+//      {
+//        viewer.setLineColor(AXIS_COLOR_BLUE);
+//        viewer.addLine (
+//              RealPoint(
+//                center[0] -  0.5 * curv1[0],
+//            center[1] -  0.5 * curv1[1],
+//            center[2] -  0.5 * curv1[2]
+//            ),
+//            RealPoint(
+//              center[0] +  0.5 * curv1[0],
+//            center[1] +  0.5 * curv1[1],
+//            center[2] +  0.5 * curv1[2]
+//            ),
+//            AXIS_LINESIZE );
+//      }
+//      //      else
+//      {
+//        viewer.setLineColor(AXIS_COLOR_RED);
+//        viewer.addLine (
+//              RealPoint(
+//                center[0] -  0.5 * curv2[0],
+//            center[1] -  0.5 * curv2[1],
+//            center[2] -  0.5 * curv2[2]
+//            ),
+//            RealPoint(
+//              center[0] +  0.5 * curv2[0],
+//            center[1] +  0.5 * curv2[1],
+//            center[2] +  0.5 * curv2[2]
+//            ),
+//            AXIS_LINESIZE );
+//      }
 
       ++abegin2;
     }
