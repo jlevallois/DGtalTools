@@ -102,6 +102,7 @@ int main( int argc, char** argv )
       ("help,h", "display this message")
       ("input-file,i", po::value< std::string >(), ".vol file")
       ("radius,r",  po::value< double >(), "Kernel radius for IntegralInvariant" )
+      ("seuil,s",  po::value< double >(), "Seuil" )
       ("try,t",  po::value< unsigned int >()->default_value(150), "Max number of tries to find a proper bel" )
       ("mode,m", po::value< std::string >()->default_value("mean"), "type of output : mean, gaussian, prindir1 or prindir2 (default mean)");
 
@@ -130,6 +131,7 @@ int main( int argc, char** argv )
 
   bool wrongMode = false;
   std::string mode = vm["mode"].as< std::string >();
+  double seuil = vm["seuil"].as< double >();
   if (( mode.compare("gaussian") != 0 ) && ( mode.compare("mean") != 0 ) && ( mode.compare("prindir1") != 0 ) && ( mode.compare("prindir2") != 0 ))
   {
     wrongMode = true;
@@ -325,11 +327,17 @@ int main( int argc, char** argv )
       }
 
       //      Cell unsignedSurfel = K.uCell( K.sKCoords(*abegin2) );
-      double k1abs = current.k1;//abs( current.k1 );
-      double k2abs = current.k2;//abs( current.k2 );
-      double val = k1abs / k2abs;
+      double k1abs = abs( current.k1 );
+      double k2abs = abs( current.k2 );
 
-      if( val < 0.2 )
+      if( k2abs < k1abs )
+      {
+        double tmp = k1abs;
+        k1abs = k2abs;
+        k2abs = tmp;
+      }
+      double val = k1abs / k2abs;
+      if( val < seuil )
       {
         viewer << CustomColors3D( DGtal::Color(255,0,0,255),
                                   DGtal::Color(255,0,0,255))
