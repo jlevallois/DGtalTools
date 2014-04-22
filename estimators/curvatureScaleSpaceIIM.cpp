@@ -61,18 +61,25 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include "DGtal/io/boards/Board2D.h"
+#include "DGtal/io/colormaps/GradientColorMap.h"
+#include "DGtal/topology/LightImplicitDigitalSurface.h"
+#include "DGtal/topology/DigitalSurface.h"
+#include "DGtal/graph/DepthFirstVisitor.h"
+#include "DGtal/graph/GraphVisitorRange.h"
+
 #include <vector>
 #include <string>
 #include <iomanip>
 
 
-using namespace DGtal;
+ using namespace DGtal;
 
 
-DGtal::ImageContainerBySTLVector<Z2i::Domain, unsigned char> 
-getImageFromFC(double scaleMax, const FreemanChain<Z2i::Integer> &fc, 
-               std::set<Z2i::KSpace::SCell> &boundarySCell)
-{
+ DGtal::ImageContainerBySTLVector<Z2i::Domain, unsigned char> 
+ getImageFromFC(double scaleMax, const FreemanChain<Z2i::Integer> &fc, 
+   std::vector<Z2i::KSpace::SCell> &boundarySCell)
+ {
   int minx, miny, maxx, maxy;
   fc.computeBoundingBox(minx, miny, maxx, maxy);
   minx-=scaleMax;
@@ -82,40 +89,67 @@ getImageFromFC(double scaleMax, const FreemanChain<Z2i::Integer> &fc,
   Z2i::KSpace aKSpace;
   aKSpace.init(Z2i::Point(minx, miny), Z2i::Point(maxx, maxy), false);
   
-  FreemanChain<Z2i::Integer>::getContourSCell(aKSpace, fc, boundarySCell, true); 
+  std::set<Z2i::KSpace::SCell> bSCell;
+  FreemanChain<Z2i::Integer>::getContourSCell(aKSpace, fc, bSCell, true); 
   std::set<Z2i::KSpace::Cell> interiorCell;
-  Surfaces<Z2i::KSpace>::uComputeInterior(aKSpace, boundarySCell, interiorCell, false);  
+  Surfaces<Z2i::KSpace>::uComputeInterior(aKSpace, bSCell, interiorCell, false);  
   ImageContainerBySTLVector<Z2i::Domain, unsigned char> imageResult (Z2i::Domain(Z2i::Point(minx, miny), Z2i::Point(maxx, maxy))); 
-  for(std::set<Z2i::KSpace::Cell>::const_iterator it = interiorCell.begin(); it!=interiorCell.end(); it++){
+  for(std::set<Z2i::KSpace::Cell>::const_iterator it = interiorCell.begin(); it!=interiorCell.end(); ++it){
     imageResult.setValue(aKSpace.uCoords(*it), 1);
   }
+
+  ///////////////
+  boundarySCell.clear();
+
+  typedef Z2i::KSpace::Surfel Surfel;
+  typedef PointPredicateFromPointFunctor< ImageContainerBySTLVector<Z2i::Domain, unsigned char>, Z2i::Domain, unsigned char > PP;
+  typedef LightImplicitDigitalSurface< Z2i::KSpace, PP > LightImplicitDigSurface;
+  typedef DigitalSurface< LightImplicitDigSurface > MyDigitalSurface;
+  Z2i::KSpace KSpaceShape;
+  KSpaceShape.init( imageResult.domain().lowerBound(), imageResult.domain().upperBound(), true );
+  SurfelAdjacency<Z2i::KSpace::dimension> SAdj( true );
+  PP pp( imageResult, 1 );
+  Surfel bel = Surfaces<Z2i::KSpace>::findABel( KSpaceShape, pp, 100000 );
+  LightImplicitDigSurface LightImplDigSurf( KSpaceShape, pp, SAdj, bel );
+  MyDigitalSurface digSurf( LightImplDigSurf );
+
+  typedef DepthFirstVisitor< MyDigitalSurface > Visitor;
+  typedef GraphVisitorRange< Visitor > VisitorRange;
+  typedef VisitorRange::ConstIterator SurfelConstIterator;
+
+  VisitorRange range( new Visitor( digSurf, *digSurf.begin() ) );
+  SurfelConstIterator abegin = range.begin();
+  SurfelConstIterator aend = range.end();
+
+  while (abegin != aend )
+  {
+    boundarySCell.push_back( *abegin);
+    ++abegin;
+  }
+  ///////////////
   return imageResult; 
 }
 
 
 void
-
-computeCurvatureIIMC(double h, double scale, const ImageContainerBySTLVector<Z2i::Domain, unsigned char>  &image,
-                     const std::set<Z2i::KSpace::SCell> &boundarySCell, std::vector<double> &resCurvature)
+computeCurvatureIIMC(double h, double scale, ImageContainerBySTLVector<Z2i::Domain, unsigned char>  &image,
+ const std::vector<Z2i::KSpace::SCell> &boundarySCell, std::vector<double> &resCurvature)
 {
   typedef DGtal::KhalimskySpaceND< 2, int > KSpace;
   typedef DGtal::ImageContainerBySTLVector<Z2i::Domain, unsigned char> Image2D ; 
   typedef KhalimskySpaceND<2, int>::Cell Cell;
   typedef KhalimskySpaceND<2, int>::SCell SCell;
-  typedef SimpleThresholdForegroundPredicate< Image2D > ImageThreshPredicate;
-  typedef ImageToConstantFunctor< Image2D, ImageThreshPredicate > MyPointFunctor;
-  typedef FunctorOnCells< MyPointFunctor, KSpace > MyCellFunctor;
-
-  double re_convolution_kernel = scale; 
+  /*typedef SimpleThresholdForegroundPredicate< Image2D > ImageThreshPredicate;
+  typedef ImageToConstantFunctor< Image2D, ImageThreshPredicate > MyPointFunctor;*/
+  typedef FunctorOnCells< Image2D, KSpace > MyCellFunctor;
 
   KSpace aKSpace;
-  aKSpace.init(image.domain().lowerBound(),
-               image.domain().upperBound(), false);
+  aKSpace.init(image.domain().lowerBound(), image.domain().upperBound(), false);
   
   
-  ImageThreshPredicate predicate = ImageThreshPredicate( image, 0 );
-  MyPointFunctor pointFunctor( image, predicate, 1 );    
-  MyCellFunctor functor ( pointFunctor, aKSpace );  
+  /*ImageThreshPredicate predicate = ImageThreshPredicate( image, 0 );
+  MyPointFunctor pointFunctor( image, predicate, 1 ); */   
+  MyCellFunctor functor ( image, aKSpace );  
   typedef IntegralInvariantMeanCurvatureEstimator< Z2i::KSpace, MyCellFunctor > MyIIMeanEstimator;
   MyIIMeanEstimator estimator ( aKSpace, functor );
 
@@ -125,7 +159,21 @@ computeCurvatureIIMC(double h, double scale, const ImageContainerBySTLVector<Z2i
 
 }
 
+struct MyDrawStyleCustomColor : public DrawableWithBoard2D
+{
+  Color myPenColor;
+  Color myFillColor;
+  MyDrawStyleCustomColor( const Color & penColor,
+        const Color & fillColor )
+    : myPenColor( penColor ), myFillColor( fillColor )
+  {}
 
+  virtual void setStyle( Board2D & aboard) const
+  {
+    aboard.setFillColor( myFillColor);
+    aboard.setPenColor( myPenColor );
+  }
+};
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -137,20 +185,20 @@ int main( int argc, char** argv )
   // parse command line ----------------------------------------------
   po::options_description general_opt("Allowed options are: ");
   general_opt.add_options()
-    ("help,h", "display this message")
-    ("FreemanChain,f", po::value<std::string>(), "FreemanChain file name")
-    ("gridStep,s", po::value<double>()->default_value(1.0), "Grid step size")
-    ("radiusInit", po::value<double>()->default_value(1.0), "initial radius")
-    ("radiusIncrement", po::value<double>()->default_value(1.0), "radius increment")
-    ("radiusFinal", po::value<double>()->default_value(1.0), "final radius") 
-    ("output,o ", po::value<std::string>(), "set the output name ")
-    ("curvatureCutOff,c", po::value<double>()->default_value(10.0), "set the curvature limits to better display");
+  ("help,h", "display this message")
+  ("FreemanChain,f", po::value<std::string>(), "FreemanChain file name")
+  ("gridStep,s", po::value<double>()->default_value(1.0), "Grid step size")
+  ("radiusInit", po::value<double>()->default_value(1.0), "initial radius")
+  ("radiusIncrement", po::value<double>()->default_value(1.0), "radius increment")
+  ("radiusFinal", po::value<double>()->default_value(1.0), "final radius") 
+  ("output,o ", po::value<std::string>(), "set the output name ")
+  ("curvatureCutOff,c", po::value<double>()->default_value(10.0), "set the curvature limits to better display");
   
 
   typedef DGtal::ImageContainerBySTLVector<Z2i::Domain, unsigned char> Image2D ; 
   typedef ImageContainerBySTLVector<Z2i::Domain, double > ImageCurvature;
 
- 
+
   bool parseOK=true;
   po::variables_map vm;
   try{
@@ -161,14 +209,14 @@ int main( int argc, char** argv )
   }
   po::notify(vm);    
   if(!parseOK || vm.count("help")||argc<=1 || (!(vm.count("FreemanChain"))) )
-    {
-      trace.info()<< "Generate the Curvature Scale Sapce image using a binomial convolver based estimator." <<std::endl
-                  << "The x axis is associated to the contour point and the y axis to the scale. The color represent the curvature values included between the cutoff values (set to 10 by default)."
-                  <<std::endl << "Basic usage: "<<std::endl
-      << "\t curvatureScaleSpaceIMM -f ${DGtal}/examples/samples/contourS.fc  --radiusInit 2 --radiusIncrement  0.5 --radiusFinal 100 -o cssResu.ppm "<<std::endl
-      << general_opt << "\n";
-      return 0;
-    }
+  {
+    trace.info()<< "Generate the Curvature Scale Sapce image using a binomial convolver based estimator." <<std::endl
+    << "The x axis is associated to the contour point and the y axis to the scale. The color represent the curvature values included between the cutoff values (set to 10 by default)."
+    <<std::endl << "Basic usage: "<<std::endl
+    << "\t curvatureScaleSpaceIMM -f ${DGtal}/examples/samples/contourS.fc  --radiusInit 2 --radiusIncrement  0.5 --radiusFinal 100 -o cssResu.ppm "<<std::endl
+    << general_opt << "\n";
+    return 0;
+  }
   double radius_initial = vm["radiusInit"].as<double>();
   double radius_increment = vm["radiusIncrement"].as<double>();
   double radius_final = vm["radiusFinal"].as<double>();
@@ -190,33 +238,63 @@ int main( int argc, char** argv )
     
     trace.progressBar(0, height);
     double rad= radius_initial;
-    std::set<Z2i::KSpace::SCell> boundarySCell;
+    std::vector<Z2i::KSpace::SCell> boundarySCell;
     Image2D image = getImageFromFC( radius_final/gridStep, vectFcs.at(0), boundarySCell );
-    
-    for(double l= 0; l < height; l++ ){
-    
-      trace.progressBar(l, height);
-      std::vector<double> curvaturesIIM;
-      
-      computeCurvatureIIMC(gridStep, rad, image, boundarySCell,  curvaturesIIM);      
-      // Output
-      unsigned int j = 0;
-      for ( std::vector<double>::const_iterator it = curvaturesIIM.begin(), it_end = curvaturesIIM.end();
-            it != it_end; ++it, ++j ) {
-        double c = (*it)*gridStep;
-        c = c<-curvatureCutOff? -curvatureCutOff: c;
-        c = c>curvatureCutOff? curvatureCutOff: c;
-        cssImage.setValue(Z2i::Point(j, l), c); 
-      }      
-      rad=rad+radius_increment;
+
+////////////////////////////
+    typename std::vector<Z2i::KSpace::SCell>::const_iterator dit = boundarySCell.begin();
+    typename std::vector<Z2i::KSpace::SCell>::const_iterator ditEnd = boundarySCell.end();
+    int nb = 0;
+    for(; dit != ditEnd; ++dit)
+    {
+      ++nb;
     }
-    
-    trace.progressBar(height, height);
-    trace.info() <<std::endl;
-    
-    DGtal::GenericWriter<ImageCurvature, 2, double, HueShadeColorMap<double> >::exportFile(vm["output"].as<std::string>(), cssImage, gradCurvature );       
-  }
- 
-  return 0;
+
+    typedef GradientColorMap< int > Gradient;
+    Gradient cmap_grad( 0, nb );
+    cmap_grad.addColor( Color( 50, 50, 255 ) );
+    cmap_grad.addColor( Color( 255, 0, 0 ) );
+    cmap_grad.addColor( Color( 255, 255, 10 ) );
+    /*Color red( 255, 0, 0 );
+    Color dred( 192, 0, 0 );*/
+
+    dit = boundarySCell.begin();
+    Board2D board;
+    board << SetMode( (*dit).className(), "Paving" );
+    std::string specificStyle = (*dit).className() + "/Paving";
+    for(int i = 0; dit != ditEnd; ++dit)
+    {
+      board << CustomStyle( specificStyle, new CustomColors( Color::Black, cmap_grad( i )))//CustomStyle( (*dit).className(), new MyDrawStyleCustomColor( red, dred ) )
+            << *dit;
+      ++i;
+    }
+    board.saveEPS( "export.eps");
+//////////////////////////////
+
+  for(double l= 0; l < height; l++ ){
+
+    trace.progressBar(l, height);
+    std::vector<double> curvaturesIIM;
+
+    computeCurvatureIIMC(gridStep, rad, image, boundarySCell,  curvaturesIIM);      
+      // Output
+    unsigned int j = 0;
+    for ( std::vector<double>::const_iterator it = curvaturesIIM.begin(), it_end = curvaturesIIM.end();
+      it != it_end; ++it, ++j ) {
+      double c = (*it);//*gridStep;
+    c = c<-curvatureCutOff? -curvatureCutOff: c;
+    c = c>curvatureCutOff? curvatureCutOff: c;
+    cssImage.setValue(Z2i::Point(j, l), c); 
+  }      
+  rad=rad+radius_increment;
+}
+
+trace.progressBar(height, height);
+trace.info() <<std::endl;
+
+DGtal::GenericWriter<ImageCurvature, 2, double, HueShadeColorMap<double> >::exportFile(vm["output"].as<std::string>(), cssImage, gradCurvature );       
+}
+
+return 0;
 }
 
