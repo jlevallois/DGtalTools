@@ -64,13 +64,12 @@
 #include "DGtal/geometry/surfaces/estimation/IntegralInvariantGaussianCurvatureEstimator.h"
 
 // Drawing
+#include "DGtal/io/boards/Board3D.h"
 #include "DGtal/io/viewers/Viewer3D.h"
 #include "DGtal/io/colormaps/GradientColorMap.h"
 #include <QtGui/QApplication>
 
-#include <cmath>
-
-//using namespace std;
+using namespace std;
 using namespace DGtal;
 
 const Color  AXIS_COLOR_RED( 200, 20, 20, 255 );
@@ -99,11 +98,12 @@ int main( int argc, char** argv )
   // parse command line ----------------------------------------------
   po::options_description general_opt("Allowed options are");
   general_opt.add_options()
-      ("help,h", "display this message")
-      ("input-file,i", po::value< std::string >(), ".vol file")
-      ("radius,r",  po::value< double >(), "Kernel radius for IntegralInvariant" )
-      ("try,t",  po::value< unsigned int >()->default_value(150), "Max number of tries to find a proper bel" )
-      ("mode,m", po::value< std::string >()->default_value("mean"), "type of output : mean, gaussian, prindir1 or prindir2 (default mean)");
+    ("help,h", "display this message")
+    ("input-file,i", po::value< std::string >(), ".vol file")
+    ("radius,r",  po::value< double >(), "Kernel radius for IntegralInvariant" )
+    ("try,t",  po::value< unsigned int >()->default_value(150), "Max number of tries to find a proper bel" )
+    ("mode,m", po::value< std::string >()->default_value("mean"), "type of output : mean, gaussian, prindir1 or prindir2 (default mean)")
+    ("export,e", po::value< std::string >(), "Export the scene to specified OBJ filename." );
 
   bool parseOK = true;
   po::variables_map vm;
@@ -114,33 +114,37 @@ int main( int argc, char** argv )
   catch( const std::exception & ex )
   {
     parseOK = false;
-    trace.info() << "Error checking program options: " << ex.what() << std::endl;
+    trace.error() << " Error checking program options: " << ex.what() << std::endl;
   }
-  po::notify( vm );
   bool neededArgsGiven=true;
-  if (!(vm.count("input-file"))){
+  
+  if (parseOK && !(vm.count("input-file"))){
     missingParam("--input-file");
     neededArgsGiven=false;
   }
-  if (!(vm.count("radius"))){
+  if (parseOK && !(vm.count("radius"))){
     missingParam("--radius");
     neededArgsGiven=false;
   }
-  double h = 1.0;
-
+  
   bool wrongMode = false;
-  std::string mode = vm["mode"].as< std::string >();
-  if (( mode.compare("gaussian") != 0 ) && ( mode.compare("mean") != 0 ) && ( mode.compare("prindir1") != 0 ) && ( mode.compare("prindir2") != 0 ))
-  {
+  std::string mode;
+  if( parseOK )
+    mode =  vm["mode"].as< std::string >();
+  if ( parseOK && ( mode.compare("gaussian") != 0 ) && ( mode.compare("mean") != 0 ) &&
+       ( mode.compare("prindir1") != 0 ) && ( mode.compare("prindir2") != 0 ))
+    {
     wrongMode = true;
+    trace.error() << " The selected mode ("<<mode << ") is not defined."<<std::endl;
   }
+
 
   if(!neededArgsGiven ||  wrongMode || !parseOK || vm.count("help") || argc <= 1 )
   {
     trace.info()<< "Visualisation of 3d curvature from .vol file using curvature from Integral Invariant" <<std::endl
                 << general_opt << "\n"
                 << "Basic usage: "<<std::endl
-                << "\t3dCurvatureViewer -i <file.vol> --radius <radius> --properties <\"mean\">"<<std::endl
+                << "\t3dCurvatureViewer -i file.vol --radius 3 --mode mean"<<std::endl
                 << std::endl
                 << "Below are the different available modes: " << std::endl
                 << "\t - \"mean\" for the mean curvature" << std::endl
@@ -150,8 +154,28 @@ int main( int argc, char** argv )
                 << std::endl;
     return 0;
   }
-  double re_convolution_kernel = vm["radius"].as< double >();
+
   
+  
+  double h = 1.0;
+
+  
+  std::string export_path;
+  bool myexport = false;
+  if(vm.count("export")){
+    export_path = vm["export"].as< std::string >();
+    if( export_path.find(".obj") == std::string::npos )
+      {
+        std::ostringstream oss; 
+        oss << export_path << ".obj" << endl; 
+        export_path = oss.str();
+      } 
+    myexport=true;
+  }
+  
+  
+  double re_convolution_kernel = vm["radius"].as< double >();
+
   // Construction of the shape from vol file
   typedef Z3i::Space::RealPoint RealPoint;
   typedef Z3i::Point Point;
@@ -191,17 +215,17 @@ int main( int argc, char** argv )
   unsigned int maxTries = vm["try"].as< unsigned int >();
   while( digSurf.size() < 2 * minsize || tries > maxTries )
   {
-    delete boundary;
-    bel = Surfaces< KSpace >::findABel( K, predicate, 10000 );
-    boundary = new Boundary( K, predicate, SurfelAdjacency< KSpace::dimension >( true ), bel );
-    digSurf = MyDigitalSurface( *boundary );
-    ++tries;
+      delete boundary;
+      bel = Surfaces< KSpace >::findABel( K, predicate, 10000 );
+      boundary = new Boundary( K, predicate, SurfelAdjacency< KSpace::dimension >( true ), bel );
+      digSurf = MyDigitalSurface( *boundary );
+      ++tries;
   }
 
   if( tries > 150 )
   {
-    std::cerr << "Can't found a proper bel. So .... I ... just ... kill myself." << std::endl;
-    return false;
+      std::cerr << "Can't found a proper bel. So .... I ... just ... kill myself." << std::endl;
+      return false;
   }
 
   typedef DepthFirstVisitor<MyDigitalSurface> Visitor;
@@ -215,7 +239,6 @@ int main( int argc, char** argv )
   MyPointFunctor pointFunctor( image, predicate, 1 );
 
   // Integral Invariant stuff
-
   typedef FunctorOnCells< MyPointFunctor, Z3i::KSpace > MyCellFunctor;
   MyCellFunctor functor ( pointFunctor, K ); // Creation of a functor on Cells, returning true if the cell is inside the shape
 
@@ -227,6 +250,9 @@ int main( int argc, char** argv )
 
   VisitorRange range2( new Visitor( digSurf, *digSurf.begin() ) );
   SurfelConstIterator abegin2 = range2.begin();
+
+  typedef Board3D<Z3i::Space, Z3i::KSpace> Board;
+  Board board( K );
 
   trace.beginBlock("curvature computation");
   if( ( mode.compare("gaussian") == 0 ) || ( mode.compare("mean") == 0 ) )
@@ -283,10 +309,21 @@ int main( int argc, char** argv )
     cmap_grad.addColor( Color( 255, 255, 10 ) );
     
     viewer << SetMode3D((*abegin2).className(), "Basic" );
+    if( myexport )
+    {
+      board << SetMode3D((K.unsigns(*abegin2)).className(), "Basic" );
+    }
+
     for ( unsigned int i = 0; i < results.size(); ++i )
     {
       viewer << CustomColors3D( Color::Black, cmap_grad( results[ i ] ))
              << *abegin2;
+
+      if (myexport)
+        {
+          board << CustomColors3D( Color::Black, cmap_grad( results[ i ] ))
+                << K.unsigns(*abegin2);
+        }
       ++abegin2;
     }
   }
@@ -313,7 +350,13 @@ int main( int argc, char** argv )
     // Drawing results
     typedef  Matrix3x3::RowVector RowVector;
     typedef  Matrix3x3::ColumnVector ColumnVector;
-    viewer << SetMode3D((*abegin2).className(), "Basic" );//<< SetMode3D(K.uCell( K.sKCoords(*abegin2) ).className(), "Basic" );
+    viewer << SetMode3D(K.uCell( K.sKCoords(*abegin2) ).className(), "Basic" );
+
+    if( myexport )
+    {
+      board << SetMode3D(K.uCell( K.sKCoords(*abegin2) ).className(), "Basic" );
+      trace.warning() << "Warning: Actually, only the object geometry will be exported in this mode." << std::endl;
+    }
     for ( unsigned int i = 0; i < results.size(); ++i )
     {
       CurvInformation current = results[ i ];
@@ -324,71 +367,71 @@ int main( int argc, char** argv )
         outer = K.sDirectIncident( *abegin2, kDim);
       }
 
-      //      Cell unsignedSurfel = K.uCell( K.sKCoords(*abegin2) );
-      double k1abs = current.k1;//abs( current.k1 );
-      double k2abs = current.k2;//abs( current.k2 );
-      double val = k1abs / k2abs;
-
-      if( val < 0.2 )
+      Cell unsignedSurfel = K.uCell( K.sKCoords(*abegin2) );
+      viewer << CustomColors3D( DGtal::Color(255,255,255,255),
+                                DGtal::Color(255,255,255,255))
+             << unsignedSurfel;
+      if (myexport)
       {
-        viewer << CustomColors3D( DGtal::Color(255,0,0,255),
-                                  DGtal::Color(255,0,0,255))
-               << *abegin2;//unsignedSurfel;
+        board << CustomColors3D( DGtal::Color(255,255,255,255),
+                                 DGtal::Color(255,255,255,255))
+              << unsignedSurfel;
+      }
+
+
+      //ColumnVector normal = current.vectors.column(0).getNormalized();
+      ColumnVector curv1 = current.vectors.column(1).getNormalized();
+      ColumnVector curv2 = current.vectors.column(2).getNormalized();
+
+      RealPoint center = embedder( outer );
+
+      if( ( mode.compare("prindir1") == 0 ) )
+      {
+        viewer.setLineColor(AXIS_COLOR_BLUE);
+        viewer.addLine (
+              RealPoint(
+                center[0] -  0.5 * curv1[0],
+            center[1] -  0.5 * curv1[1],
+            center[2] -  0.5 * curv1[2]
+            ),
+            RealPoint(
+              center[0] +  0.5 * curv1[0],
+            center[1] +  0.5 * curv1[1],
+            center[2] +  0.5 * curv1[2]
+            ),
+            AXIS_LINESIZE );
       }
       else
       {
-//        std::cout << current.k1 << " " << current.k2 << std::endl;
-        viewer << CustomColors3D( DGtal::Color(255,255,255,255),
-                                  DGtal::Color(255,255,255,255))
-               << *abegin2;
+        viewer.setLineColor(AXIS_COLOR_RED);
+        viewer.addLine (
+              RealPoint(
+                center[0] -  0.5 * curv2[0],
+            center[1] -  0.5 * curv2[1],
+            center[2] -  0.5 * curv2[2]
+            ),
+            RealPoint(
+              center[0] +  0.5 * curv2[0],
+            center[1] +  0.5 * curv2[1],
+            center[2] +  0.5 * curv2[2]
+            ),
+            AXIS_LINESIZE );
       }
-
-//      ColumnVector curv1 = current.vectors.column(1).getNormalized();
-//      ColumnVector curv2 = current.vectors.column(2).getNormalized();
-
-//      double eps = 0.01;
-//      RealPoint center = embedder( outer );
-
-//      //      if( ( mode.compare("prindir1") == 0 ) )
-//      {
-//        viewer.setLineColor(AXIS_COLOR_BLUE);
-//        viewer.addLine (
-//              RealPoint(
-//                center[0] -  0.5 * curv1[0],
-//            center[1] -  0.5 * curv1[1],
-//            center[2] -  0.5 * curv1[2]
-//            ),
-//            RealPoint(
-//              center[0] +  0.5 * curv1[0],
-//            center[1] +  0.5 * curv1[1],
-//            center[2] +  0.5 * curv1[2]
-//            ),
-//            AXIS_LINESIZE );
-//      }
-//      //      else
-//      {
-//        viewer.setLineColor(AXIS_COLOR_RED);
-//        viewer.addLine (
-//              RealPoint(
-//                center[0] -  0.5 * curv2[0],
-//            center[1] -  0.5 * curv2[1],
-//            center[2] -  0.5 * curv2[2]
-//            ),
-//            RealPoint(
-//              center[0] +  0.5 * curv2[0],
-//            center[1] +  0.5 * curv2[1],
-//            center[2] +  0.5 * curv2[2]
-//            ),
-//            AXIS_LINESIZE );
-//      }
 
       ++abegin2;
     }
     trace.endBlock();
-  }
 
+   
+  }
   viewer << Viewer3D<>::updateDisplay;
 
+  if (myexport){
+    trace.info()<< "Exporting object: " << export_path << " ...";
+    board.saveOBJ(export_path);
+    trace.info() << "[done]" << std::endl;
+  }
+    
   delete boundary;
   return application.exec();
 }
