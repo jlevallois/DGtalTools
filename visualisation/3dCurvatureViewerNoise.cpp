@@ -589,6 +589,14 @@ int main( int argc, char** argv )
                 << unsignedSurfel;
         }
 
+        if( enable_dat )
+        {
+          Point kCoords = K.uKCoords(K.unsigns(*abegin2));
+          outDat << kCoords[0] << " " << kCoords[1] << " " << kCoords[2] <<  " "
+          << results[i][0] << " " << results[i][1] << " " << results[i][2]
+          << std::endl;
+        }
+
         RealPoint center = embedder( outer );
 
 #ifdef WITH_VISU3D_QGLVIEWER
